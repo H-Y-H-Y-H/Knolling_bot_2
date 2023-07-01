@@ -36,12 +36,30 @@ class LSTMRegressor(nn.Module):
         # Initialize cell state
         c0 = torch.zeros(self.num_layers, x.size(1), self.hidden_dim).to(x.device)
 
-        # We need to detach as we are doing truncated backpropagation through time (BPTT)
-        # If we don't, we'll backprop all the way to the start even after going through another batch
         out, (hn, cn) = self.lstm(x, (h0.detach(), c0.detach()))
 
         # Index hidden state of last time step
-        # out.size() --> 100, 32, 100
-        # out[:, -1, :] --> 100, 100 --> just want last time step hidden states!
         out = self.linear(out)
         return out
+
+# CrossEntropy
+    def maskedMSELoss(self, predictions, target, ignore_index = -100):
+        mask = target.ne(ignore_index)
+        mse_loss = (predictions - target).pow(2) * mask
+        mse_loss = mse_loss.sum() / mask.sum()
+
+        return mse_loss
+
+
+if __name__ == '__main__':
+
+    target_batch = torch.tensor([[1,2,3,4],
+                                 [1,2,3,4],
+                                 [1,2,3,4]])
+
+    mask = torch.ones_like(target_batch, dtype=torch.bool)
+
+    target_batch_atten_mask = (target_batch == 0).bool()
+    target_batch.masked_fill_(label_mask, -100)
+
+    torch.nn.utils.rnn.pack_padded_sequence
