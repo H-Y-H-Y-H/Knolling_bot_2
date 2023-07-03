@@ -5,11 +5,9 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-from torch.nn import Transformer
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from torch.utils.data import Dataset, DataLoader
-import math
-import torch.optim as optim
+from network import LSTMRegressor
 import sys
 sys.path.append('../')
 # from pos_encoder import *
@@ -65,46 +63,6 @@ class Generate_Dataset(Dataset):
     def __len__(self):
         return len(self.box_data)
 
-class LSTMRegressor(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2):
-        super(LSTMRegressor, self).__init__()
-
-        self.input_dim = input_dim
-        self.hidden_dim = hidden_dim
-        self.num_layers = num_layers
-
-        # Define the LSTM layer
-        binary = False
-        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers, bidirectional=binary, batch_first=True).to(device)
-        if binary == False:
-            self.num_directions = 1
-        else:
-            self.num_directions = 2
-
-        # Define the output layer
-        self.linear = nn.Linear(self.hidden_dim, output_dim).to(device)
-
-    def forward(self, input):
-
-        # Initialize hidden state and cell state with zeros
-        h0 = torch.zeros(self.num_layers * self.num_directions, batch_size, self.hidden_dim).to(device, dtype=torch.float32)
-        c0 = torch.zeros(self.num_layers * self.num_directions, batch_size, self.hidden_dim).to(device, dtype=torch.float32)
-
-        output, (hn, cn) = self.lstm(input, (h0.detach(), c0.detach()))
-        unpacked_out, out_length = pad_packed_sequence(output, batch_first=True)
-        # print(unpacked_out.shape)
-        # Index hidden state of last time step
-        out = self.linear(unpacked_out)
-        return out
-
-# CrossEntropy
-    def maskedMSELoss(self, predict, target, ignore_index = -100):
-        mask = target.ne(ignore_index)
-        mse_loss = (predict - target).pow(2) * mask
-        mse_loss = mse_loss.sum() / mask.sum()
-
-        return mse_loss
-
 
 if __name__ == '__main__':
 
@@ -115,7 +73,7 @@ if __name__ == '__main__':
     print("Device:", device)
 
     # define the basic parameters
-    model_save_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/results/LSTM_701/'
+    model_save_path = '../Grasp_pred_model/results/LSTM_702/'
     os.makedirs(model_save_path, exist_ok=True)
     epoch = 100
     abort_learning = 0
@@ -123,16 +81,17 @@ if __name__ == '__main__':
     target_batch = torch.tensor([[1,2,3,4],
                                  [1,2,3,4],
                                  [1,2,3,4]])
+
     # split the raw data into box and grasp flag
-    num_img = 100
+    num_img = 10000
     ratio = 0.8
     box_one_img = 21
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_630/labels/'
+    data_path = data_root + 'grasp_pile_628_no_img/labels/'
     box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
 
     # create the train dataset and test dataset
-    batch_size = 4
+    batch_size = 16
     train_dataset = Generate_Dataset(box_data=box_train, grasp_data=grasp_train)
     test_dataset = Generate_Dataset(box_data=box_test, grasp_data=grasp_test)
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
@@ -144,9 +103,11 @@ if __name__ == '__main__':
     num_layers = 2
     output_size = 1
     learning_rate = 0.001
-    model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, num_layers=num_layers, output_dim=output_size)
+    model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, num_layers=num_layers,
+                          batch_size=batch_size, device=device)
+    model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     min_loss = np.inf
 
     all_train_loss = []
@@ -190,18 +151,18 @@ if __name__ == '__main__':
         all_valid_loss.append(avg_valid_loss)
 
         if avg_valid_loss < min_loss:
-            print('Training_Loss At Epoch ' + str(epoch) + ':\t' + str(avg_train_loss))
-            print('Testing_Loss At Epoch ' + str(epoch) + ':\t' + str(avg_valid_loss))
+            print('Training_Loss At Epoch ' + str(epoch) + ':\t', np.around(avg_train_loss, 6))
+            print('Testing_Loss At Epoch ' + str(epoch) + ':\t', np.around(avg_valid_loss, 6))
             min_loss = avg_valid_loss
             PATH = model_save_path + 'best_model.pt'
             torch.save(model.state_dict(), PATH)
             abort_learning = 0
         else:
             abort_learning += 1
-        np.savetxt(model_save_path + "train_loss_LSTM.txt", np.asarray(all_train_loss))
-        np.savetxt(model_save_path + "valid_loss_LSTM.txt", np.asarray(all_valid_loss))
+        np.savetxt(model_save_path + "train_loss_LSTM.txt", np.asarray(all_train_loss), fmt='%.06f')
+        np.savetxt(model_save_path + "valid_loss_LSTM.txt", np.asarray(all_valid_loss), fmt='%.06f')
         t1 = time.time()
-        print(f"epoch{i}, time used: {(t1 - t0)}, lr: {scheduler.get_last_lr()}")
+        print(f"epoch{i}, time used: {round((t1 - t0), 2)}, lr: {scheduler.get_last_lr()}")
         if abort_learning > 20:
             break
         else:

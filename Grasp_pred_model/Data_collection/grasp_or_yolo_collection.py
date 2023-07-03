@@ -10,12 +10,17 @@ from urdfpy import URDF
 from tqdm import tqdm
 import time
 import torch
+from sklearn.preprocessing import MinMaxScaler
+from Grasp_pred_model.train_model import collate_fn, Generate_Dataset
 
 import sys
 sys.path.append('/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_bot/')
+from Grasp_pred_model.network import LSTMRegressor
+
 from ultralytics.yolo.engine.results import Results
 from ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops
 from ultralytics.yolo.v8.detect.predict import DetectionPredictor
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 
 # logger = EasyLog(log_level=logging.INFO)
 
@@ -27,113 +32,113 @@ def change_sequence(pos_before):
     order = np.argsort(distance)
     return order
 
-def find_corner(x,y,type,yaw):
-
-    gamma = yaw
-
-    rot_z = [[np.cos(gamma), -np.sin(gamma)],
-             [np.sin(gamma), np.cos(gamma)]]
-
-    pos = [x, y]
-
-    rot_z = np.asarray(rot_z)
-
-    if type == 0:
-        c1 = [16/2,16/2]
-        c2 = [16/2,-16/2]
-        c3 = [-16/2,16/2]
-        c4 = [-16/2,-16/2]
-
-    elif type == 1:
-        c1 = [24/2,16/2]
-        c2 = [24/2,-16/2]
-        c3 = [-24/2,16/2]
-        c4 = [-24/2,-16/2]
-
-    elif type == 2:
-        c1 = [32/2,16/2]
-        c2 = [32/2,-16/2]
-        c3 = [-32/2,16/2]
-        c4 = [-32/2,-16/2]
-
-    c1,c2,c3,c4 = np.asarray(c1),np.asarray(c2),np.asarray(c3),np.asarray(c4)
-    c1 = c1/1000
-    c2 = c2/1000
-    c3 = c3/1000
-    c4 = c4/1000
-
-    corn1 = np.dot(rot_z,c1)
-    corn2 = np.dot(rot_z,c2)
-    corn3 = np.dot(rot_z,c3)
-    corn4 = np.dot(rot_z,c4)
-
-    corn11 = [corn1[0] + x, corn1[1] + y]
-    corn22 = [corn2[0] + x, corn2[1] + y]
-    corn33 = [corn3[0] + x, corn3[1] + y]
-    corn44 = [corn4[0] + x, corn4[1] + y]
-
-    return corn11, corn22, corn33, corn44
-
-
-def resolve_img(corn1,corn2,corn3,corn4):
-
-    along_axis = [abs(np.arctan(corn1[1] / (corn1[0]-0.15))), abs(np.arctan(corn2[1] / (corn2[0]-0.15))), abs(np.arctan(corn3[1] / (corn3[0]-0.15))),
-                  abs(np.arctan(corn4[1] / (corn4[0]-0.15)))]
-
-    # print(along_axis)
+# def find_corner(x,y,type,yaw):
+#
+#     gamma = yaw
+#
+#     rot_z = [[np.cos(gamma), -np.sin(gamma)],
+#              [np.sin(gamma), np.cos(gamma)]]
+#
+#     pos = [x, y]
+#
+#     rot_z = np.asarray(rot_z)
+#
+#     if type == 0:
+#         c1 = [16/2,16/2]
+#         c2 = [16/2,-16/2]
+#         c3 = [-16/2,16/2]
+#         c4 = [-16/2,-16/2]
+#
+#     elif type == 1:
+#         c1 = [24/2,16/2]
+#         c2 = [24/2,-16/2]
+#         c3 = [-24/2,16/2]
+#         c4 = [-24/2,-16/2]
+#
+#     elif type == 2:
+#         c1 = [32/2,16/2]
+#         c2 = [32/2,-16/2]
+#         c3 = [-32/2,16/2]
+#         c4 = [-32/2,-16/2]
+#
+#     c1,c2,c3,c4 = np.asarray(c1),np.asarray(c2),np.asarray(c3),np.asarray(c4)
+#     c1 = c1/1000
+#     c2 = c2/1000
+#     c3 = c3/1000
+#     c4 = c4/1000
+#
+#     corn1 = np.dot(rot_z,c1)
+#     corn2 = np.dot(rot_z,c2)
+#     corn3 = np.dot(rot_z,c3)
+#     corn4 = np.dot(rot_z,c4)
+#
+#     corn11 = [corn1[0] + x, corn1[1] + y]
+#     corn22 = [corn2[0] + x, corn2[1] + y]
+#     corn33 = [corn3[0] + x, corn3[1] + y]
+#     corn44 = [corn4[0] + x, corn4[1] + y]
+#
+#     return corn11, corn22, corn33, corn44
 
 
-    cube_h = 12/1000 # cube height (m)
+# def resolve_img(corn1,corn2,corn3,corn4):
+#
+#     along_axis = [abs(np.arctan(corn1[1] / (corn1[0]-0.15))), abs(np.arctan(corn2[1] / (corn2[0]-0.15))), abs(np.arctan(corn3[1] / (corn3[0]-0.15))),
+#                   abs(np.arctan(corn4[1] / (corn4[0]-0.15)))]
+#
+#     # print(along_axis)
+#
+#
+#     cube_h = 12/1000 # cube height (m)
+#
+#     dist1 = math.dist([0.15, 0], [corn1[0], corn1[1]])
+#     dist2 = math.dist([0.15, 0], [corn2[0], corn2[1]])
+#     dist3 = math.dist([0.15, 0], [corn3[0], corn3[1]])
+#     dist4 = math.dist([0.15, 0], [corn4[0], corn4[1]])
+#
+#     # print(dist1,dist2,dist3,dist4)
+#     add_value1 = (cube_h * dist1) / (0.387 - cube_h)
+#     add_value2 = (cube_h * dist2) / (0.387 - cube_h)
+#     add_value3 = (cube_h * dist3) / (0.387 - cube_h)
+#     add_value4 = (cube_h * dist4) / (0.387 - cube_h)
+#
+#     # new_dist1 = dist1 + add_value1
+#     # new_dist2 = dist2 + add_value2
+#     # new_dist3 = dist3 + add_value3
+#     # new_dist4 = dist4 + add_value4
+#
+#
+#     # sign = lambda x: math.copysign(1, x)
+#
+#     corn1[0] = corn1[0] + np.sign(corn1[0]-0.15) * add_value1 * math.cos(along_axis[0])
+#     corn1[1] = corn1[1] + np.sign(corn1[1]) * add_value1 * math.sin(along_axis[0])
+#
+#     corn2[0] = corn2[0] + np.sign(corn2[0]-0.15) * add_value2 * math.cos(along_axis[1])
+#     corn2[1] = corn2[1] + np.sign(corn2[1]) * add_value2 * math.sin(along_axis[1])
+#
+#     corn3[0] = corn3[0] + np.sign(corn3[0]-0.15) * add_value3 * math.cos(along_axis[2])
+#     corn3[1] = corn3[1] + np.sign(corn3[1]) * add_value3 * math.sin(along_axis[2])
+#
+#     corn4[0] = corn4[0] + np.sign(corn4[0]-0.15) * add_value4 * math.cos(along_axis[3])
+#     corn4[1] = corn4[1] + np.sign(corn4[1]) * add_value4 * math.sin(along_axis[3])
+#
+#     return corn1, corn2, corn3, corn4
 
-    dist1 = math.dist([0.15, 0], [corn1[0], corn1[1]])
-    dist2 = math.dist([0.15, 0], [corn2[0], corn2[1]])
-    dist3 = math.dist([0.15, 0], [corn3[0], corn3[1]])
-    dist4 = math.dist([0.15, 0], [corn4[0], corn4[1]])
-
-    # print(dist1,dist2,dist3,dist4)
-    add_value1 = (cube_h * dist1) / (0.387 - cube_h)
-    add_value2 = (cube_h * dist2) / (0.387 - cube_h)
-    add_value3 = (cube_h * dist3) / (0.387 - cube_h)
-    add_value4 = (cube_h * dist4) / (0.387 - cube_h)
-
-    # new_dist1 = dist1 + add_value1
-    # new_dist2 = dist2 + add_value2
-    # new_dist3 = dist3 + add_value3
-    # new_dist4 = dist4 + add_value4
-
-
-    # sign = lambda x: math.copysign(1, x)
-
-    corn1[0] = corn1[0] + np.sign(corn1[0]-0.15) * add_value1 * math.cos(along_axis[0])
-    corn1[1] = corn1[1] + np.sign(corn1[1]) * add_value1 * math.sin(along_axis[0])
-
-    corn2[0] = corn2[0] + np.sign(corn2[0]-0.15) * add_value2 * math.cos(along_axis[1])
-    corn2[1] = corn2[1] + np.sign(corn2[1]) * add_value2 * math.sin(along_axis[1])
-
-    corn3[0] = corn3[0] + np.sign(corn3[0]-0.15) * add_value3 * math.cos(along_axis[2])
-    corn3[1] = corn3[1] + np.sign(corn3[1]) * add_value3 * math.sin(along_axis[2])
-
-    corn4[0] = corn4[0] + np.sign(corn4[0]-0.15) * add_value4 * math.cos(along_axis[3])
-    corn4[1] = corn4[1] + np.sign(corn4[1]) * add_value4 * math.sin(along_axis[3])
-
-    return corn1, corn2, corn3, corn4
-
-def xyz_resolve(x,y):
-
-    dist = math.dist([0.15, 0], [x, y])
-
-    cube_h = 12/1000
-
-    add_value = (cube_h * dist) / (0.387 - cube_h)
-
-    along_axis = abs(np.arctan(y/(x-0.15)))
-
-    # sign = lambda x: math.copysign(1, x)
-
-    x_new = x + np.sign(x-0.15) * add_value * math.cos(along_axis)
-    y_new = y + np.sign(y) * add_value * math.sin(along_axis)
-
-    return x_new, y_new
+# def xyz_resolve(x,y):
+#
+#     dist = math.dist([0.15, 0], [x, y])
+#
+#     cube_h = 12/1000
+#
+#     add_value = (cube_h * dist) / (0.387 - cube_h)
+#
+#     along_axis = abs(np.arctan(y/(x-0.15)))
+#
+#     # sign = lambda x: math.copysign(1, x)
+#
+#     x_new = x + np.sign(x-0.15) * add_value * math.cos(along_axis)
+#     y_new = y + np.sign(y) * add_value * math.sin(along_axis)
+#
+#     return x_new, y_new
 
 class PosePredictor(DetectionPredictor):
 
@@ -441,13 +446,13 @@ class Yolo_predict():
                                                         cls=0, conf=1,
                                                         use_xylw=use_xylw, truth_flag=True, height_data=height_data)
 
-        # cv2.namedWindow('zzz', 0)
-        # cv2.resizeWindow('zzz', 1280, 960)
-        # cv2.imshow('zzz', origin_img)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        cv2.namedWindow('zzz', 0)
+        cv2.resizeWindow('zzz', 1280, 960)
+        cv2.imshow('zzz', origin_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         img_path_output = img_path + '_pred.png'
-        if save_img_flag == True:
+        if self.save_img_flag == True:
             cv2.imwrite(img_path_output, origin_img)
         pred_result = np.asarray(pred_result)
 
@@ -456,16 +461,22 @@ class Yolo_predict():
 class Arm_env(gym.Env):
 
     def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
-                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None):
+                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=None, para_dict=None, total_error=None):
         self.endnum = endnum
         self.kImageSize = {'width': 480, 'height': 480}
 
-        self.urdf_path = '../urdf/'
+        self.urdf_path = urdf_path
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
         self.save_img_flag = save_img_flag
         self.yolo_model = Yolo_predict(save_img_flag=self.save_img_flag)
-
+        if use_grasp_model == True:
+            self.para_dict = para_dict
+            self.model = LSTMRegressor(input_dim=self.para_dict['input_size'], hidden_dim=self.para_dict['hidden_size'], output_dim=self.para_dict['output_size'],
+                                      num_layers=self.para_dict['num_layers'], batch_size=self.para_dict['batch_size'], device=self.para_dict['device'])
+            self.model.load_state_dict(torch.load(self.para_dict['model_path'] + 'best_model.pt'))
+            self.use_grasp_model = use_grasp_model
+            self.total_error = total_error
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -525,7 +536,7 @@ class Arm_env(gym.Env):
         p.setTimeStep(1. / 120.)
 
     def reset_table(self, close_flag=False, use_lego_urdf=None, lego_list=None, num_item=None, thread=None, epoch=None,
-                    pile_flag=None, data_root=None, try_grasp_flag=None, test_pile_detection=None):
+                    pile_flag=None, data_root=None, try_grasp_flag=None, test_pile_detection=False):
 
         p.resetSimulation()
         self.num_item = num_item
@@ -654,11 +665,6 @@ class Arm_env(gym.Env):
                 for i in range(self.num_item):
                     if dis_flag == False:
                         break
-
-                    # if i == 0:
-                    #     num2 = len(self.boxes_index) - 1
-                    # else:
-                    #     num2 = len(self.boxes_index)
                     num2 = np.copy(self.num_item)
 
                     # print(num2)
@@ -768,19 +774,41 @@ class Arm_env(gym.Env):
             if len(check_delete_index) == 0:
                 break
 
-        if try_grasp_flag == True:
+        if try_grasp_flag == True or self.use_grasp_model == True:
             self.img_per_epoch = 0
             # manipulator_before, pred_lwh_list = self.get_obs(format='grasp', data_root=data_root, epoch=epoch)
-            img_per_epoch_result = self.try_grasp(data_root=data_root, img_index_start=epoch)
+            img_per_epoch_result = self.try_grasp(data_root=data_root, img_index_start=epoch, test_pile_detection=test_pile_detection)
             return img_per_epoch_result
-        else:
-            return self.get_obs(format='pile', test_pile_detection=test_pile_detection, data_root=data_root, epoch=epoch), self.gt_lwh_list, new_num_item
+        elif test_pile_detection == True:
+            return self.get_obs(format='pile', test_pile_detection=test_pile_detection, data_root=data_root, epoch=epoch), \
+                   self.gt_lwh_list, new_num_item
 
-    def try_grasp(self, data_root=None, img_index_start=None):
+    def try_grasp(self, data_root=None, img_index_start=None, test_pile_detection=None):
         print('this is img_index start while grasping', img_index_start)
         if img_index_start + self.img_per_epoch >= self.endnum:
+            self.total_error = np.asarray(self.total_error).reshape(-1, 1)
+            np.savetxt(data_root + 'total_error.txt', self.total_error)
             quit()
         manipulator_before, pred_lwh_list, pred_conf = self.get_obs(format='grasp', data_root=data_root, epoch=self.img_per_epoch + img_index_start)
+
+        if self.use_grasp_model == True:
+
+            xy = manipulator_before[:, :2]
+            yaw = manipulator_before[:, -1].reshape(-1, 1)
+            lw = pred_lwh_list[:, :2]
+            data = np.concatenate((xy, lw, pred_conf.reshape(-1, 1), yaw), axis=1)
+
+            scaler = MinMaxScaler()
+            data_range = np.array([[0, -0.14, 0, 0, 0, 0.5],
+                                   [0.3, 0.14, 0.06, 0.06, np.pi, 1]])
+            scaler.fit(data_range)
+            tar_index = np.where(data[:, -2] < 0)[0]
+            data[tar_index, -2] += np.pi
+            LSTM_input = torch.from_numpy(np.array([scaler.transform(data)])).to(self.para_dict['device'], dtype=torch.float32)
+            LSTM_input = pack_padded_sequence(LSTM_input, list([data.shape[0]]), batch_first=True)
+            out = self.model.forward(LSTM_input)
+            pred_grasp = out.cpu().detach().numpy().reshape(-1, 1)
+
         pos_ori_after = np.concatenate((self.reset_pos, np.zeros(3)), axis=0).reshape(-1, 6)
         manipulator_after = np.repeat(pos_ori_after, len(manipulator_before), axis=0)
 
@@ -808,13 +836,13 @@ class Arm_env(gym.Env):
             exist_gt_index = []
 
             for i in range(len(start_end)):
+
                 trajectory_pos_list = [[0.02, grasp_width[i]],  # open!
                                        offset_high + start_end[i][:3],
                                        offset_low + start_end[i][:3],
                                        [0.0273, grasp_width[i]],  # close
                                        offset_high + start_end[i][:3],
                                        start_end[i][6:9]]
-
                 trajectory_ori_list = [rest_ori + start_end[i][3:6],
                                        rest_ori + start_end[i][3:6],
                                        rest_ori + start_end[i][3:6],
@@ -901,11 +929,18 @@ class Arm_env(gym.Env):
 
             gt_data = np.asarray(gt_data)
             grasp_flag = np.asarray(grasp_flag).reshape(-1, 1)
-            yolo_label = np.concatenate((grasp_flag, gt_data, pred_conf.reshape(-1, 1)), axis=1)
+
+
+            if self.use_grasp_model == True:
+                grasp_flag_error = np.mean((grasp_flag - pred_grasp) ** 2)
+                yolo_label = np.concatenate((grasp_flag, pred_grasp, gt_data, pred_conf.reshape(-1, 1)), axis=1)
+                self.total_error.append(grasp_flag_error)
+                print('this is grasp error', grasp_flag_error)
+            else:
+                yolo_label = np.concatenate((grasp_flag, gt_data, pred_conf.reshape(-1, 1)), axis=1)
             conf_1_index = np.where(yolo_label[:, 0] == 1)[0]
             if yolo_label[conf_1_index, -1] < 0.70:
                 print(f'index {img_index_start + self.img_per_epoch}, check it!')
-
 
         if test_pile_detection == True:
             pass
@@ -1049,25 +1084,27 @@ class Arm_env(gym.Env):
             return manipulator_before, new_lwh_list, pred_conf
 
         elif format == 'pile':
+
+            os.makedirs(data_root + 'origin_images/', exist_ok=True)
+            img_path = data_root + 'origin_images/%012d' % (epoch)
+            (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
+                                                                             height=480,
+                                                                             viewMatrix=self.view_matrix,
+                                                                             projectionMatrix=self.projection_matrix,
+                                                                             renderer=p.ER_BULLET_HARDWARE_OPENGL)
+            far_range = self.camera_parameters['far']
+            near_range = self.camera_parameters['near']
+            depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
+            top_height = 0.4 - depth_data
+            my_im = image[:, :, :3]
+            temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
+            my_im[:, :, 0] = my_im[:, :, 2]
+            my_im[:, :, 2] = temp
+            img = np.copy(my_im)
+            os.makedirs(data_root + 'origin_images/', exist_ok=True)
+            img_path = data_root + 'origin_images/%012d' % (epoch)
+
             if test_pile_detection == True:
-
-                os.makedirs(data_root + 'origin_images/', exist_ok=True)
-                img_path = data_root + 'origin_images/%012d' % (epoch)
-                (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
-                                                                                 height=480,
-                                                                                 viewMatrix=self.view_matrix,
-                                                                                 projectionMatrix=self.projection_matrix,
-                                                                                 renderer=p.ER_BULLET_HARDWARE_OPENGL)
-                far_range = self.camera_parameters['far']
-                near_range = self.camera_parameters['near']
-                depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
-                top_height = 0.4 - depth_data
-                my_im = image[:, :, :3]
-                temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
-                my_im[:, :, 0] = my_im[:, :, 2]
-                my_im[:, :, 2] = temp
-
-
                 gt_pos = self.gt_pos_ori[:, :2]
                 gt_lw = self.gt_lwh_list[:, :2]
                 gt_ori = self.gt_pos_ori[:, 5]
@@ -1169,9 +1206,9 @@ if __name__ == '__main__':
         while True:
             num_item = int(np.random.uniform(min_box_num, max_box_num + 1))
             img_per_epoch = env.reset_table(close_flag=CLOSE_FLAG, use_lego_urdf=use_lego_urdf, data_root=data_root,
-                                         num_item=num_item, thread=thread, epoch=exist_img_num,
-                                         pile_flag=pile_flag,
-                                         try_grasp_flag=try_grasp_flag)
+                                             num_item=num_item, thread=thread, epoch=exist_img_num,
+                                             pile_flag=pile_flag,
+                                             try_grasp_flag=try_grasp_flag)
             exist_img_num += img_per_epoch
     else:
         conf_crowded_total = []

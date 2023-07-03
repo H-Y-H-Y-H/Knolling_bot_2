@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from tqdm import tqdm
 
 def data_preprocess_csv(path, data_num):
 
@@ -58,26 +59,27 @@ def data_preprocess_np(path, data_num):
                            [1, 0.3, 0.14, 0.06, 0.06, np.pi, 1]])
     scaler.fit(data_range)
 
-    for i in range(data_num):
+    for i in tqdm(range(data_num, data_num + data_num)):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         # delete the
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
         tar_index = np.where(data[:, -2] < 0)[0]
         if len(tar_index) > 0:
-            print('this is tar index', tar_index)
-            print('this is ori', data[tar_index, :])
+            pass
+            # print('this is tar index', tar_index)
+            # print('this is ori', data[tar_index, :])
         data[tar_index, -2] += np.pi
-        print('this is origin data\n', data)
+        # print('this is origin data\n', data)
         normal_data = scaler.transform(data)
-        print('this is normal data\n', normal_data)
+        # print('this is normal data\n', normal_data)
 
-        np.savetxt(target_path + '%012d.txt' % i, normal_data, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i - data_num), normal_data, fmt='%.04f')
 
 
 if __name__ == '__main__':
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_630/'
+    data_path = data_root + 'grasp_pile_628_no_img/'
 
-    data_num = 2000
+    data_num = 100000
     # data_preprocess_csv(data_path, data_num)
     data_preprocess_np(data_path, data_num)
