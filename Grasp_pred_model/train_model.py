@@ -8,6 +8,7 @@ from tqdm import tqdm
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from torch.utils.data import Dataset, DataLoader
 from network import LSTMRegressor
+from tqdm import tqdm
 import sys
 sys.path.append('../')
 # from pos_encoder import *
@@ -24,14 +25,19 @@ def data_split(path, total_num, ratio, max_box):
     grasp_data_train = []
     grasp_data_test = []
 
-    for i in range(num_train):
+    print('load the train data ...')
+    for i in tqdm(range(num_train)):
         data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
         box_data_train.append(data_train[:, 1:])
         grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
-    for i in range(num_train, total_num):
+    print('\ntotal train data:', i)
+
+    print('load the valid data ...')
+    for i in tqdm(range(num_train, total_num)):
         data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
         box_data_test.append(data_test[:, 1:])
         grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+    print('total valid data:', int(total_num - num_train))
 
     return box_data_train, box_data_test, grasp_data_train, grasp_data_test
 
@@ -40,9 +46,17 @@ def collate_fn(data):
     box_data = [sq[0] for sq in data]
     grasp_data = [sq[1] for sq in data]
     data_length = [len(sq) for sq in box_data]
-    box_data = pad_sequence(box_data, batch_first=True, padding_value=0.0)
-    grasp_data = pad_sequence(grasp_data, batch_first=True, padding_value=-100.0)
-    return box_data, grasp_data, data_length
+
+    # box_data_demo = torch.ones(21, 6)
+    # grasp_data_demo = torch.ones(21, 1)
+    # box_data.append(box_data_demo)
+    # grasp_data.append(grasp_data_demo)
+
+    # box_data_pad = pad_sequence(box_data, batch_first=True, padding_value=0.0)[:batch_size, :, :]
+    # grasp_data_pad = pad_sequence(grasp_data, batch_first=True, padding_value=-100.0)[:batch_size, :, :]
+    box_data_pad = pad_sequence(box_data, batch_first=True, padding_value=0.0)
+    grasp_data_pad = pad_sequence(grasp_data, batch_first=True, padding_value=-100.0)
+    return box_data_pad, grasp_data_pad, data_length
 class Generate_Dataset(Dataset):
     def __init__(self, box_data, grasp_data):
         self.box_data = box_data
@@ -73,7 +87,7 @@ if __name__ == '__main__':
     print("Device:", device)
 
     # define the basic parameters
-    model_save_path = '../Grasp_pred_model/results/LSTM_702/'
+    model_save_path = '../Grasp_pred_model/results/LSTM_703/'
     os.makedirs(model_save_path, exist_ok=True)
     epoch = 100
     abort_learning = 0
@@ -83,7 +97,7 @@ if __name__ == '__main__':
                                  [1,2,3,4]])
 
     # split the raw data into box and grasp flag
-    num_img = 10000
+    num_img = 100000
     ratio = 0.8
     box_one_img = 21
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
@@ -91,7 +105,7 @@ if __name__ == '__main__':
     box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
 
     # create the train dataset and test dataset
-    batch_size = 16
+    batch_size = 32
     train_dataset = Generate_Dataset(box_data=box_train, grasp_data=grasp_train)
     test_dataset = Generate_Dataset(box_data=box_test, grasp_data=grasp_test)
     train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
@@ -99,37 +113,39 @@ if __name__ == '__main__':
 
     # initialize the parameters of the model
     input_size = 6
-    hidden_size = 64
+    hidden_size = 16
     num_layers = 2
     output_size = 1
     learning_rate = 0.001
     model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, num_layers=num_layers,
                           batch_size=batch_size, device=device)
-    model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     min_loss = np.inf
 
     all_train_loss = []
     all_valid_loss = []
     for i in range(epoch):
+        # print(i)
         t0 = time.time()
         train_loss = []
         valid_loss = []
 
         model.train()
         for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(train_loader):
+            # print('this is batch id', batch_id)
             # print('this is box data\n', box_data_batch)
             # print('this is grasp data\n', grasp_data_batch)
             box_data_batch = box_data_batch.to(device, dtype=torch.float32)
             grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
 
+            optimizer.zero_grad()
             box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
             out = model.forward(box_data_pack)
             loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
             train_loss.append(loss.item())
 
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 

@@ -13,15 +13,16 @@ class LSTMRegressor(nn.Module):
         self.batch_size = batch_size
 
         # Define the LSTM layer
-        binary = False
-        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers, bidirectional=binary, batch_first=True).to(device)
+        binary = True
+        self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers,
+                            bidirectional=binary, batch_first=True, dropout=0.05).to(device)
         if binary == False:
             self.num_directions = 1
         else:
             self.num_directions = 2
 
         # Define the output layer
-        self.linear = nn.Linear(self.hidden_dim, output_dim).to(self.device)
+        self.linear = nn.Linear(self.hidden_dim * self.num_directions, output_dim).to(self.device)
 
     def forward(self, input):
 
@@ -36,7 +37,6 @@ class LSTMRegressor(nn.Module):
         out = self.linear(unpacked_out)
         return out
 
-# CrossEntropy
     def maskedMSELoss(self, predict, target, ignore_index = -100):
         mask = target.ne(ignore_index)
         mse_loss = (predict - target).pow(2) * mask
