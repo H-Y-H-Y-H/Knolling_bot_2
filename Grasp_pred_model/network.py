@@ -23,6 +23,7 @@ class LSTMRegressor(nn.Module):
 
         # Define the output layer
         self.linear = nn.Linear(self.hidden_dim * self.num_directions, output_dim).to(self.device)
+        self.relu = nn.ReLU()
 
     def forward(self, input):
 
@@ -34,7 +35,7 @@ class LSTMRegressor(nn.Module):
         unpacked_out, out_length = pad_packed_sequence(output, batch_first=True)
         # print(unpacked_out.shape)
         # Index hidden state of last time step
-        out = self.linear(unpacked_out)
+        out = self.relu(self.linear(unpacked_out))
         return out
 
     def maskedMSELoss(self, predict, target, ignore_index = -100):

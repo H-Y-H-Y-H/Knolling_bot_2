@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-path = './LSTM_703/'
+path = 'LSTM_704_2/'
 train_loss = np.loadtxt(path + 'train_loss_LSTM.txt')
 valid_loss = np.loadtxt(path + 'valid_loss_LSTM.txt')
 print('this is min of train loss:', np.min(train_loss))

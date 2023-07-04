@@ -50,7 +50,7 @@ def data_preprocess_csv(path, data_num):
         })
     data_frame.to_csv(path + 'grasp_data.csv', index=False)
 
-def data_preprocess_np(path, data_num):
+def data_preprocess_np(path, data_num, start_index=0):
 
     target_path = path + 'labels/'
     os.makedirs(target_path, exist_ok=True)
@@ -59,7 +59,7 @@ def data_preprocess_np(path, data_num):
                            [1, 0.3, 0.14, 0.06, 0.06, np.pi, 1]])
     scaler.fit(data_range)
 
-    for i in tqdm(range(data_num, data_num + data_num)):
+    for i in tqdm(range(start_index, data_num + start_index)):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         # delete the
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
@@ -73,13 +73,28 @@ def data_preprocess_np(path, data_num):
         normal_data = scaler.transform(data)
         # print('this is normal data\n', normal_data)
 
-        np.savetxt(target_path + '%012d.txt' % (i - data_num), normal_data, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i - 100000), normal_data, fmt='%.04f')
 
+def data_move(source_path, target_path, source_start_index, data_num):
+    import shutil
+
+    for i in range(source_start_index, int(data_num + source_start_index)):
+        cur_path = source_path + '%012d.txt' % i
+        tar_path = target_path + '%012d.txt' % i
+        shutil.copy(cur_path, tar_path)
 
 if __name__ == '__main__':
-    data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_628_no_img/'
 
-    data_num = 100000
+    data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
+    data_path = data_root + 'grasp_pile_703/'
+
+    data_num = 150000
+    start_index = 200000
     # data_preprocess_csv(data_path, data_num)
-    data_preprocess_np(data_path, data_num)
+    data_preprocess_np(data_path, data_num, start_index)
+
+    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_704/origin_labels/'
+    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_703/origin_labels/'
+    # source_start_index = 200000
+    # num = 100000
+    # data_move(source_path, target_path, source_start_index, num)

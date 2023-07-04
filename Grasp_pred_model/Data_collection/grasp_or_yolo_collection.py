@@ -11,7 +11,7 @@ from tqdm import tqdm
 import time
 import torch
 from sklearn.preprocessing import MinMaxScaler
-from Grasp_pred_model.train_model import collate_fn, Generate_Dataset
+# from Grasp_pred_model.train_model import collate_fn, Generate_Dataset
 
 import sys
 sys.path.append('/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_bot/')
@@ -379,7 +379,7 @@ class Yolo_predict():
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=0.4, iou=0.4)
+        args = dict(model=model, source=img_path_input, conf=0.5, iou=0.4, device='cpu')
         use_python = True
         if use_python:
             from ultralytics import YOLO
@@ -446,13 +446,14 @@ class Yolo_predict():
                                                         cls=0, conf=1,
                                                         use_xylw=use_xylw, truth_flag=True, height_data=height_data)
 
-        cv2.namedWindow('zzz', 0)
-        cv2.resizeWindow('zzz', 1280, 960)
-        cv2.imshow('zzz', origin_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-        img_path_output = img_path + '_pred.png'
+
         if self.save_img_flag == True:
+            cv2.namedWindow('zzz', 0)
+            cv2.resizeWindow('zzz', 1280, 960)
+            cv2.imshow('zzz', origin_img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            img_path_output = img_path + '_pred.png'
             cv2.imwrite(img_path_output, origin_img)
         pred_result = np.asarray(pred_result)
 
@@ -461,7 +462,7 @@ class Yolo_predict():
 class Arm_env(gym.Env):
 
     def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
-                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=None, para_dict=None, total_error=None):
+                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False, para_dict=None, total_error=None):
         self.endnum = endnum
         self.kImageSize = {'width': 480, 'height': 480}
 
@@ -477,6 +478,8 @@ class Arm_env(gym.Env):
             self.model.load_state_dict(torch.load(self.para_dict['model_path'] + 'best_model.pt'))
             self.use_grasp_model = use_grasp_model
             self.total_error = total_error
+        else:
+            self.use_grasp_model = False
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -565,7 +568,7 @@ class Arm_env(gym.Env):
 
         # Texture change
         background = np.random.randint(1, 5)
-        textureId = p.loadTexture(f"../urdf/img_{background}.png")
+        textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
         p.changeVisualShape(baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         if try_grasp_flag == True:
@@ -686,7 +689,7 @@ class Arm_env(gym.Env):
         self.obj_idx = []
         box_path = data_root + "box_urdf/thread_%d/epoch_%d/" % (thread, epoch)
         os.makedirs(box_path, exist_ok=True)
-        temp_box = URDF.load('../urdf/box_generator/template.urdf')
+        temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
 
         length_range = np.round(np.random.uniform(0.016, 0.048, size=(self.num_item, 1)), decimals=3)
         width_range = np.round(np.random.uniform(0.016, np.minimum(length_range, 0.036), size=(self.num_item, 1)),decimals=3)
@@ -732,7 +735,7 @@ class Arm_env(gym.Env):
             delete_index = []
             for i in range(len(self.obj_idx)):
                 p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.3, spinningFriction=0.3, rollingFriction=0.00,
-                                 linearDamping=0, angularDamping=0, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
+                                 linearDamping=0.4, angularDamping=0.4, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
@@ -754,7 +757,7 @@ class Arm_env(gym.Env):
                 self.obj_idx.pop(i)
                 self.gt_lwh_list = np.delete(self.gt_lwh_list, i, axis=0)
             for _ in range(int(200)):
-                # time.sleep(1/48)
+                # time.sleep(1/96)
                 p.stepSimulation()
 
             check_delete_index = []
@@ -786,8 +789,9 @@ class Arm_env(gym.Env):
     def try_grasp(self, data_root=None, img_index_start=None, test_pile_detection=None):
         print('this is img_index start while grasping', img_index_start)
         if img_index_start + self.img_per_epoch >= self.endnum:
-            self.total_error = np.asarray(self.total_error).reshape(-1, 1)
-            np.savetxt(data_root + 'total_error.txt', self.total_error)
+            if self.use_grasp_model == True:
+                self.total_error = np.asarray(self.total_error).reshape(-1, 1)
+                np.savetxt(data_root + 'total_error.txt', self.total_error)
             quit()
         manipulator_before, pred_lwh_list, pred_conf = self.get_obs(format='grasp', data_root=data_root, epoch=self.img_per_epoch + img_index_start)
 
@@ -936,11 +940,11 @@ class Arm_env(gym.Env):
                 yolo_label = np.concatenate((grasp_flag, pred_grasp, gt_data, pred_conf.reshape(-1, 1)), axis=1)
                 self.total_error.append(grasp_flag_error)
                 print('this is grasp error', grasp_flag_error)
+                conf_1_index = np.where(yolo_label[:, 0] == 1)[0]
+                if yolo_label[conf_1_index, -1] < 0.70:
+                    print(f'index {img_index_start + self.img_per_epoch}, check it!')
             else:
                 yolo_label = np.concatenate((grasp_flag, gt_data, pred_conf.reshape(-1, 1)), axis=1)
-            conf_1_index = np.where(yolo_label[:, 0] == 1)[0]
-            if yolo_label[conf_1_index, -1] < 0.70:
-                print(f'index {img_index_start + self.img_per_epoch}, check it!')
 
         if test_pile_detection == True:
             pass
@@ -1032,16 +1036,22 @@ class Arm_env(gym.Env):
                                         force=10)
         for i in range(20):
             p.stepSimulation()
-            # time.sleep(1 / 48)
+            time.sleep(1 / 96)
 
     def get_obs(self, format=None, data_root=None, epoch=None, test_pile_detection=False):
 
         self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
         if len(self.obj_idx) == 0:
             return np.array([]), np.array([]), np.array([])
+        self.constrain_id = []
         for i in range(len(self.obj_idx)):
             box_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
             box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
+            # self.constrain_id.append(p.createConstraint(self.obj_idx[i], -1, -1, -1, p.JOINT_FIXED,
+            #                                             jointAxis=[1, 1, 1],
+            #                                             parentFramePosition=[0, 0, 0],
+            #                                             childFramePosition=box_pos,
+            #                                             childFrameOrientation=[1, 1, 1]))
             self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
             self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
             self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
@@ -1177,17 +1187,17 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 00
-    endnum =   500
+    startnum = 0
+    endnum =   100
     thread = 0
     CLOSE_FLAG = False
     pile_flag = True
     use_lego_urdf = False
     try_grasp_flag = True
     test_pile_detection = False
-    save_img_flag = True
+    save_img_flag = False
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_630_test/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_704/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
@@ -1195,10 +1205,11 @@ if __name__ == '__main__':
     min_box_num = 18
     mm2px = 530 / 0.34
 
-    np.random.seed(150)
-    random.seed(150)
+    np.random.seed(158)
+    random.seed(158)
 
-    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag)
+    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
+                  urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/')
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
     if try_grasp_flag == True:

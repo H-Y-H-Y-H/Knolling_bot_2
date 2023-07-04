@@ -86,46 +86,77 @@ if __name__ == '__main__':
         device = 'cpu'
     print("Device:", device)
 
+    para_dict = {'num_img': 50000,
+                 'ratio': 0.8,
+                 'epoch': 200,
+                 'model_path': '../Grasp_pred_model/results/LSTM_704_3/',
+                 'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_703/labels/',
+                 'learning_rate': 0.01, 'stepLR': 50, 'gamma': 0.5,
+                 'network': 'binary',
+                 'batch_size': 32,
+                 'input_size': 6,
+                 'hidden_size': 16,
+                 'box_one_img': 21,
+                 'num_layers': 2,
+                 'output_size': 1,
+                 'abort_learning': 20,
+                 'run_name': '704_3',
+                 'wandb_flag': True}
+    import wandb
+    wandb_flag = True
+    if wandb_flag == True:
+        wandb.config = para_dict
+        wandb.init(project='zzz_LSTM',
+                 notes='knolling_bot_2',
+                 tags=['baseline', 'paper1'],
+                 name=para_dict['run_name'])
+        wandb.config.update(para_dict)
+        print('this is para_dict\n', para_dict)
+
+
     # define the basic parameters
-    model_save_path = '../Grasp_pred_model/results/LSTM_703/'
+    model_save_path = para_dict['model_path']
     os.makedirs(model_save_path, exist_ok=True)
-    epoch = 100
+    epoch = para_dict['epoch']
     abort_learning = 0
 
-    target_batch = torch.tensor([[1,2,3,4],
-                                 [1,2,3,4],
-                                 [1,2,3,4]])
+    # target_batch = torch.tensor([[1,2,3,4],
+    #                              [1,2,3,4],
+    #                              [1,2,3,4]])
 
     # split the raw data into box and grasp flag
-    num_img = 100000
-    ratio = 0.8
-    box_one_img = 21
+    num_img = para_dict['num_img']
+    ratio = para_dict['ratio']
+    box_one_img = para_dict['box_one_img']
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_628_no_img/labels/'
+    data_path = data_root + 'grasp_pile_703/labels/'
     box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
 
     # create the train dataset and test dataset
-    batch_size = 32
+    batch_size = para_dict['batch_size']
     train_dataset = Generate_Dataset(box_data=box_train, grasp_data=grasp_train)
     test_dataset = Generate_Dataset(box_data=box_test, grasp_data=grasp_test)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True,
+                              collate_fn=collate_fn, drop_last=True)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True,
+                             collate_fn=collate_fn, drop_last=True)
 
     # initialize the parameters of the model
-    input_size = 6
-    hidden_size = 16
-    num_layers = 2
-    output_size = 1
-    learning_rate = 0.001
+    input_size = para_dict['input_size']
+    hidden_size = para_dict['hidden_size']
+    num_layers = para_dict['num_layers']
+    output_size = para_dict['output_size']
+    learning_rate = para_dict['learning_rate']
     model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, num_layers=num_layers,
                           batch_size=batch_size, device=device)
     # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
     min_loss = np.inf
 
     all_train_loss = []
     all_valid_loss = []
+    current_epoch = 0
     for i in range(epoch):
         # print(i)
         t0 = time.time()
@@ -133,6 +164,7 @@ if __name__ == '__main__':
         valid_loss = []
 
         model.train()
+        # print('train')
         for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(train_loader):
             # print('this is batch id', batch_id)
             # print('this is box data\n', box_data_batch)
@@ -154,7 +186,9 @@ if __name__ == '__main__':
 
         model.eval()
         with torch.no_grad():
+            # print('eval')
             for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(test_loader):
+                # print(batch_id)
                 box_data_batch = box_data_batch.to(device, dtype=torch.float32)
                 grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
 
@@ -167,8 +201,8 @@ if __name__ == '__main__':
         all_valid_loss.append(avg_valid_loss)
 
         if avg_valid_loss < min_loss:
-            print('Training_Loss At Epoch ' + str(epoch) + ':\t', np.around(avg_train_loss, 6))
-            print('Testing_Loss At Epoch ' + str(epoch) + ':\t', np.around(avg_valid_loss, 6))
+            print('Training_Loss At Epoch ' + str(i) + ':\t', np.around(avg_train_loss, 6))
+            print('Testing_Loss At Epoch ' + str(i) + ':\t', np.around(avg_valid_loss, 6))
             min_loss = avg_valid_loss
             PATH = model_save_path + 'best_model.pt'
             torch.save(model.state_dict(), PATH)
@@ -179,10 +213,20 @@ if __name__ == '__main__':
         np.savetxt(model_save_path + "valid_loss_LSTM.txt", np.asarray(all_valid_loss), fmt='%.06f')
         t1 = time.time()
         print(f"epoch{i}, time used: {round((t1 - t0), 2)}, lr: {scheduler.get_last_lr()}")
-        if abort_learning > 20:
+
+
+        if abort_learning > para_dict['abort_learning']:
             break
         else:
             scheduler.step()
+        current_epoch += 1
+
+    if wandb_flag == True:
+        wandb.init()
+        for step in range(current_epoch):
+            wandb.log({'Train_loss': all_train_loss[step]}, step=step)
+            wandb.log({'Valid_loss': all_valid_loss[step]}, step=step)
+        wandb.finish()
 
     # mask = torch.ones_like(target_batch, dtype=torch.bool)
     #
