@@ -82,27 +82,28 @@ if __name__ == '__main__':
 
     if torch.cuda.is_available():
         device = 'cuda:0'
+
     else:
         device = 'cpu'
     print("Device:", device)
 
-    para_dict = {'num_img': 50000,
+    para_dict = {'num_img': 450000,
                  'ratio': 0.8,
                  'epoch': 200,
-                 'model_path': '../Grasp_pred_model/results/LSTM_705_1_cross_test/',
+                 'model_path': '../Grasp_pred_model/results/LSTM_706_3_cross/',
                  'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
-                 'learning_rate': 0.1, 'stepLR': 30, 'gamma': 0.1,
+                 'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.1,
                  'network': 'binary',
                  'batch_size': 32,
                  'input_size': 6,
-                 'hidden_size': 16,
+                 'hidden_size': 64,
                  'box_one_img': 21,
                  'num_layers': 2,
                  'output_size': 2,
                  'abort_learning': 40,
-                 'run_name': '705_3',
-                 'project_name': 'zzz_LSTM_mse',
-                 'wandb_flag': False,
+                 'run_name': '706_3',
+                 'project_name': 'zzz_LSTM_cross',
+                 'wandb_flag': True,
                  'use_mse': False}
     import wandb
     if para_dict['wandb_flag'] == True:

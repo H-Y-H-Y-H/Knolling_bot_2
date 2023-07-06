@@ -84,12 +84,12 @@ def data_preprocess_np(path, data_num, start_index=0):
 def data_move(source_path, target_path, source_start_index, data_num):
     import shutil
 
-    # print(np.loadtxt(source_path + '%012d.txt' % 50000).reshape(-1, 7))
-    # print(np.loadtxt(source_path + '%012d.txt' % 60000).reshape(-1, 7))
+    print(np.loadtxt(source_path + '%012d.txt' % 50000).reshape(-1, 7))
+    print(np.loadtxt(source_path + '%012d.txt' % 60000).reshape(-1, 7))
 
     for i in range(source_start_index, int(data_num + source_start_index)):
         cur_path = source_path + '%012d.txt' % (i)
-        tar_path = target_path + '%012d.txt' % (i + 150000)
+        tar_path = target_path + '%012d.txt' % (i + 350000)
         shutil.copy(cur_path, tar_path)
 
 def check_dataset():
@@ -99,15 +99,16 @@ def check_dataset():
 if __name__ == '__main__':
 
     # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    # data_path = data_root + 'grasp_dataset_03004/'
-    # # data_path = data_root + 'origin_labels_704_lab/'
+    # # data_path = data_root + 'grasp_dataset_03004/'
+    # data_path = data_root + 'grasp_pile_705_laptop/'
+    # # data_path = data_root + 'origin_labels_706_lab/'
     #
-    # data_num = 150000
+    # data_num = 100000
     # start_index = 0
     # # data_preprocess_csv(data_path, data_num)
     # data_preprocess_np(data_path, data_num, start_index)
 
-    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_704_laptop/labels/'
+    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_706_lab/labels/'
     target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/'
     source_start_index = 0
     num = 100000
