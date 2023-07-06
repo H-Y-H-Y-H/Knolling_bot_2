@@ -462,12 +462,10 @@ class Yolo_predict():
 class Arm_env(gym.Env):
 
     def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
-                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False,
-                 para_dict=None, total_error=None, init_pos_range=None):
+                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False, para_dict=None, total_error=None):
         self.endnum = endnum
         self.kImageSize = {'width': 480, 'height': 480}
 
-        self.init_pos_range = init_pos_range
         self.urdf_path = urdf_path
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
@@ -635,10 +633,10 @@ class Arm_env(gym.Env):
             # rdm_ori = np.concatenate((np.ones((self.num_item, 1)) * (np.pi / 2.5),
             #                           np.zeros((self.num_item, 1)),
             #                           np.ones((self.num_item, 1)) * (np.pi / 9)), axis=1)
-            rdm_ori = np.random.uniform(-np.pi / 4, np.pi / 4, size=(self.num_item, 3))
-            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_item, 1))
-            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_item, 1))
-            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_item, 1))
+            rdm_ori = np.random.uniform(-np.pi / 2, np.pi / 2, size=(self.num_item, 3))
+            rdm_pos_x = np.random.uniform(0.10, 0.20, size=(self.num_item, 1))
+            rdm_pos_y = np.random.uniform(-0.05, 0.05, size=(self.num_item, 1))
+            rdm_pos_z = np.random.uniform(0.05, 0.2, size=(self.num_item, 1))
             rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
         else:
             while True:
@@ -765,7 +763,6 @@ class Arm_env(gym.Env):
             check_delete_index = []
             for i in range(len(self.obj_idx)):
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
-                cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
                 pitch_flag = False
                 for j in range(len(forbid_range)):
@@ -872,15 +869,19 @@ class Arm_env(gym.Env):
                     success_break_flag = False
                     fail_break_flag = False
                     box_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[j])[0])  # this is the pos after of the grasped box
-                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.03 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.01:
+                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.03:
                         for m in range(len(self.obj_idx)):
                             box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
                             ori_qua_after = p.getBasePositionAndOrientation(self.obj_idx[m])[1]
                             box_ori_after = np.asarray(ori_qua_after)
                             upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
-                            if box_pos_after[2] > 0.03 and m != j:
-                                print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
+                            if (np.linalg.norm(box_pos_after - box_pos_before[m]) > 0.005 or 0.08 < np.linalg.norm(
+                                    box_ori_after - box_ori_before[m]) < upper_limit or \
+                                upper_limit - 0.002 < np.linalg.norm(
+                                        box_ori_after - box_ori_before[m]) < upper_limit + 0.002) and m != j:
+                                print(
+                                    f'The {m} boxes have been disturbed, pos_before is {box_pos_before[m]}, pos_after is {box_pos_after}, \n'
+                                    f'ori_before is {box_ori_before[m]}, ori_after is {box_ori_after}, grasp fail!')
                                 p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
                                 grasp_flag.append(0)
                                 fail_break_flag = True
@@ -922,40 +923,10 @@ class Arm_env(gym.Env):
                         # gt_data.append(np.concatenate(
                         #     (box_pos_before[gt_index], self.gt_lwh_list[gt_index], self.gt_pos_ori[gt_index, 3:])))
                         # exist_gt_index.append(gt_index)
-                    # p.restoreState(state_id)
+                    p.restoreState(state_id)
                     p.removeBody(self.obj_idx[gt_index_grasp])
-                    print('this is len of self.obj', len(self.obj_idx))
                     del self.obj_idx[gt_index_grasp]
                     self.gt_lwh_list = np.delete(self.gt_lwh_list, gt_index_grasp, axis=0)
-
-                    ######## after every grasp, check pos and ori of every box which are out of the field ########
-                    forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
-                    delete_index = []
-                    print('this is len of self.obj', len(self.obj_idx))
-                    for m in range(len(self.obj_idx)):
-                        cur_ori = np.asarray(
-                            p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[m])[1]))
-                        cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
-                        roll_flag = False
-                        pitch_flag = False
-                        for n in range(len(forbid_range)):
-                            if np.abs(cur_ori[0] - forbid_range[n]) < 0.01:
-                                roll_flag = True
-                            if np.abs(cur_ori[1] - forbid_range[n]) < 0.01:
-                                pitch_flag = True
-                        if roll_flag == True and pitch_flag == True and (
-                                np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
-                                cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-                            1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
-                            delete_index.append(m)
-                    delete_index.reverse()
-                    for idx in delete_index:
-                        print('this is delete index', idx)
-                        p.removeBody(self.obj_idx[idx])
-                        self.obj_idx.pop(idx)
-                        self.gt_lwh_list = np.delete(self.gt_lwh_list, idx, axis=0)
-                    ######## after every grasp, check pos and ori of every box which are out of the field ########
-
                     break
                 else:
                     p.restoreState(state_id)
@@ -1030,11 +1001,10 @@ class Arm_env(gym.Env):
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=3)
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=50)
             for i in range(6):
                 p.stepSimulation()
-                if self.is_render:
-                    time.sleep(1 / 240)
+                # time.sleep(1 / 240)
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
                     target_pos[2] - tar_pos[2]) < 0.001 and \
                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
@@ -1061,13 +1031,12 @@ class Arm_env(gym.Env):
                                     targetPosition=motor_pos(obj_width) + close_open_gap, force=1)
         else:  # open
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width),
-                                    force=1)
+                                    force=10)
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width),
-                                        force=1)
+                                        force=10)
         for i in range(20):
             p.stepSimulation()
-            if self.is_render:
-                time.sleep(1 / 96)
+            # time.sleep(1 / 96)
 
     def get_obs(self, format=None, data_root=None, epoch=None, test_pile_detection=False):
 
@@ -1154,6 +1123,25 @@ class Arm_env(gym.Env):
                 results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=my_im,
                                                                     height_data=top_height,
                                                                     target=gt_label, test_pile_detection=test_pile_detection)
+                # # align the pred box and gt box
+                # gt_compare_index = []
+                # crowded_index = []
+                # for i in range(len(results)):
+                #     gt_index = np.argsort(np.linalg.norm(self.gt_pos_ori[:, :2] - results[i, :2], axis=1))
+                #     gt_index_grasp = gt_index[0]
+                #     # gt_data.append(np.concatenate((box_pos_before[gt_index_grasp], self.gt_lwh_list[gt_index_grasp], self.gt_pos_ori[gt_index_grasp, 3:])))
+                #     gt_compare_index.append(gt_index_grasp)
+                # gt_compare_index = np.asarray(gt_compare_index)
+                # for i in range(len(gt_compare_index)):
+                #     # seg_area = seg_mask[seg_mask == gt_compare_index[i]]
+                #     for j in range(len(gt_compare_index)):
+                #         length_i = np.max(self.gt_lwh_list[gt_compare_index[i]])
+                #         length_j = np.max(self.gt_lwh_list[gt_compare_index[j]])
+                #         if np.linalg.norm(self.gt_pos_ori[gt_compare_index[i], :2] - self.gt_pos_ori[gt_compare_index[j], :2]) < (length_i + length_j) / 2 and i != j:
+                #         # if (np.abs(self.gt_pos_ori[gt_compare_index[i], 3] - 0) > 0.01 or np.abs(self.gt_pos_ori[gt_compare_index[i], 4] - 0) > 0.01):
+                #             crowded_index.append(i)
+                #             print('this is normal box ori', self.gt_pos_ori[gt_compare_index[i]])
+                #             break
                 crowded_index = []
                 for i in range(len(results)):
                     # seg_area = seg_mask[seg_mask == gt_compare_index[i]]
@@ -1199,34 +1187,29 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 0
-    endnum =   200
-    thread = 4
+    startnum = 98000
+    endnum =   100000
+    thread = 17
     CLOSE_FLAG = False
     pile_flag = True
     use_lego_urdf = False
     try_grasp_flag = True
     test_pile_detection = False
     save_img_flag = False
-
-    init_pos_range = [[0.12, 0.18],
-                      [-0.04, 0.04],
-                      [0.05, 0.2]]
-
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop_2/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_705_laptop/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
-    max_box_num = 24
-    min_box_num = 20
+    max_box_num = 21
+    min_box_num = 18
     mm2px = 530 / 0.34
 
-    np.random.seed(160)
-    random.seed(160)
+    # np.random.seed(158)
+    # random.seed(158)
 
-    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
-                  urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
+    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
+                  urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/')
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
     if try_grasp_flag == True:

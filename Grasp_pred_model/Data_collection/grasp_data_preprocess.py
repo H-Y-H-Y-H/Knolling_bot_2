@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from tqdm import tqdm
 
-def data_preprocess_csv(path, data_num):
+def data_preprocess_csv(path, data_num, start_index):
 
     max_conf_1 = 0
     data = []
@@ -15,7 +15,7 @@ def data_preprocess_csv(path, data_num):
     for i in range(1, data_num):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
-        if origin_data[0, 0] == 1:
+        if origin_data[0, 0] == 1 and len(origin_data) != 1:
             print(f'here {i}')
             max_conf_1 += 1
         data = np.concatenate((data, origin_data), axis=0)
@@ -98,18 +98,18 @@ def check_dataset():
 
 if __name__ == '__main__':
 
-    # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    # # data_path = data_root + 'grasp_dataset_03004/'
-    # data_path = data_root + 'grasp_pile_705_laptop/'
-    # # data_path = data_root + 'origin_labels_706_lab/'
-    #
-    # data_num = 100000
-    # start_index = 0
-    # # data_preprocess_csv(data_path, data_num)
+    data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
+    # data_path = data_root + 'grasp_dataset_03004/'
+    data_path = data_root + 'grasp_pile_706_laptop/'
+    # data_path = data_root + 'origin_labels_706_lab/'
+
+    data_num = 5000
+    start_index = 0
+    data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np(data_path, data_num, start_index)
 
-    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_706_lab/labels/'
-    target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/'
-    source_start_index = 0
-    num = 100000
-    data_move(source_path, target_path, source_start_index, num)
+    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_706_lab/labels/'
+    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/'
+    # source_start_index = 0
+    # num = 100000
+    # data_move(source_path, target_path, source_start_index, num)

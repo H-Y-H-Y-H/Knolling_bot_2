@@ -87,23 +87,23 @@ if __name__ == '__main__':
         device = 'cpu'
     print("Device:", device)
 
-    para_dict = {'num_img': 450000,
+    para_dict = {'num_img': 50000,
                  'ratio': 0.8,
                  'epoch': 200,
-                 'model_path': '../Grasp_pred_model/results/LSTM_706_3_cross/',
+                 'model_path': '../Grasp_pred_model/results/LSTM_706_cross_test/',
                  'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
                  'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.1,
                  'network': 'binary',
                  'batch_size': 32,
                  'input_size': 6,
-                 'hidden_size': 64,
+                 'hidden_size': 16,
                  'box_one_img': 21,
                  'num_layers': 2,
                  'output_size': 2,
                  'abort_learning': 40,
-                 'run_name': '706_3',
+                 'run_name': '706_test',
                  'project_name': 'zzz_LSTM_cross',
-                 'wandb_flag': True,
+                 'wandb_flag': False,
                  'use_mse': False}
     import wandb
     if para_dict['wandb_flag'] == True:
@@ -130,7 +130,6 @@ if __name__ == '__main__':
     num_img = para_dict['num_img']
     ratio = para_dict['ratio']
     box_one_img = para_dict['box_one_img']
-    data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
     data_path = para_dict['data_path']
     box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
 
