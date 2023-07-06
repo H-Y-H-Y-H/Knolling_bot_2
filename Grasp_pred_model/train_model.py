@@ -86,12 +86,12 @@ if __name__ == '__main__':
         device = 'cpu'
     print("Device:", device)
 
-    para_dict = {'num_img': 250000,
+    para_dict = {'num_img': 50000,
                  'ratio': 0.8,
                  'epoch': 200,
-                 'model_path': '../Grasp_pred_model/results/LSTM_705_4/',
+                 'model_path': '../Grasp_pred_model/results/LSTM_705_1_cross_test/',
                  'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
-                 'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.5,
+                 'learning_rate': 0.1, 'stepLR': 30, 'gamma': 0.1,
                  'network': 'binary',
                  'batch_size': 32,
                  'input_size': 6,
@@ -100,8 +100,8 @@ if __name__ == '__main__':
                  'num_layers': 2,
                  'output_size': 2,
                  'abort_learning': 40,
-                 'run_name': '705_4',
-                 'project_name': 'zzz_LSTM_softmax',
+                 'run_name': '705_3',
+                 'project_name': 'zzz_LSTM_mse',
                  'wandb_flag': False,
                  'use_mse': False}
     import wandb

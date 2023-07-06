@@ -26,7 +26,7 @@ if __name__ == '__main__':
         para_dict = {'num_img': 50000,
                      'ratio': 0.8,
                      'epoch': 200,
-                     'model_path': '../Grasp_pred_model/results/LSTM_705_2/',
+                     'model_path': '../Grasp_pred_model/results/LSTM_705_3_cross/',
                      'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
                      'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.5,
                      'network': 'binary',
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                                   batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss())
 
         ###########################################################################
-        # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+        model.load_state_dict(torch.load(para_dict['model_path'] + 'best_model.pt'))
         ###########################################################################
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -96,6 +96,8 @@ if __name__ == '__main__':
                 valid_loss.append(loss.item())
 
         avg_valid_loss = np.mean(valid_loss)
+
+
 
     else:
         startnum = 0
