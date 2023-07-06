@@ -59,6 +59,12 @@ def data_preprocess_np(path, data_num, start_index=0):
                            [1, 0.3, 0.14, 0.06, 0.06, np.pi, 1]])
     scaler.fit(data_range)
 
+    # print(np.loadtxt(path + 'origin_labels/%012d.txt' % start_index).reshape(-1, 11)[0])
+    # print(np.loadtxt(path + 'origin_labels/%012d.txt' % (start_index + 10000)).reshape(-1, 11)[0])
+
+    # print(np.loadtxt(path + 'labels/%012d.txt' % 150000).reshape(-1, 7))
+    # print(np.loadtxt(path + 'labels/%012d.txt' % 160000).reshape(-1, 7))
+
     for i in tqdm(range(start_index, data_num + start_index)):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         # delete the
@@ -73,28 +79,36 @@ def data_preprocess_np(path, data_num, start_index=0):
         normal_data = scaler.transform(data)
         # print('this is normal data\n', normal_data)
 
-        np.savetxt(target_path + '%012d.txt' % (i - 100000), normal_data, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i), normal_data, fmt='%.04f')
 
 def data_move(source_path, target_path, source_start_index, data_num):
     import shutil
 
+    # print(np.loadtxt(source_path + '%012d.txt' % 50000).reshape(-1, 7))
+    # print(np.loadtxt(source_path + '%012d.txt' % 60000).reshape(-1, 7))
+
     for i in range(source_start_index, int(data_num + source_start_index)):
-        cur_path = source_path + '%012d.txt' % i
-        tar_path = target_path + '%012d.txt' % i
+        cur_path = source_path + '%012d.txt' % (i)
+        tar_path = target_path + '%012d.txt' % (i + 150000)
         shutil.copy(cur_path, tar_path)
+
+def check_dataset():
+
+    pass
 
 if __name__ == '__main__':
 
-    data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_703/'
+    # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
+    # data_path = data_root + 'grasp_dataset_03004/'
+    # # data_path = data_root + 'origin_labels_704_lab/'
+    #
+    # data_num = 150000
+    # start_index = 0
+    # # data_preprocess_csv(data_path, data_num)
+    # data_preprocess_np(data_path, data_num, start_index)
 
-    data_num = 150000
-    start_index = 200000
-    # data_preprocess_csv(data_path, data_num)
-    data_preprocess_np(data_path, data_num, start_index)
-
-    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_704/origin_labels/'
-    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_703/origin_labels/'
-    # source_start_index = 200000
-    # num = 100000
-    # data_move(source_path, target_path, source_start_index, num)
+    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_704_laptop/labels/'
+    target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/'
+    source_start_index = 0
+    num = 100000
+    data_move(source_path, target_path, source_start_index, num)

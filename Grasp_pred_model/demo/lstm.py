@@ -150,10 +150,10 @@ def eval(rnn, iterator, criteon):
     
     print('>>test:', avg_acc)
 
-# for epoch in range(10):
-#
-#     eval(rnn, test_iterator, criteon)
-#     train(rnn, train_iterator, optimizer, criteon)
+for epoch in range(10):
+
+    eval(rnn, test_iterator, criteon)
+    train(rnn, train_iterator, optimizer, criteon)
 
 if __name__ == '__main__':
 

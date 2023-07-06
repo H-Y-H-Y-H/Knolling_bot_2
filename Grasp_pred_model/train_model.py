@@ -86,27 +86,28 @@ if __name__ == '__main__':
         device = 'cpu'
     print("Device:", device)
 
-    para_dict = {'num_img': 50000,
+    para_dict = {'num_img': 250000,
                  'ratio': 0.8,
                  'epoch': 200,
-                 'model_path': '../Grasp_pred_model/results/LSTM_704_3/',
-                 'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_703/labels/',
-                 'learning_rate': 0.01, 'stepLR': 50, 'gamma': 0.5,
+                 'model_path': '../Grasp_pred_model/results/LSTM_705_4/',
+                 'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
+                 'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.5,
                  'network': 'binary',
                  'batch_size': 32,
                  'input_size': 6,
                  'hidden_size': 16,
                  'box_one_img': 21,
                  'num_layers': 2,
-                 'output_size': 1,
-                 'abort_learning': 20,
-                 'run_name': '704_3',
-                 'wandb_flag': True}
+                 'output_size': 2,
+                 'abort_learning': 40,
+                 'run_name': '705_4',
+                 'project_name': 'zzz_LSTM_softmax',
+                 'wandb_flag': False,
+                 'use_mse': False}
     import wandb
-    wandb_flag = True
-    if wandb_flag == True:
+    if para_dict['wandb_flag'] == True:
         wandb.config = para_dict
-        wandb.init(project='zzz_LSTM',
+        wandb.init(project=para_dict['project_name'],
                  notes='knolling_bot_2',
                  tags=['baseline', 'paper1'],
                  name=para_dict['run_name'])
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     ratio = para_dict['ratio']
     box_one_img = para_dict['box_one_img']
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_703/labels/'
+    data_path = para_dict['data_path']
     box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
 
     # create the train dataset and test dataset
@@ -147,9 +148,18 @@ if __name__ == '__main__':
     num_layers = para_dict['num_layers']
     output_size = para_dict['output_size']
     learning_rate = para_dict['learning_rate']
-    model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, num_layers=num_layers,
+    if para_dict['use_mse'] == True:
+        model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size, num_layers=num_layers,
                           batch_size=batch_size, device=device)
+    else:
+        model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size,
+                              num_layers=num_layers,
+                              batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss())
+
+    ###########################################################################
     # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    ###########################################################################
+
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
     min_loss = np.inf
@@ -175,7 +185,10 @@ if __name__ == '__main__':
             optimizer.zero_grad()
             box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
             out = model.forward(box_data_pack)
-            loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+            if para_dict['use_mse'] == True:
+                loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+            else:
+                loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
             train_loss.append(loss.item())
 
             loss.backward()
@@ -194,7 +207,10 @@ if __name__ == '__main__':
 
                 box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
                 out = model.forward(box_data_pack)
-                loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+                if para_dict['use_mse'] == True:
+                    loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+                else:
+                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
                 valid_loss.append(loss.item())
 
         avg_valid_loss = np.mean(valid_loss)
@@ -221,7 +237,7 @@ if __name__ == '__main__':
             scheduler.step()
         current_epoch += 1
 
-    if wandb_flag == True:
+    if para_dict['wandb_flag'] == True:
         wandb.init()
         for step in range(current_epoch):
             wandb.log({'Train_loss': all_train_loss[step]}, step=step)

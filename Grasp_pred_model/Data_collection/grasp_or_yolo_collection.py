@@ -735,7 +735,7 @@ class Arm_env(gym.Env):
             delete_index = []
             for i in range(len(self.obj_idx)):
                 p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.3, spinningFriction=0.3, rollingFriction=0.00,
-                                 linearDamping=0.4, angularDamping=0.4, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
+                                 linearDamping=0.04, angularDamping=0.04, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
@@ -1004,7 +1004,7 @@ class Arm_env(gym.Env):
                                         targetPosition=ik_angles0[motor_index], maxVelocity=100, force=50)
             for i in range(6):
                 p.stepSimulation()
-                time.sleep(1 / 240)
+                # time.sleep(1 / 240)
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
                     target_pos[2] - tar_pos[2]) < 0.001 and \
                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
@@ -1036,7 +1036,7 @@ class Arm_env(gym.Env):
                                         force=10)
         for i in range(20):
             p.stepSimulation()
-            time.sleep(1 / 96)
+            # time.sleep(1 / 96)
 
     def get_obs(self, format=None, data_root=None, epoch=None, test_pile_detection=False):
 
@@ -1187,9 +1187,9 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 0
-    endnum =   100
-    thread = 0
+    startnum = 8000
+    endnum =   10000
+    thread = 4
     CLOSE_FLAG = False
     pile_flag = True
     use_lego_urdf = False
@@ -1197,7 +1197,7 @@ if __name__ == '__main__':
     test_pile_detection = False
     save_img_flag = False
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_704/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_705/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
@@ -1205,10 +1205,10 @@ if __name__ == '__main__':
     min_box_num = 18
     mm2px = 530 / 0.34
 
-    np.random.seed(158)
-    random.seed(158)
+    # np.random.seed(158)
+    # random.seed(158)
 
-    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
+    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
                   urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/')
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
