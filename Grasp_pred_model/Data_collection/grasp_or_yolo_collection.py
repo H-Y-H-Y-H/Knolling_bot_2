@@ -32,114 +32,6 @@ def change_sequence(pos_before):
     order = np.argsort(distance)
     return order
 
-# def find_corner(x,y,type,yaw):
-#
-#     gamma = yaw
-#
-#     rot_z = [[np.cos(gamma), -np.sin(gamma)],
-#              [np.sin(gamma), np.cos(gamma)]]
-#
-#     pos = [x, y]
-#
-#     rot_z = np.asarray(rot_z)
-#
-#     if type == 0:
-#         c1 = [16/2,16/2]
-#         c2 = [16/2,-16/2]
-#         c3 = [-16/2,16/2]
-#         c4 = [-16/2,-16/2]
-#
-#     elif type == 1:
-#         c1 = [24/2,16/2]
-#         c2 = [24/2,-16/2]
-#         c3 = [-24/2,16/2]
-#         c4 = [-24/2,-16/2]
-#
-#     elif type == 2:
-#         c1 = [32/2,16/2]
-#         c2 = [32/2,-16/2]
-#         c3 = [-32/2,16/2]
-#         c4 = [-32/2,-16/2]
-#
-#     c1,c2,c3,c4 = np.asarray(c1),np.asarray(c2),np.asarray(c3),np.asarray(c4)
-#     c1 = c1/1000
-#     c2 = c2/1000
-#     c3 = c3/1000
-#     c4 = c4/1000
-#
-#     corn1 = np.dot(rot_z,c1)
-#     corn2 = np.dot(rot_z,c2)
-#     corn3 = np.dot(rot_z,c3)
-#     corn4 = np.dot(rot_z,c4)
-#
-#     corn11 = [corn1[0] + x, corn1[1] + y]
-#     corn22 = [corn2[0] + x, corn2[1] + y]
-#     corn33 = [corn3[0] + x, corn3[1] + y]
-#     corn44 = [corn4[0] + x, corn4[1] + y]
-#
-#     return corn11, corn22, corn33, corn44
-
-
-# def resolve_img(corn1,corn2,corn3,corn4):
-#
-#     along_axis = [abs(np.arctan(corn1[1] / (corn1[0]-0.15))), abs(np.arctan(corn2[1] / (corn2[0]-0.15))), abs(np.arctan(corn3[1] / (corn3[0]-0.15))),
-#                   abs(np.arctan(corn4[1] / (corn4[0]-0.15)))]
-#
-#     # print(along_axis)
-#
-#
-#     cube_h = 12/1000 # cube height (m)
-#
-#     dist1 = math.dist([0.15, 0], [corn1[0], corn1[1]])
-#     dist2 = math.dist([0.15, 0], [corn2[0], corn2[1]])
-#     dist3 = math.dist([0.15, 0], [corn3[0], corn3[1]])
-#     dist4 = math.dist([0.15, 0], [corn4[0], corn4[1]])
-#
-#     # print(dist1,dist2,dist3,dist4)
-#     add_value1 = (cube_h * dist1) / (0.387 - cube_h)
-#     add_value2 = (cube_h * dist2) / (0.387 - cube_h)
-#     add_value3 = (cube_h * dist3) / (0.387 - cube_h)
-#     add_value4 = (cube_h * dist4) / (0.387 - cube_h)
-#
-#     # new_dist1 = dist1 + add_value1
-#     # new_dist2 = dist2 + add_value2
-#     # new_dist3 = dist3 + add_value3
-#     # new_dist4 = dist4 + add_value4
-#
-#
-#     # sign = lambda x: math.copysign(1, x)
-#
-#     corn1[0] = corn1[0] + np.sign(corn1[0]-0.15) * add_value1 * math.cos(along_axis[0])
-#     corn1[1] = corn1[1] + np.sign(corn1[1]) * add_value1 * math.sin(along_axis[0])
-#
-#     corn2[0] = corn2[0] + np.sign(corn2[0]-0.15) * add_value2 * math.cos(along_axis[1])
-#     corn2[1] = corn2[1] + np.sign(corn2[1]) * add_value2 * math.sin(along_axis[1])
-#
-#     corn3[0] = corn3[0] + np.sign(corn3[0]-0.15) * add_value3 * math.cos(along_axis[2])
-#     corn3[1] = corn3[1] + np.sign(corn3[1]) * add_value3 * math.sin(along_axis[2])
-#
-#     corn4[0] = corn4[0] + np.sign(corn4[0]-0.15) * add_value4 * math.cos(along_axis[3])
-#     corn4[1] = corn4[1] + np.sign(corn4[1]) * add_value4 * math.sin(along_axis[3])
-#
-#     return corn1, corn2, corn3, corn4
-
-# def xyz_resolve(x,y):
-#
-#     dist = math.dist([0.15, 0], [x, y])
-#
-#     cube_h = 12/1000
-#
-#     add_value = (cube_h * dist) / (0.387 - cube_h)
-#
-#     along_axis = abs(np.arctan(y/(x-0.15)))
-#
-#     # sign = lambda x: math.copysign(1, x)
-#
-#     x_new = x + np.sign(x-0.15) * add_value * math.cos(along_axis)
-#     y_new = y + np.sign(y) * add_value * math.sin(along_axis)
-#
-#     return x_new, y_new
-
 class PosePredictor(DetectionPredictor):
 
     def postprocess(self, preds, img, orig_img):
@@ -247,6 +139,7 @@ class Yolo_predict():
         height = height_data[int(x_px_center), int(y_px_center)] - 0.01
         if height <= 0.006:
             height = 0.006
+        height = 0.006
 
         # this is the knolling sequence, not opencv!!!!
         keypoints_x = ((keypoints[:, 1] * 480 - 6) / mm2px).reshape(-1, 1)
@@ -872,14 +765,14 @@ class Arm_env(gym.Env):
                     success_break_flag = False
                     fail_break_flag = False
                     box_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[j])[0])  # this is the pos after of the grasped box
-                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.03 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.01:
+                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
+                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
                         for m in range(len(self.obj_idx)):
                             box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
                             ori_qua_after = p.getBasePositionAndOrientation(self.obj_idx[m])[1]
                             box_ori_after = np.asarray(ori_qua_after)
                             upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
-                            if box_pos_after[2] > 0.03 and m != j:
+                            if box_pos_after[2] > 0.06 and m != j:
                                 print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
                                 p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
                                 grasp_flag.append(0)
@@ -1030,11 +923,11 @@ class Arm_env(gym.Env):
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=3)
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=2)
             for i in range(6):
                 p.stepSimulation()
                 if self.is_render:
-                    time.sleep(1 / 240)
+                    time.sleep(1 / 480)
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
                     target_pos[2] - tar_pos[2]) < 0.001 and \
                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
@@ -1218,14 +1111,14 @@ if __name__ == '__main__':
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
-    max_box_num = 24
-    min_box_num = 20
+    max_box_num = 15
+    min_box_num = 12
     mm2px = 530 / 0.34
 
-    np.random.seed(160)
-    random.seed(160)
+    # np.random.seed(167)
+    # random.seed(167)
 
-    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
+    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
                   urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
