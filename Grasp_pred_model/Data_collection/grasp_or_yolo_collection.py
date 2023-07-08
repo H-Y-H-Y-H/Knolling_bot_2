@@ -136,10 +136,10 @@ class Yolo_predict():
         # y_px_center = y_mm_center * mm2px + 320
         x_px_center = scaled_xylw[1] * 480
         y_px_center = scaled_xylw[0] * 640
-        height = height_data[int(x_px_center), int(y_px_center)] - 0.01
-        if height <= 0.006:
-            height = 0.006
-        height = 0.006
+        z_mm_center = height_data[int(x_px_center), int(y_px_center)] - 0.01
+        if z_mm_center <= 0.006:
+            z_mm_center = 0.006
+        # z_mm_center = 0.006
 
         # this is the knolling sequence, not opencv!!!!
         keypoints_x = ((keypoints[:, 1] * 480 - 6) / mm2px).reshape(-1, 1)
@@ -219,7 +219,7 @@ class Yolo_predict():
         label2 = 'index: %d, x: %.4f, y: %.4f' % (index, plot_x, plot_y)
         label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
         if label:
-            w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, height
+            w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
             # cv2.rectangle(self.im, p1, p2, color, 0, cv2.LINE_AA)  # filled
             if truth_flag == True:
@@ -261,7 +261,7 @@ class Yolo_predict():
             im = cv2.circle(im, (int(x_coord), int(y_coord)), radius, color_k, -1, lineType=cv2.LINE_AA)
         ############### zzz plot the keypoints ###############
 
-        result = np.concatenate((box_center, [height], [round(length, 4)], [round(width, 4)], [my_ori]))
+        result = np.concatenate((box_center, [z_mm_center], [round(length, 4)], [round(width, 4)], [my_ori]))
 
         return im, result
 
@@ -609,28 +609,24 @@ class Arm_env(gym.Env):
                 p.changeVisualShape(self.obj_idx[i], -1, rgbaColor=(r, g, b, 1))
 
         self.gt_lwh_list = np.asarray(self.gt_lwh_list)
-        for _ in range(int(200)):
-            # time.sleep(1/48)
+        for _ in range(int(100)):
             p.stepSimulation()
-        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0, restitution=0.0,
-                         contactDamping=0.001, contactStiffness=10000)
+            if self.is_render == True:
+                time.sleep(1/48)
+        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0, restitution=0.0)
 
         # if try_grasp_flag == True:
         #     for i in range(len(self.obj_idx)):
         #         p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.8, spinningFriction=0.8, rollingFriction=0.00,
         #                          linearDamping=0, angularDamping=0, jointDamping=0,
         #                          restitution=0.0, contactDamping=0.001, contactStiffness=10000)
-        #     for _ in range(int(100)):
-        #         # time.sleep(1/48)
-        #         p.stepSimulation()
-        # else:
         forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
         while True:
             new_num_item = len(self.obj_idx)
             delete_index = []
             for i in range(len(self.obj_idx)):
-                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.3, spinningFriction=0.3, rollingFriction=0.00,
-                                 linearDamping=0.04, angularDamping=0.04, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
+                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0001,
+                                 linearDamping=0.8, angularDamping=0.8, jointDamping=0, restitution=0.0)
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
@@ -690,6 +686,13 @@ class Arm_env(gym.Env):
                 np.savetxt(data_root + 'total_error.txt', self.total_error)
             quit()
         manipulator_before, pred_lwh_list, pred_conf = self.get_obs(format='grasp', data_root=data_root, epoch=self.img_per_epoch + img_index_start)
+
+        if len(manipulator_before) == 0:
+            print('no pile in the environment, try to reset!')
+            return self.img_per_epoch
+        if np.any(manipulator_before[:, 2].reshape(1, -1) > 0.01) == False:
+            print('no pile in the environment, try to reset!')
+            return self.img_per_epoch
 
         if self.use_grasp_model == True:
 
@@ -923,11 +926,11 @@ class Arm_env(gym.Env):
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=2)
-            for i in range(6):
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=1.8)
+            for i in range(3):
                 p.stepSimulation()
                 if self.is_render:
-                    time.sleep(1 / 480)
+                    time.sleep(1 / 240)
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
                     target_pos[2] - tar_pos[2]) < 0.001 and \
                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
@@ -949,9 +952,9 @@ class Arm_env(gym.Env):
 
         if gap > 0.0265:  # close
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=1)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.5)
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=1)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.5)
         else:  # open
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width),
                                     force=1)
@@ -1092,8 +1095,8 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 90000
-    endnum =   100000
+    startnum = 9000
+    endnum =   10000
     thread = 9
     CLOSE_FLAG = False
     pile_flag = True
@@ -1102,23 +1105,23 @@ if __name__ == '__main__':
     test_pile_detection = False
     save_img_flag = False
 
-    init_pos_range = [[0.12, 0.18],
-                      [-0.03, 0.03],
-                      [0.05, 0.2]]
+    init_pos_range = [[0.13, 0.17],
+                      [-0.02, 0.02],
+                      [0.03, 0.05]]
 
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_707_laptop_test/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
-    max_box_num = 15
-    min_box_num = 12
+    max_box_num = 10
+    min_box_num = 8
     mm2px = 530 / 0.34
 
-    # np.random.seed(167)
-    # random.seed(167)
+    # np.random.seed(175)
+    # random.seed(175)
 
-    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
+    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
                   urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)

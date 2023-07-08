@@ -15,7 +15,7 @@ def data_preprocess_csv(path, data_num, start_index):
     for i in range(1, data_num):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
-        if origin_data[0, 0] == 1 and len(origin_data) != 1:
+        if origin_data[0, 0] == 1:
             print(f'here {i}')
             max_conf_1 += 1
         data = np.concatenate((data, origin_data), axis=0)
@@ -50,9 +50,9 @@ def data_preprocess_csv(path, data_num, start_index):
         })
     data_frame.to_csv(path + 'grasp_data.csv', index=False)
 
-def data_preprocess_np_min_max(path, data_num, start_index=0):
+def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=None, target_start_index=None):
 
-    target_path = path + 'labels/'
+    target_path = target_data_path + 'labels/'
     os.makedirs(target_path, exist_ok=True)
     scaler = StandardScaler()
     scaler = MinMaxScaler()
@@ -80,7 +80,8 @@ def data_preprocess_np_min_max(path, data_num, start_index=0):
         # normal_data = scaler.transform(data)
         # print('this is normal data\n', normal_data)
 
-        np.savetxt(target_path + '%012d.txt' % (i), data, fmt='%.04f')
+        print(i + target_start_index - start_index)
+        np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data, fmt='%.04f')
 
 def data_preprocess_np_standard(path, data_num, start_index):
     target_path = path + 'labels/'
@@ -122,7 +123,7 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
 
     for i in range(source_start_index, int(data_num + source_start_index)):
         cur_path = source_path + '%012d.txt' % (i)
-        tar_path = target_path + '%012d.txt' % (i + target_start_index)
+        tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
 
         # os.remove(target_path + '%012d.txt' % (i + 350000))
@@ -135,14 +136,17 @@ if __name__ == '__main__':
 
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
     # data_path = data_root + 'grasp_dataset_03004/'
-    data_path = data_root + 'grasp_pile_706_laptop/'
+    data_path = data_root + 'grasp_pile_707_laptop/'
     # data_path = data_root + 'origin_labels_707_lab/'
 
-    data_num = 100000
+    target_data_path = data_root + 'grasp_pile_707_laptop/'
+
+    data_num = 10000
     start_index = 0
-    # data_preprocess_csv(data_path, data_num, start_index)
+    target_start_index = 0
+    data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np_standard(data_path, data_num, start_index)
-    data_preprocess_np_min_max(data_path, data_num, start_index)
+    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
     # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_707_lab/labels/'
     # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/'

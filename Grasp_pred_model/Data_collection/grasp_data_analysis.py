@@ -19,7 +19,7 @@ def heatmap(path):
 def EDA(path):
 
     df = pd.read_csv(path)
-    df.iloc[:, [1, 2, 3, 4, 5, 6]].plot(kind='box', subplots=True, layout=(1, 6), whis=1.5)
+    df.iloc[:, [1, 2, 3, 4, 5, 6, 7]].plot(kind='box', subplots=True, layout=(1, 7), whis=1.5)
     print('this is the description of the dataset\n', df.describe())
     plt.show()
 
@@ -51,7 +51,7 @@ def r_square(path):
 if __name__ == '__main__':
 
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_path = data_root + 'grasp_pile_706_laptop/grasp_data.csv'
+    data_path = data_root + 'grasp_pile_707_laptop/grasp_data.csv'
     heatmap(data_path)
     EDA(data_path)
     statistics(data_path)

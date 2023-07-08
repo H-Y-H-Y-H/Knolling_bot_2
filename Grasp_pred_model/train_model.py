@@ -47,14 +47,14 @@ def data_split(path, total_num, ratio, max_box, test_model=False):
         print('load the train data ...')
         for i in tqdm(range(num_train)):
             data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-            box_data_train.append(data_train[:, 1:6])
+            box_data_train.append(data_train[:, 1:])
             grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
         print('\ntotal train data:', i)
 
         print('load the valid data ...')
         for i in tqdm(range(num_train, total_num)):
             data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-            box_data_test.append(data_test[:, 1:6])
+            box_data_test.append(data_test[:, 1:])
             grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
         print('total valid data:', int(total_num - num_train))
 
@@ -105,45 +105,45 @@ class Generate_Dataset(Dataset):
     def __len__(self):
         return len(self.box_data)
 
-# # use conf
-# para_dict = {'num_img': 100000,
-#              'ratio': 0.8,
-#              'epoch': 200,
-#              'model_path': '../Grasp_pred_model/results/LSTM_707_4_cross_test/',
-#              'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
-#              'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
-#              'network': 'binary',
-#              'batch_size': 32,
-#              'input_size': 6,
-#              'hidden_size': 32,
-#              'box_one_img': 21,
-#              'num_layers': 2,
-#              'output_size': 2,
-#              'abort_learning': 30,
-#              'run_name': '707_4_test',
-#              'project_name': 'zzz_LSTM_cross',
-#              'wandb_flag': True,
-#              'use_mse': False}
-
-# no conf
-para_dict = {'num_img': 100000,
+# use conf
+para_dict = {'num_img': 180000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_707_1_cross_no_conf/',
-             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
+             'model_path': '../Grasp_pred_model/results/LSTM_707_2_cross_no_scaler/',
+             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707_no_scaler/labels/',
              'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 32,
-             'input_size': 5,
+             'input_size': 6,
              'hidden_size': 32,
              'box_one_img': 21,
              'num_layers': 2,
              'output_size': 2,
              'abort_learning': 30,
-             'run_name': '707_1',
-             'project_name': 'zzz_LSTM_cross_no_conf',
+             'run_name': '707_2_',
+             'project_name': 'zzz_LSTM_cross_no_scaler',
              'wandb_flag': True,
              'use_mse': False}
+
+# # no conf
+# para_dict = {'num_img': 180000,
+#              'ratio': 0.8,
+#              'epoch': 200,
+#              'model_path': '../Grasp_pred_model/results/LSTM_707_2_cross_no_conf/',
+#              'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
+#              'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
+#              'network': 'binary',
+#              'batch_size': 32,
+#              'input_size': 5,
+#              'hidden_size': 32,
+#              'box_one_img': 21,
+#              'num_layers': 2,
+#              'output_size': 2,
+#              'abort_learning': 30,
+#              'run_name': '707_2',
+#              'project_name': 'zzz_LSTM_cross_no_conf',
+#              'wandb_flag': True,
+#              'use_mse': False}
 
 if __name__ == '__main__':
 
