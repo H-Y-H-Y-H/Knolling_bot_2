@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
-from train_model import Generate_Dataset, data_split, collate_fn
+from train_model import Generate_Dataset, data_split, collate_fn, para_dict
 
 if __name__ == '__main__':
 
@@ -23,32 +23,16 @@ if __name__ == '__main__':
             device = 'cpu'
         print("Device:", device)
 
-        para_dict = {'num_img': 50000,
-                     'ratio': 0.8,
-                     'epoch': 200,
-                     'model_path': '../Grasp_pred_model/results/LSTM_705_3_cross/',
-                     'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
-                     'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.5,
-                     'network': 'binary',
-                     'batch_size': 32,
-                     'input_size': 6,
-                     'hidden_size': 16,
-                     'box_one_img': 21,
-                     'num_layers': 2,
-                     'output_size': 2,
-                     'abort_learning': 40,
-                     'run_name': '705_2',
-                     'project_name': 'zzz_LSTM_softmax',
-                     'wandb_flag': True,
-                     'use_mse': False}
+        para_dict['wandb_flag'] = False
+        para_dict['model_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/'
+        para_dict['run_name'] = para_dict['run_name'] + '_test'
         total_error = []
 
         num_img = para_dict['num_img']
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
         data_path = para_dict['data_path']
-        box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
+        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -76,7 +60,7 @@ if __name__ == '__main__':
         ###########################################################################
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=para_dict['patience'], factor=para_dict['factor'])
 
         valid_loss = []
         model.eval()
@@ -91,12 +75,28 @@ if __name__ == '__main__':
                 out = model.forward(box_data_pack)
                 if para_dict['use_mse'] == True:
                     loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+                    valid_loss.append(loss.item())
                 else:
-                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                valid_loss.append(loss.item())
+                    # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
+                    success, grasp_success, grasp_dominated_total, grasp_dominated_success, pred_positive, true_positive = model.detect_accuracy(predict=out, target=grasp_data_batch)
 
-        avg_valid_loss = np.mean(valid_loss)
 
+        # avg_valid_loss = np.mean(valid_loss)
+
+        print('total_img', int(num_img - num_img * ratio))
+
+        print('total_true', success)
+        print('grasp_success', grasp_success)
+        print('Recall %.04f\n' % (grasp_success / success))
+
+        print('pred_positive', pred_positive)
+        print('true_positive', true_positive)
+        print('Precision %.04f\n' % (true_positive/pred_positive))
+
+        print('grasp_dominated_total', grasp_dominated_total)
+        print('grasp_dominated_success', grasp_dominated_success)
+
+        print('over!')
 
 
     else:
@@ -124,8 +124,6 @@ if __name__ == '__main__':
             else:
                 device = 'cpu'
             print("Device:", device)
-            para_dict = {'input_size': 6, 'hidden_size': 64, 'num_layers': 2,
-                         'output_size': 1, 'batch_size': 1, 'model_path': '../Grasp_pred_model/results/LSTM_702/', 'device': device}
             total_error = []
             env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag, urdf_path=urdf_path,
                           use_grasp_model=use_grasp_model, para_dict=para_dict, total_error=total_error)

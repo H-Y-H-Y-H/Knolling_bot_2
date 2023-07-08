@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from tqdm import tqdm
 
 def data_preprocess_csv(path, data_num, start_index):
@@ -50,10 +50,11 @@ def data_preprocess_csv(path, data_num, start_index):
         })
     data_frame.to_csv(path + 'grasp_data.csv', index=False)
 
-def data_preprocess_np(path, data_num, start_index=0):
+def data_preprocess_np_min_max(path, data_num, start_index=0):
 
     target_path = path + 'labels/'
     os.makedirs(target_path, exist_ok=True)
+    scaler = StandardScaler()
     scaler = MinMaxScaler()
     data_range = np.array([[0, 0, -0.14, 0, 0, 0, 0.5],
                            [1, 0.3, 0.14, 0.06, 0.06, np.pi, 1]])
@@ -62,8 +63,8 @@ def data_preprocess_np(path, data_num, start_index=0):
     # print(np.loadtxt(path + 'origin_labels/%012d.txt' % start_index).reshape(-1, 11)[0])
     # print(np.loadtxt(path + 'origin_labels/%012d.txt' % (start_index + 10000)).reshape(-1, 11)[0])
 
-    # print(np.loadtxt(path + 'labels/%012d.txt' % 150000).reshape(-1, 7))
-    # print(np.loadtxt(path + 'labels/%012d.txt' % 160000).reshape(-1, 7))
+    print(np.loadtxt(path + 'labels/%012d.txt' % 50000).reshape(-1, 7))
+    print(np.loadtxt(path + 'labels/%012d.txt' % 60000).reshape(-1, 7))
 
     for i in tqdm(range(start_index, data_num + start_index)):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
@@ -72,16 +73,48 @@ def data_preprocess_np(path, data_num, start_index=0):
         tar_index = np.where(data[:, -2] < 0)[0]
         if len(tar_index) > 0:
             pass
-            # print('this is tar index', tar_index)
-            # print('this is ori', data[tar_index, :])
+            print('this is tar index', tar_index)
+            print('this is ori', data[tar_index, :])
         data[tar_index, -2] += np.pi
         # print('this is origin data\n', data)
-        normal_data = scaler.transform(data)
+        # normal_data = scaler.transform(data)
         # print('this is normal data\n', normal_data)
 
-        np.savetxt(target_path + '%012d.txt' % (i), normal_data, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i), data, fmt='%.04f')
 
-def data_move(source_path, target_path, source_start_index, data_num):
+def data_preprocess_np_standard(path, data_num, start_index):
+    target_path = path + 'labels/'
+    os.makedirs(target_path, exist_ok=True)
+    scaler = StandardScaler()
+
+    total_array = np.loadtxt(path + 'origin_labels/%012d.txt' % start_index).reshape(-1, 11)
+    total_array = np.delete(total_array, [3, 6, 7, 8], axis=1)
+    tar_index = np.where(total_array[:, -2] < 0)[0]
+    total_array[tar_index, -2] += np.pi
+    total_len = [total_array.shape[0]]
+    for i in tqdm(range(start_index + 1, data_num + start_index)):
+        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
+        data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        tar_index = np.where(data[:, -2] < 0)[0]
+        data[tar_index, -2] += np.pi
+
+        total_array = np.concatenate((total_array, data), axis=0)
+        total_len.append(data.shape[0])
+
+    total_array[:, 1:] = scaler.fit_transform(total_array[:, 1:])
+
+    seg_start_index = 0
+    for i in tqdm(range(start_index, data_num + start_index)):
+        # print('before\n', np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11))
+        data_after = total_array[seg_start_index:seg_start_index + total_len[i - start_index], :]
+        seg_start_index += total_len[i - start_index]
+        # print('after\n', data_after)
+        np.savetxt(target_path + '%012d.txt' % (i - 20000), data_after, fmt='%.04f')
+
+    print('here')
+
+
+def data_move(source_path, target_path, source_start_index, data_num, target_start_index):
     import shutil
 
     print(np.loadtxt(source_path + '%012d.txt' % 50000).reshape(-1, 7))
@@ -89,8 +122,10 @@ def data_move(source_path, target_path, source_start_index, data_num):
 
     for i in range(source_start_index, int(data_num + source_start_index)):
         cur_path = source_path + '%012d.txt' % (i)
-        tar_path = target_path + '%012d.txt' % (i + 350000)
+        tar_path = target_path + '%012d.txt' % (i + target_start_index)
         shutil.copy(cur_path, tar_path)
+
+        # os.remove(target_path + '%012d.txt' % (i + 350000))
 
 def check_dataset():
 
@@ -101,15 +136,17 @@ if __name__ == '__main__':
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
     # data_path = data_root + 'grasp_dataset_03004/'
     data_path = data_root + 'grasp_pile_706_laptop/'
-    # data_path = data_root + 'origin_labels_706_lab/'
+    # data_path = data_root + 'origin_labels_707_lab/'
 
-    data_num = 5000
+    data_num = 100000
     start_index = 0
-    data_preprocess_csv(data_path, data_num, start_index)
-    # data_preprocess_np(data_path, data_num, start_index)
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index)
 
-    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_706_lab/labels/'
-    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/'
+    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_707_lab/labels/'
+    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/'
     # source_start_index = 0
-    # num = 100000
-    # data_move(source_path, target_path, source_start_index, num)
+    # target_start_index = 0
+    # num = 80000
+    # data_move(source_path, target_path, source_start_index, num, target_start_index)

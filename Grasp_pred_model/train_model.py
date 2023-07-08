@@ -14,9 +14,10 @@ sys.path.append('../')
 # from pos_encoder import *
 import torch.nn.functional as F
 # from model import *
+from sklearn.preprocessing import StandardScaler
 
 
-def data_split(path, total_num, ratio, max_box):
+def data_split(path, total_num, ratio, max_box, test_model=False):
 
     num_train = int(total_num * ratio)
 
@@ -24,22 +25,49 @@ def data_split(path, total_num, ratio, max_box):
     box_data_test = []
     grasp_data_train = []
     grasp_data_test = []
+    data_total = []
 
-    print('load the train data ...')
-    for i in tqdm(range(num_train)):
-        data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-        box_data_train.append(data_train[:, 1:])
-        grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
-    print('\ntotal train data:', i)
+    # print('load the data ...')
+    # for i in tqdm(range(total_num)):
+    #     data_total.append(np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7))
+    # print('\ntotal data:', i)
+    # data_total = scaler.fit_transform(np.asarray(data_total))
+    #
+    # data_train = data_total[:num_train, :]
+    # data_test = data_total[num_train:, :]
+    # box_data_train = data_train[:, 1:]
+    # box_data_test = data_test[:, 1:]
+    # grasp_data_train = data_train[:, 0].reshape(-1, 1)
+    # grasp_data_test = data_test[:, 0].reshape(-1, 1)
+    #
+    # print('total train data', len(box_data_train))
+    # print('total test data', len(box_data_test))
 
-    print('load the valid data ...')
-    for i in tqdm(range(num_train, total_num)):
-        data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-        box_data_test.append(data_test[:, 1:])
-        grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
-    print('total valid data:', int(total_num - num_train))
+    if test_model == False:
+        print('load the train data ...')
+        for i in tqdm(range(num_train)):
+            data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+            box_data_train.append(data_train[:, 1:6])
+            grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
+        print('\ntotal train data:', i)
 
-    return box_data_train, box_data_test, grasp_data_train, grasp_data_test
+        print('load the valid data ...')
+        for i in tqdm(range(num_train, total_num)):
+            data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+            box_data_test.append(data_test[:, 1:6])
+            grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+        print('total valid data:', int(total_num - num_train))
+
+        return box_data_train, box_data_test, grasp_data_train, grasp_data_test
+    else:
+        print('load the valid data ...')
+        for i in tqdm(range(num_train, total_num)):
+            data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+            box_data_test.append(data_test[:, 1:])
+            grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+        print('total valid data:', int(total_num - num_train))
+
+        return box_data_test, grasp_data_test
 
 def collate_fn(data):
     data.sort(key=lambda x: len(x[1]), reverse=True)
@@ -77,6 +105,45 @@ class Generate_Dataset(Dataset):
     def __len__(self):
         return len(self.box_data)
 
+# # use conf
+# para_dict = {'num_img': 100000,
+#              'ratio': 0.8,
+#              'epoch': 200,
+#              'model_path': '../Grasp_pred_model/results/LSTM_707_4_cross_test/',
+#              'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
+#              'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
+#              'network': 'binary',
+#              'batch_size': 32,
+#              'input_size': 6,
+#              'hidden_size': 32,
+#              'box_one_img': 21,
+#              'num_layers': 2,
+#              'output_size': 2,
+#              'abort_learning': 30,
+#              'run_name': '707_4_test',
+#              'project_name': 'zzz_LSTM_cross',
+#              'wandb_flag': True,
+#              'use_mse': False}
+
+# no conf
+para_dict = {'num_img': 100000,
+             'ratio': 0.8,
+             'epoch': 200,
+             'model_path': '../Grasp_pred_model/results/LSTM_707_1_cross_no_conf/',
+             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
+             'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
+             'network': 'binary',
+             'batch_size': 32,
+             'input_size': 5,
+             'hidden_size': 32,
+             'box_one_img': 21,
+             'num_layers': 2,
+             'output_size': 2,
+             'abort_learning': 30,
+             'run_name': '707_1',
+             'project_name': 'zzz_LSTM_cross_no_conf',
+             'wandb_flag': True,
+             'use_mse': False}
 
 if __name__ == '__main__':
 
@@ -87,24 +154,6 @@ if __name__ == '__main__':
         device = 'cpu'
     print("Device:", device)
 
-    para_dict = {'num_img': 50000,
-                 'ratio': 0.8,
-                 'epoch': 200,
-                 'model_path': '../Grasp_pred_model/results/LSTM_706_cross_test/',
-                 'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_03004/labels/',
-                 'learning_rate': 0.01, 'stepLR': 30, 'gamma': 0.1,
-                 'network': 'binary',
-                 'batch_size': 32,
-                 'input_size': 6,
-                 'hidden_size': 16,
-                 'box_one_img': 21,
-                 'num_layers': 2,
-                 'output_size': 2,
-                 'abort_learning': 40,
-                 'run_name': '706_test',
-                 'project_name': 'zzz_LSTM_cross',
-                 'wandb_flag': False,
-                 'use_mse': False}
     import wandb
     if para_dict['wandb_flag'] == True:
         wandb.config = para_dict
@@ -161,7 +210,8 @@ if __name__ == '__main__':
     ###########################################################################
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=para_dict['patience'], factor=para_dict['factor'])
     min_loss = np.inf
 
     all_train_loss = []
@@ -228,13 +278,14 @@ if __name__ == '__main__':
         np.savetxt(model_save_path + "train_loss_LSTM.txt", np.asarray(all_train_loss), fmt='%.06f')
         np.savetxt(model_save_path + "valid_loss_LSTM.txt", np.asarray(all_valid_loss), fmt='%.06f')
         t1 = time.time()
-        print(f"epoch{i}, time used: {round((t1 - t0), 2)}, lr: {scheduler.get_last_lr()}")
+        # print(f"epoch{i}, time used: {round((t1 - t0), 2)}, lr: {scheduler.get_last_lr()}")
+        print(f"epoch{i}, time used: {round((t1 - t0), 2)}, lr: {optimizer.param_groups[0]['lr']}")
 
 
         if abort_learning > para_dict['abort_learning']:
             break
         else:
-            scheduler.step()
+            scheduler.step(avg_valid_loss)
         current_epoch += 1
 
     if para_dict['wandb_flag'] == True:

@@ -53,5 +53,5 @@ if __name__ == '__main__':
     data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
     data_path = data_root + 'grasp_pile_706_laptop/grasp_data.csv'
     heatmap(data_path)
-    # EDA(data_path)
+    EDA(data_path)
     statistics(data_path)

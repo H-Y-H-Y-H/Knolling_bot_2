@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+import numpy as np
 
 class LSTMRegressor(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2, device=None, batch_size=None, criterion=None):
@@ -13,6 +14,12 @@ class LSTMRegressor(nn.Module):
         self.batch_size = batch_size
         self.criterion = criterion
         self.nllloss = nn.NLLLoss
+        self.success = 0
+        self.grasp_dominated_total = 0
+        self.grasp_dominated_success = 0
+        self.grasp_sucess = 0
+        self.pred_positive = 0
+        self.true_positive = 0
 
         # Define the LSTM layer
         binary = True
@@ -26,7 +33,7 @@ class LSTMRegressor(nn.Module):
         # Define the output layer
         self.linear = nn.Linear(self.hidden_dim * self.num_directions, output_dim).to(self.device)
         self.relu = nn.ReLU()
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.Softmax(dim=2)
 
     def forward(self, input):
 
@@ -58,7 +65,51 @@ class LSTMRegressor(nn.Module):
         mask = target.view(-1, ).ne(ignore_index)
         target = target.view(-1, )
         predict = predict.view(self.batch_size * predict.size(1), 2)
-
+        pred_mask = predict[mask]
+        tar_mask = target[mask]
         loss = self.criterion(predict[mask], target[mask].long())
 
         return loss
+
+    def detect_accuracy(self, predict, target, ignore_index = -100):
+
+        mask_tar = target.ne(ignore_index)
+        mask_pred = mask_tar.repeat(1, 1, 2)
+        # tar = target[mask_tar].cpu().detach().numpy().reshape(-1, 1)
+        # pred = predict[mask_pred].cpu().detach().numpy().reshape(-1, 2)
+
+        tar = target.cpu().detach().numpy()
+        pred = predict.cpu().detach().numpy()
+        pred_soft = self.softmax(predict).cpu().detach().numpy()
+
+        # print('aaa')
+
+        for i in range(pred_soft.shape[0]):
+            for j in range(pred_soft.shape[1]):
+
+                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
+
+                if tar[i, j, 0] == 1: # test the recall
+                    self.success += 1
+                    if criterion:
+                        self.grasp_sucess += 1
+                    if j != 0:
+                        # print('grasp_dominated')
+                        self.grasp_dominated_total += 1
+                        if criterion:
+                            self.grasp_dominated_success += 1
+                    elif criterion:
+                        pass
+                elif tar[i, j, 0] == -100:
+                    pass
+
+                if pred_soft[i, j, 1] > pred_soft[i, j, 0] and tar[i, j, 0] != -100: # test the precision
+                    self.pred_positive += 1
+                    if tar[i, j, 0] == 1:
+                        self.true_positive += 1
+
+
+            if np.all(tar[i] < 0.5):
+                print('here')
+
+        return self.success, self.grasp_sucess, self.grasp_dominated_total, self.grasp_dominated_success, self.pred_positive, self.true_positive

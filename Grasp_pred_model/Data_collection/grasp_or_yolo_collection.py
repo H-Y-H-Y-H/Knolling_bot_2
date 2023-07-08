@@ -1092,9 +1092,9 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 0
-    endnum =   200
-    thread = 4
+    startnum = 90000
+    endnum =   100000
+    thread = 9
     CLOSE_FLAG = False
     pile_flag = True
     use_lego_urdf = False
@@ -1103,11 +1103,11 @@ if __name__ == '__main__':
     save_img_flag = False
 
     init_pos_range = [[0.12, 0.18],
-                      [-0.04, 0.04],
+                      [-0.03, 0.03],
                       [0.05, 0.2]]
 
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop_2/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
