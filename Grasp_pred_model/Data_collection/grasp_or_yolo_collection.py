@@ -613,7 +613,8 @@ class Arm_env(gym.Env):
             p.stepSimulation()
             if self.is_render == True:
                 time.sleep(1/48)
-        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0, restitution=0.0)
+        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0, restitution=0.0,
+                                            contactDamping=0.001, contactStiffness=10000)
 
         # if try_grasp_flag == True:
         #     for i in range(len(self.obj_idx)):
@@ -626,7 +627,8 @@ class Arm_env(gym.Env):
             delete_index = []
             for i in range(len(self.obj_idx)):
                 p.changeDynamics(self.obj_idx[i], -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0001,
-                                 linearDamping=0.8, angularDamping=0.8, jointDamping=0, restitution=0.0)
+                                 linearDamping=0.8, angularDamping=0.8, jointDamping=0, restitution=0.0,
+                                            contactDamping=0.001, contactStiffness=10000)
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
@@ -1095,8 +1097,8 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 9000
-    endnum =   10000
+    startnum = 90000
+    endnum =   100000
     thread = 9
     CLOSE_FLAG = False
     pile_flag = True
@@ -1110,7 +1112,7 @@ if __name__ == '__main__':
                       [0.03, 0.05]]
 
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_707_laptop_test/'
+        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_708_laptop/'
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
@@ -1121,7 +1123,7 @@ if __name__ == '__main__':
     # np.random.seed(175)
     # random.seed(175)
 
-    env = Arm_env(max_step=1, is_render=True, endnum=endnum, save_img_flag=save_img_flag,
+    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
                   urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
