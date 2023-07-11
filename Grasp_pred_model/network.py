@@ -14,10 +14,10 @@ class LSTMRegressor(nn.Module):
         self.batch_size = batch_size
         self.criterion = criterion
         self.nllloss = nn.NLLLoss
-        self.success = 0
-        self.grasp_dominated_total = 0
-        self.grasp_dominated_success = 0
-        self.grasp_sucess = 0
+        self.tar_success = 0
+        self.grasp_dominated_tar_success = 0
+        self.grasp_dominated_pred_success = 0
+        self.pred_sucess = 0
         self.pred_positive = 0
         self.true_positive = 0
 
@@ -90,26 +90,25 @@ class LSTMRegressor(nn.Module):
                 criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
 
                 if tar[i, j, 0] == 1: # test the recall
-                    self.success += 1
+                    self.tar_success += 1
                     if criterion:
-                        self.grasp_sucess += 1
+                        self.pred_sucess += 1
                     if j != 0:
                         # print('grasp_dominated')
-                        self.grasp_dominated_total += 1
+                        self.grasp_dominated_tar_success += 1
                         if criterion:
-                            self.grasp_dominated_success += 1
+                            self.grasp_dominated_pred_success += 1
                     elif criterion:
                         pass
                 elif tar[i, j, 0] == -100:
-                    pass
+                    continue
 
-                if pred_soft[i, j, 1] > pred_soft[i, j, 0] and tar[i, j, 0] != -100: # test the precision
+                if criterion and tar[i, j, 0] != -100: # test the precision
                     self.pred_positive += 1
                     if tar[i, j, 0] == 1:
                         self.true_positive += 1
 
-
             if np.all(tar[i] < 0.5):
                 print('here')
 
-        return self.success, self.grasp_sucess, self.grasp_dominated_total, self.grasp_dominated_success, self.pred_positive, self.true_positive
+        return self.tar_success, self.pred_sucess, self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, self.pred_positive, self.true_positive

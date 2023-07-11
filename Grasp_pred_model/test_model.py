@@ -24,8 +24,11 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['model_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/'
+        para_dict['num_img'] = 100000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_707_1_cross_no_scaler/'
+        para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
+        para_dict['hidden_size'] = 32
         total_error = []
 
         num_img = para_dict['num_img']
@@ -78,24 +81,33 @@ if __name__ == '__main__':
                     valid_loss.append(loss.item())
                 else:
                     # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                    success, grasp_success, grasp_dominated_total, grasp_dominated_success, pred_positive, true_positive = model.detect_accuracy(predict=out, target=grasp_data_batch)
+                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, pred_positive, true_positive = model.detect_accuracy(predict=out, target=grasp_data_batch)
 
 
         # avg_valid_loss = np.mean(valid_loss)
 
         print('total_img', int(num_img - num_img * ratio))
 
-        print('total_true', success)
-        print('grasp_success', grasp_success)
-        print('Recall %.04f\n' % (grasp_success / success))
+        print('tar_success', tar_success)
+        print('pred_success', pred_success)
+        print('Recall %.04f\n' % (pred_success / tar_success))
 
         print('pred_positive', pred_positive)
         print('true_positive', true_positive)
         print('Precision %.04f\n' % (true_positive/pred_positive))
 
-        print('grasp_dominated_total', grasp_dominated_total)
-        print('grasp_dominated_success', grasp_dominated_success)
+        print('grasp_dominated_tar_success', grasp_dominated_tar_success)
+        print('grasp_dominated_pred_success', grasp_dominated_pred_success)
 
+        with open(para_dict['model_path'] + "test.txt", "w") as f:
+            f.write(f'tar_success: {tar_success}\n')
+            f.write(f'pred_success: {pred_success}\n')
+            f.write('Recall %.04f\n' % (pred_success / tar_success))
+            f.write(f'pred_positive: {pred_positive}\n')
+            f.write(f'true_positive: {true_positive}\n')
+            f.write('Precision %.04f\n' % (true_positive/pred_positive))
+            f.write(f'grasp_dominated_tar_success: {grasp_dominated_tar_success}\n')
+            f.write(f'grasp_dominated_pred_success: {grasp_dominated_pred_success}\n')
         print('over!')
 
 

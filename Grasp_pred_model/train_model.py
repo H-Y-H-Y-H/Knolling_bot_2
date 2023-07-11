@@ -17,7 +17,7 @@ import torch.nn.functional as F
 from sklearn.preprocessing import StandardScaler
 
 
-def data_split(path, total_num, ratio, max_box, test_model=False):
+def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=False):
 
     num_train = int(total_num * ratio)
 
@@ -27,47 +27,56 @@ def data_split(path, total_num, ratio, max_box, test_model=False):
     grasp_data_test = []
     data_total = []
 
-    # print('load the data ...')
-    # for i in tqdm(range(total_num)):
-    #     data_total.append(np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7))
-    # print('\ntotal data:', i)
-    # data_total = scaler.fit_transform(np.asarray(data_total))
-    #
-    # data_train = data_total[:num_train, :]
-    # data_test = data_total[num_train:, :]
-    # box_data_train = data_train[:, 1:]
-    # box_data_test = data_test[:, 1:]
-    # grasp_data_train = data_train[:, 0].reshape(-1, 1)
-    # grasp_data_test = data_test[:, 0].reshape(-1, 1)
-    #
-    # print('total train data', len(box_data_train))
-    # print('total test data', len(box_data_test))
+    if use_scaler == True:
+        scaler = StandardScaler()
+        print('load the data ...')
+        for i in tqdm(range(total_num)):
+            data_total.append(np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7))
+        print('\ntotal data:', i)
+        data_total = scaler.fit_transform(np.asarray(data_total))
 
-    if test_model == False:
-        print('load the train data ...')
-        for i in tqdm(range(num_train)):
-            data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-            box_data_train.append(data_train[:, 1:])
-            grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
-        print('\ntotal train data:', i)
+        data_train = data_total[:num_train, :]
+        data_test = data_total[num_train:, :]
+        box_data_train = data_train[:, 1:]
+        box_data_test = data_test[:, 1:]
+        grasp_data_train = data_train[:, 0].reshape(-1, 1)
+        grasp_data_test = data_test[:, 0].reshape(-1, 1)
 
-        print('load the valid data ...')
-        for i in tqdm(range(num_train, total_num)):
-            data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-            box_data_test.append(data_test[:, 1:])
-            grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
-        print('total valid data:', int(total_num - num_train))
+        print('total train data', len(box_data_train))
+        print('total test data', len(box_data_test))
 
         return box_data_train, box_data_test, grasp_data_train, grasp_data_test
-    else:
-        print('load the valid data ...')
-        for i in tqdm(range(num_train, total_num)):
-            data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
-            box_data_test.append(data_test[:, 1:])
-            grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
-        print('total valid data:', int(total_num - num_train))
 
-        return box_data_test, grasp_data_test
+    else:
+        if test_model == False:
+            print('load the train data ...')
+            for i in tqdm(range(num_train)):
+                data_train = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+                # if data_train[0, 0] == 1:
+                #     continue
+                box_data_train.append(data_train[:, 1:])
+                grasp_data_train.append(data_train[:, 0].reshape(-1, 1))
+            print('\ntotal train data:', len(grasp_data_train))
+
+            print('load the valid data ...')
+            for i in tqdm(range(num_train, total_num)):
+                data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+                # if data_test[0, 0] == 1:
+                #     continue
+                box_data_test.append(data_test[:, 1:])
+                grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+            print('total valid data:', len(grasp_data_test))
+
+            return box_data_train, box_data_test, grasp_data_train, grasp_data_test
+        else:
+            print('load the valid data ...')
+            for i in tqdm(range(num_train, total_num)):
+                data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+                box_data_test.append(data_test[:, 1:])
+                grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+            print('total valid data:', int(total_num - num_train))
+
+            return box_data_test, grasp_data_test
 
 def collate_fn(data):
     data.sort(key=lambda x: len(x[1]), reverse=True)
@@ -106,24 +115,25 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'num_img': 180000,
+para_dict = {'num_img': 500000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_707_2_cross_no_scaler/',
-             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707_no_scaler/labels/',
-             'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_710_1_cross_no_scaler/',
+             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_710/labels/',
+             'learning_rate': 0.01, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 32,
              'input_size': 6,
              'hidden_size': 32,
-             'box_one_img': 21,
+             'box_one_img': 10,
              'num_layers': 2,
              'output_size': 2,
              'abort_learning': 30,
-             'run_name': '707_2_',
+             'run_name': '710_1',
              'project_name': 'zzz_LSTM_cross_no_scaler',
              'wandb_flag': True,
-             'use_mse': False}
+             'use_mse': False,
+             'use_scaler': False}
 
 # # no conf
 # para_dict = {'num_img': 180000,
@@ -180,7 +190,7 @@ if __name__ == '__main__':
     ratio = para_dict['ratio']
     box_one_img = para_dict['box_one_img']
     data_path = para_dict['data_path']
-    box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img)
+    box_train, box_test, grasp_train, grasp_test = data_split(data_path, num_img, ratio, box_one_img, para_dict['use_scaler'])
 
     # create the train dataset and test dataset
     batch_size = para_dict['batch_size']
