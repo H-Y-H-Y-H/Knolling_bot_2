@@ -274,7 +274,7 @@ class Yolo_predict():
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=0.5, iou=0.8, device='cpu')
+        args = dict(model=model, source=img_path_input, conf=0.5, iou=0.8, device='cuda:1')
         use_python = True
         if use_python:
             from ultralytics import YOLO
@@ -282,7 +282,6 @@ class Yolo_predict():
         else:
             predictor = PosePredictor(overrides=args)
             predictor.predict_cli()
-        device = 'cuda:0'
 
         origin_img = cv2.imread(img_path_input)
 
@@ -1182,16 +1181,16 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 0, 'end_num': 100, 'thread': 9,
+    para_dict = {'start_num': 360000, 'end_num': 400000, 'thread': 9,
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
                  'try_grasp_flag': True,
                  'test_pile_detection': False,
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'gripper_threshold': 0.004, 'gripper_force': 0.3, 'gripper_sim_step': 10,
                  'move_threshold': 0.005, 'move_force': 1.5,
