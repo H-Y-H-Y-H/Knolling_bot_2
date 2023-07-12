@@ -84,12 +84,16 @@ class LSTMRegressor(nn.Module):
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
         for i in range(pred_soft.shape[0]):
-            if len(np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]) > 1:
+            pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
+            if len(pred_1_index) > 1:
                 # print('pred not only one result!')
                 # print(pred_soft[i])
                 self.not_one_result += 1
+                for j in range(len(pred_1_index)):
+                    if tar[i, pred_1_index[j], 0] != -100:
+                        pass
             for j in range(pred_soft.shape[1]):
-                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0] and pred_soft[i, j, 1] - pred_soft[i, j, 0] > 0.1
+                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
                 if tar[i, j, 0] == 1: # test the recall
                     self.tar_success += 1
                     if criterion:
