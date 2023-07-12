@@ -7,6 +7,7 @@ from tqdm import tqdm
 def data_preprocess_csv(path, data_num, start_index):
 
     max_conf_1 = 0
+    no_grasp = 0
     data = []
     i = 0
     origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
@@ -16,10 +17,14 @@ def data_preprocess_csv(path, data_num, start_index):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
         origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
         if origin_data[0, 0] == 1:
-            print(f'here {i}')
+            print(f'yolo dominated {i}')
             max_conf_1 += 1
+        if np.all(origin_data[:, 0] == 0):
+            print(f'no grasp {i}')
+            no_grasp += 1
         data = np.concatenate((data, origin_data), axis=0)
-    print(max_conf_1)
+    print('this is yolo dominated', max_conf_1)
+    print('this is no grasp', no_grasp)
 
     conf_1_index = []
     for i in range(len(data)):
@@ -74,8 +79,8 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         tar_index = np.where(data[:, -2] < 0)[0]
         if len(tar_index) > 0:
             pass
-            print('this is tar index', tar_index)
-            print('this is ori', data[tar_index, :])
+            # print('this is tar index', tar_index)
+            # print('this is ori', data[tar_index, :])
         data[tar_index, -2] += np.pi
         if len(data) > max_length:
             max_length = len(data)
@@ -83,7 +88,7 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         # normal_data = scaler.transform(data)
         # print('this is normal data\n', normal_data)
 
-        print(i + target_start_index - start_index)
+        # print(i + target_start_index - start_index)
         np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data, fmt='%.04f')
 
     print('this is the max length in the dataset', max_length)
@@ -117,7 +122,7 @@ def data_preprocess_np_standard(path, data_num, start_index):
         # print('after\n', data_after)
         np.savetxt(target_path + '%012d.txt' % (i - 20000), data_after, fmt='%.04f')
 
-    print('here')
+    # print('here')
 
 
 def data_move(source_path, target_path, source_start_index, data_num, target_start_index):
@@ -141,23 +146,24 @@ if __name__ == '__main__':
 
     # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
     # # data_path = data_root + 'grasp_dataset_03004/'
-    # data_path = data_root + 'grasp_pile_708_laptop/'
-    # # data_path = data_root + 'origin_labels_708_lab/'
+    # # data_path = data_root + 'grasp_pile_710_laptop/'
+    # data_path = data_root + 'origin_labels_710_lab/'
     #
-    # target_data_path = data_root + 'grasp_pile_708_laptop/'
-    # # target_data_path = data_root + 'origin_labels_708_lab/'
+    # # target_data_path = data_root + 'grasp_pile_710_laptop/'
+    # target_data_path = data_root + 'origin_labels_710_lab/'
     #
-    # data_num = 250000
+    # data_num = 150000
     # start_index = 0
     # target_start_index = 0
     # # data_preprocess_csv(data_path, data_num, start_index)
     # # data_preprocess_np_standard(data_path, data_num, start_index)
     # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
-    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_708_lab/labels/'
-    target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_710/labels/'
+    source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_710_lab/labels/'
+    # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_710_laptop/labels/'
+    target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/'
     os.makedirs(target_path, exist_ok=True)
     source_start_index = 0
-    target_start_index = 250000
-    num = 250000
+    target_start_index = 300000
+    num = 150000
     data_move(source_path, target_path, source_start_index, num, target_start_index)

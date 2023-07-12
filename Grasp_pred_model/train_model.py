@@ -70,10 +70,20 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             return box_data_train, box_data_test, grasp_data_train, grasp_data_test
         else:
             print('load the valid data ...')
+            max_conf_1 = 0
+            no_grasp = 0
             for i in tqdm(range(num_train, total_num)):
                 data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+                if data_test[0, 0] == 1:
+                    # print(f'yolo dominated {i}')
+                    max_conf_1 += 1
+                if np.all(data_test[:, 0] == 0):
+                    # print(f'no grasp {i}')
+                    no_grasp += 1
                 box_data_test.append(data_test[:, 1:])
                 grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
+            print('this is yolo dominated', max_conf_1)
+            print('this is no grasp', no_grasp)
             print('total valid data:', int(total_num - num_train))
 
             return box_data_test, grasp_data_test
@@ -115,21 +125,21 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'num_img': 500000,
+para_dict = {'num_img': 450000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_710_1_cross_no_scaler/',
-             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_710/labels/',
-             'learning_rate': 0.01, 'patience': 10, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_711_9_cross_no_scaler/',
+             'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/',
+             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 32,
              'input_size': 6,
              'hidden_size': 32,
              'box_one_img': 10,
-             'num_layers': 2,
+             'num_layers': 8,
              'output_size': 2,
-             'abort_learning': 30,
-             'run_name': '710_1',
+             'abort_learning': 20,
+             'run_name': '711_9',
              'project_name': 'zzz_LSTM_cross_no_scaler',
              'wandb_flag': True,
              'use_mse': False,

@@ -24,11 +24,12 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 100000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_707_1_cross_no_scaler/'
-        para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_706_laptop/labels/'
+        para_dict['num_img'] = 450000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_9_cross_no_scaler/'
+        para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
+        test_file_para = '711_9_'
         total_error = []
 
         num_img = para_dict['num_img']
@@ -99,7 +100,7 @@ if __name__ == '__main__':
         print('grasp_dominated_tar_success', grasp_dominated_tar_success)
         print('grasp_dominated_pred_success', grasp_dominated_pred_success)
 
-        with open(para_dict['model_path'] + "test.txt", "w") as f:
+        with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
             f.write(f'tar_success: {tar_success}\n')
             f.write(f'pred_success: {pred_success}\n')
             f.write('Recall %.04f\n' % (pred_success / tar_success))

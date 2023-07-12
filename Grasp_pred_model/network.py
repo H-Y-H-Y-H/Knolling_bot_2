@@ -109,6 +109,11 @@ class LSTMRegressor(nn.Module):
                         self.true_positive += 1
 
             if np.all(tar[i] < 0.5):
-                print('here')
+                # print('here')
+                pass
 
         return self.tar_success, self.pred_sucess, self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, self.pred_positive, self.true_positive
+
+    # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
+    # f.write(f'model_path: {para_dict["model_path"]}\n')
+    # f.write(f'data_path: {para_dict["data_path"]}\n')

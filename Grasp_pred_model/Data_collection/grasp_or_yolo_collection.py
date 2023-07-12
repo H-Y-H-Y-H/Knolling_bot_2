@@ -1181,7 +1181,7 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 9, 'end_num': 100, 'thread': 0,
+    para_dict = {'start_num': 290000, 'end_num': 300000, 'thread': 9,
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
@@ -1190,7 +1190,7 @@ if __name__ == '__main__':
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'gripper_threshold': 0.004, 'gripper_force': 0.3, 'gripper_sim_step': 10,
                  'move_threshold': 0.005, 'move_force': 1.5,
@@ -1205,8 +1205,8 @@ if __name__ == '__main__':
                  'dataset_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'}
 
     # 'C:/Users/24356/Desktop/knolling_dataset/'
-    np.random.seed(65)
-    random.seed(65)
+    # np.random.seed(65)
+    # random.seed(65)
 
     startnum = para_dict['start_num']
     endnum =   para_dict['end_num']
@@ -1221,8 +1221,8 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
 
     if try_grasp_flag == True:
-        data_root = para_dict['dataset_path'] + 'grasp_pile_710_laptop_test/'
-        with open(para_dict['dataset_path'] + 'grasp_pile_710_laptop_test_readme.txt', "w") as f:
+        data_root = para_dict['dataset_path'] + 'grasp_pile_710_laptop/'
+        with open(para_dict['dataset_path'] + 'grasp_pile_710_laptop_readme.txt', "w") as f:
             for key, value in para_dict.items():
                 f.write(key + ': ')
                 f.write(str(value) + '\n')
