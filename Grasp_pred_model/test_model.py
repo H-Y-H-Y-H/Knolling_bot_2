@@ -24,12 +24,13 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 450000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_9_cross_no_scaler/'
+        para_dict['num_img'] = 350000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_1_cross_no_scaler/'
         para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
-        test_file_para = '711_9_'
+        para_dict['num_layers'] = 2
+        test_file_para = '711_1_'
         total_error = []
 
         num_img = para_dict['num_img']
