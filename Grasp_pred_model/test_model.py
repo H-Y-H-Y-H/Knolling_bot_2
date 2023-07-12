@@ -24,20 +24,20 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 350000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_1_cross_no_scaler/'
+        para_dict['num_img'] = 450000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_9_cross_no_scaler/'
         para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
-        para_dict['num_layers'] = 2
-        test_file_para = '711_1_'
+        para_dict['num_layers'] = 8
+        test_file_para = '711_9_'
         total_error = []
 
         num_img = para_dict['num_img']
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
+        box_test, grasp_test, yolo_dominated = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -83,12 +83,13 @@ if __name__ == '__main__':
                     valid_loss.append(loss.item())
                 else:
                     # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, pred_positive, true_positive = model.detect_accuracy(predict=out, target=grasp_data_batch)
+                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, pred_positive, true_positive, not_one_result = model.detect_accuracy(predict=out, target=grasp_data_batch)
 
 
         # avg_valid_loss = np.mean(valid_loss)
 
         print('total_img', int(num_img - num_img * ratio))
+        print('not one result', not_one_result)
 
         print('tar_success', tar_success)
         print('pred_success', pred_success)
@@ -102,6 +103,8 @@ if __name__ == '__main__':
         print('grasp_dominated_pred_success', grasp_dominated_pred_success)
 
         with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
+            f.write(f'total img: {int(num_img - num_img * ratio)}\n')
+            f.write(f'yolo dominated: {yolo_dominated}\n')
             f.write(f'tar_success: {tar_success}\n')
             f.write(f'pred_success: {pred_success}\n')
             f.write('Recall %.04f\n' % (pred_success / tar_success))

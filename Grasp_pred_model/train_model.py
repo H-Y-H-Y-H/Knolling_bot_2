@@ -90,7 +90,7 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             print('this is grasp dominated', grasp_dominated)
             print('total valid data:', int(total_num - num_train))
 
-            return box_data_test, grasp_data_test
+            return box_data_test, grasp_data_test, yolo_dominated
 
 def collate_fn(data):
     data.sort(key=lambda x: len(x[1]), reverse=True)

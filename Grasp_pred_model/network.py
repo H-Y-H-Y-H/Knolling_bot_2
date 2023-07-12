@@ -20,6 +20,7 @@ class LSTMRegressor(nn.Module):
         self.pred_sucess = 0
         self.pred_positive = 0
         self.true_positive = 0
+        self.not_one_result = 0
 
         # Define the LSTM layer
         binary = True
@@ -82,13 +83,13 @@ class LSTMRegressor(nn.Module):
         pred = predict.cpu().detach().numpy()
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
-        # print('aaa')
-
         for i in range(pred_soft.shape[0]):
+            if len(np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]) > 1:
+                # print('pred not only one result!')
+                # print(pred_soft[i])
+                self.not_one_result += 1
             for j in range(pred_soft.shape[1]):
-
-                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
-
+                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0] and pred_soft[i, j, 1] - pred_soft[i, j, 0] > 0.1
                 if tar[i, j, 0] == 1: # test the recall
                     self.tar_success += 1
                     if criterion:
@@ -112,7 +113,8 @@ class LSTMRegressor(nn.Module):
                 # print('here')
                 pass
 
-        return self.tar_success, self.pred_sucess, self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, self.pred_positive, self.true_positive
+        return self.tar_success, self.pred_sucess, self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, \
+               self.pred_positive, self.true_positive, self.not_one_result
 
     # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
     # f.write(f'model_path: {para_dict["model_path"]}\n')
