@@ -70,20 +70,24 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             return box_data_train, box_data_test, grasp_data_train, grasp_data_test
         else:
             print('load the valid data ...')
-            max_conf_1 = 0
+            yolo_dominated = 0
             no_grasp = 0
+            grasp_dominated = 0
             for i in tqdm(range(num_train, total_num)):
                 data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
                 if data_test[0, 0] == 1:
                     # print(f'yolo dominated {i}')
-                    max_conf_1 += 1
+                    yolo_dominated += 1
                 if np.all(data_test[:, 0] == 0):
                     # print(f'no grasp {i}')
                     no_grasp += 1
+                elif data_test[0, 0] != 1:
+                    grasp_dominated += 1
                 box_data_test.append(data_test[:, 1:])
                 grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
-            print('this is yolo dominated', max_conf_1)
+            print('this is yolo dominated', yolo_dominated)
             print('this is no grasp', no_grasp)
+            print('this is grasp dominated', grasp_dominated)
             print('total valid data:', int(total_num - num_train))
 
             return box_data_test, grasp_data_test
