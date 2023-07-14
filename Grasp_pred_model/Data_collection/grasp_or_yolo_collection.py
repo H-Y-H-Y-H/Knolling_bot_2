@@ -1,7 +1,6 @@
 import pybullet as p
 import pybullet_data as pd
 import os
-import gym
 import numpy as np
 import random
 import math
@@ -353,7 +352,7 @@ class Yolo_predict():
 
         return pred_result, pred_conf
 
-class Arm_env(gym.Env):
+class Arm_env():
 
     def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
                  z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False,

@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import random
 import os
-sys.path.append('/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/')
+sys.path.append('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/')
 from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
 from network import LSTMRegressor
 import torch
@@ -24,13 +24,13 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 450000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_711_9_cross_no_scaler/'
-        para_dict['data_path'] = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_711/labels/'
+        para_dict['num_img'] = 1150000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_714_2_cross_no_scaler/'
+        para_dict['data_path'] = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
-        test_file_para = '711_9_'
+        test_file_para = '714_2_'
         total_error = []
 
         num_img = para_dict['num_img']
@@ -101,6 +101,8 @@ if __name__ == '__main__':
 
         print('grasp_dominated_tar_success', grasp_dominated_tar_success)
         print('grasp_dominated_pred_success', grasp_dominated_pred_success)
+        print('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_success / grasp_dominated_tar_success))
+        print('Yolo_success_pred_rate %.04f' % (yolo_dominated / int(num_img - num_img * ratio)))
 
         with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
             f.write(f'total img: {int(num_img - num_img * ratio)}\n')
@@ -113,6 +115,8 @@ if __name__ == '__main__':
             f.write('Precision %.04f\n' % (true_positive/pred_positive))
             f.write(f'grasp_dominated_tar_success: {grasp_dominated_tar_success}\n')
             f.write(f'grasp_dominated_pred_success: {grasp_dominated_pred_success}\n')
+            f.write('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_success / grasp_dominated_tar_success))
+            f.write('Yolo_success_pred_rate %.04f\n' % (yolo_dominated / int(num_img - num_img * ratio)))
         print('over!')
 
 
