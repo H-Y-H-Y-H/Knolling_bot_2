@@ -129,21 +129,23 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'num_img': 1150000,
+para_dict = {'decive': 'cuda:1',
+             'num_img': 1650000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_714_3_cross_no_scaler/',
-             'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/',
-             'learning_rate': 0.001, 'patience': 20, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_714_12_cross_no_scaler/',
+             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714/labels/',
+             'learning_rate': 0.0001, 'patience': 20, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 32,
              'input_size': 6,
              'hidden_size': 32,
              'box_one_img': 10,
-             'num_layers': 4,
+             'num_layers': 8,
              'output_size': 2,
              'abort_learning': 30,
-             'run_name': '714_3',
+             'set_dropout': 0.05,
+             'run_name': '714_12',
              'project_name': 'zzz_LSTM_cross_no_scaler',
              'wandb_flag': True,
              'use_mse': False,
@@ -172,7 +174,7 @@ para_dict = {'num_img': 1150000,
 if __name__ == '__main__':
 
     if torch.cuda.is_available():
-        device = 'cuda:0'
+        device = para_dict['decive']
 
     else:
         device = 'cpu'
@@ -227,7 +229,7 @@ if __name__ == '__main__':
     else:
         model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size,
                               num_layers=num_layers,
-                              batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss())
+                              batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss(), set_dropout=para_dict['set_dropout'])
 
     ###########################################################################
     # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))

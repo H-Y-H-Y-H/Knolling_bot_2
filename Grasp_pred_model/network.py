@@ -4,7 +4,7 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 import numpy as np
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2, device=None, batch_size=None, criterion=None):
+    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2, device=None, batch_size=None, criterion=None, set_dropout=0.05):
         super(LSTMRegressor, self).__init__()
 
         self.input_dim = input_dim
@@ -25,7 +25,7 @@ class LSTMRegressor(nn.Module):
         # Define the LSTM layer
         binary = True
         self.lstm = nn.LSTM(self.input_dim, self.hidden_dim, self.num_layers,
-                            bidirectional=binary, batch_first=True, dropout=0.05).to(device)
+                            bidirectional=binary, batch_first=True, dropout=set_dropout).to(device)
         if binary == False:
             self.num_directions = 1
         else:

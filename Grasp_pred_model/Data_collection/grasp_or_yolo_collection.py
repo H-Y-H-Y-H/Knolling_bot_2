@@ -266,14 +266,14 @@ class Yolo_predict():
 
     def yolov8_predict(self, cfg=DEFAULT_CFG, use_python=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
-        model = '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
-        # model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
+        # model = '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
+        model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # model = 'C:/Users/24356/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # img = adjust_img(img)
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=para_dict['yolo_conf'], iou=para_dict['yolo_iou'], device='cuda:0')
+        args = dict(model=model, source=img_path_input, conf=para_dict['yolo_conf'], iou=para_dict['yolo_iou'], device=para_dict['device'])
         use_python = True
         if use_python:
             from ultralytics import YOLO
@@ -1180,8 +1180,8 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 210000, 'end_num': 240000, 'thread': 3,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8,
+    para_dict = {'start_num': 80000, 'end_num': 100000, 'thread': 4,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
@@ -1202,8 +1202,9 @@ if __name__ == '__main__':
                  'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
                  'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
                  'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
-                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'}
+                 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'}
 
+    # 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'C:/Users/24356/Desktop/knolling_dataset/'
     # np.random.seed(169)
@@ -1222,8 +1223,8 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
 
     if try_grasp_flag == True:
-        data_root = para_dict['dataset_path'] + 'grasp_pile_714_laptop/'
-        with open(para_dict['dataset_path'] + 'grasp_pile_714_laptop_readme.txt', "w") as f:
+        data_root = para_dict['dataset_path'] + 'grasp_pile_715_lab/'
+        with open(para_dict['dataset_path'] + 'grasp_pile_715_lab_readme.txt', "w") as f:
             for key, value in para_dict.items():
                 f.write(key + ': ')
                 f.write(str(value) + '\n')
@@ -1236,7 +1237,8 @@ if __name__ == '__main__':
     mm2px = 530 / 0.34
 
     env = Arm_env(max_step=1, is_render=para_dict['is_render'], endnum=endnum, save_img_flag=save_img_flag,
-                  urdf_path='/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
+                  urdf_path='/home/ubuntu/Desktop/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
+    # urdf_path='/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/'
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
     if try_grasp_flag == True:
