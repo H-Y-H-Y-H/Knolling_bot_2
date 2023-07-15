@@ -273,7 +273,7 @@ class Yolo_predict():
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=para_dict['yolo_conf'], iou=para_dict['yolo_iou'], device='cuda:0')
+        args = dict(model=model, source=img_path_input, conf=0.5, iou=0.8, device='cuda:0')
         use_python = True
         if use_python:
             from ultralytics import YOLO
@@ -527,15 +527,13 @@ class Arm_env():
                     wall_pos = np.random.uniform(0, 0.20)
                     p.setGravity(-10, 0, -15)
                     wallid = p.loadURDF(os.path.join(self.urdf_path, "plane_2.urdf"), basePosition=[wall_pos, 0, 0],
-                                        baseOrientation=p.getQuaternionFromEuler([0, 1.57, 0]), useFixedBase=1,
-                                        flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+                                        baseOrientation=p.getQuaternionFromEuler([0, 1.57, 0]), useFixedBase=1)
                 else:  # y_mode
                     wall_flag = 1
                     wall_pos = np.random.uniform(-0.18, 0.10)
                     p.setGravity(0, -10, -15)
                     wallid = p.loadURDF(os.path.join(self.urdf_path, "plane_2.urdf"), basePosition=[0, wall_pos, 0],
-                                        baseOrientation=p.getQuaternionFromEuler([-1.57, 0, 0]), useFixedBase=1,
-                                        flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+                                        baseOrientation=p.getQuaternionFromEuler([-1.57, 0, 0]), useFixedBase=1)
 
                 p.changeVisualShape(wallid, -1, rgbaColor=[1, 1, 1, 0])
 
@@ -613,8 +611,8 @@ class Arm_env():
             temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
             temp_box.save(box_path + 'box_%d.urdf' % (i))
             self.obj_idx.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
-                                           baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
-                                           flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                                           baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0))
+            # self.obj_idx.append(p.loadURDF(self.urdf_path + 'lego.urdf', basePosition=rdm_pos[i], baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0))
             r = np.random.uniform(0, 0.9)
             g = np.random.uniform(0, 0.9)
             b = np.random.uniform(0, 0.9)
@@ -675,7 +673,7 @@ class Arm_env():
                 p.removeBody(self.obj_idx[i])
                 self.obj_idx.pop(i)
                 self.gt_lwh_list = np.delete(self.gt_lwh_list, i, axis=0)
-            for _ in range(int(100)):
+            for _ in range(int(200)):
                 # time.sleep(1/96)
                 p.stepSimulation()
 
@@ -714,7 +712,7 @@ class Arm_env():
                 np.savetxt(data_root + 'total_error.txt', self.total_error)
             quit()
         manipulator_before, pred_lwh_list, pred_conf = self.get_obs(format='grasp', data_root=data_root, epoch=self.img_per_epoch + img_index_start)
-
+        # manipulator_before[:, 2] -= 0.006
         if len(manipulator_before) <= 1:
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
@@ -794,7 +792,8 @@ class Arm_env():
                             last_pos, _, _, success_grasp_flag = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j],
                                                                            origin_left_pos=left_pos, origin_right_pos=right_pos, index=j)
                             if success_grasp_flag == False:
-                                break
+                                pass
+                                # break
                         else:
                             last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
                         last_ori = np.copy(trajectory_ori_list[j])
@@ -983,7 +982,7 @@ class Arm_env():
                         print('during moving, fail')
                         break
                     if self.is_render:
-                        time.sleep(1 / 120)
+                        time.sleep(1 / 96)
                 if move_success_flag == False:
                     break
             else:
@@ -1177,11 +1176,9 @@ class Arm_env():
         my_im[:, :, 2] = temp
         return my_im
 
-
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 210000, 'end_num': 240000, 'thread': 3,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8,
+    para_dict = {'start_num': 0, 'end_num': 100, 'thread': 0,
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
@@ -1190,24 +1187,24 @@ if __name__ == '__main__':
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
                  'move_threshold': 0.005, 'move_force': 3,
-                 'box_lateral_friction': 0.8, 'box_spinning_friction': 0.8, 'box_rolling_friction': 0.0,
+                 'box_lateral_friction': 1, 'box_spinning_friction': 1, 'box_rolling_friction': 0.0,
                  'box_linear_damping': 0.01, 'box_angular_damping': 0.01, 'box_joint_damping': 0.1,
-                 'box_restitution': 0, 'box_contact_damping': 100, 'box_contact_stiffness': 1000000,
+                 'box_restitution': 0, 'box_contact_damping': 10, 'box_contact_stiffness': 1000000,
                  'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
                  'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
-                 'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
+                 'gripper_restitution': 0, 'gripper_contact_damping': 10, 'gripper_contact_stiffness': 1000000,
                  'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
                  'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
                  'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'}
 
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'C:/Users/24356/Desktop/knolling_dataset/'
-    # np.random.seed(169)
-    # random.seed(169)
+    np.random.seed(73)
+    random.seed(73)
 
     startnum = para_dict['start_num']
     endnum =   para_dict['end_num']
@@ -1222,8 +1219,8 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
 
     if try_grasp_flag == True:
-        data_root = para_dict['dataset_path'] + 'grasp_pile_714_laptop/'
-        with open(para_dict['dataset_path'] + 'grasp_pile_714_laptop_readme.txt', "w") as f:
+        data_root = para_dict['dataset_path'] + 'grasp_pile_714_lab/'
+        with open(para_dict['dataset_path'] + 'grasp_pile_714_lab_readme.txt', "w") as f:
             for key, value in para_dict.items():
                 f.write(key + ': ')
                 f.write(str(value) + '\n')
@@ -1239,59 +1236,13 @@ if __name__ == '__main__':
                   urdf_path='/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
+
     if try_grasp_flag == True:
         exist_img_num = startnum
         while True:
             num_item = int(np.random.uniform(min_box_num, max_box_num + 1))
             img_per_epoch = env.reset_table(close_flag=CLOSE_FLAG, use_lego_urdf=use_lego_urdf, data_root=data_root,
-                                             num_item=num_item, thread=thread, epoch=exist_img_num,
-                                             pile_flag=pile_flag,
-                                             try_grasp_flag=try_grasp_flag)
+                                            num_item=num_item, thread=thread, epoch=exist_img_num,
+                                            pile_flag=pile_flag,
+                                            try_grasp_flag=try_grasp_flag)
             exist_img_num += img_per_epoch
-    else:
-        conf_crowded_total = []
-        conf_normal_total = []
-        for epoch in tqdm(range(startnum,endnum)):
-            # num_item = random.randint(1, 5)
-            num_item = int(np.random.uniform(min_box_num, max_box_num + 1))
-            num_2x2 = np.random.randint(1, 5)
-            num_2x3 = np.random.randint(1, 5)
-            num_2x4 = np.random.randint(1, 5)
-            lego_list = np.array([num_2x2, num_2x3, num_2x4])
-
-            if test_pile_detection == False:
-                state, lw_list, new_num_list = env.reset_table(close_flag=CLOSE_FLAG, use_lego_urdf=use_lego_urdf, data_root=data_root,
-                                             lego_list=lego_list, num_item=num_item, thread=thread, epoch=epoch, pile_flag=pile_flag, try_grasp_flag=try_grasp_flag)
-                my_im2 = env.get_image()[:, :, :3]
-                if len(state) == 0:
-                    cv2.imwrite(os.path.join(data_root, 'origin_images/%012d.png') % epoch, my_im2)
-                    np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % epoch), np.array([]), fmt='%.04f')
-                else:
-                    label = np.zeros((new_num_list, 10))
-                    all_pos = state[:, :3]
-                    all_ori = state[:, 3:]
-                    corner_list = []
-                    for j in range(new_num_list):
-                        if j >= new_num_list:
-                            element = np.zeros(9)
-                            # element = np.append(element, 0)
-                            label.append(element)
-                        else:
-                            pos = all_pos[j]
-                            ori = all_ori[j]
-                            element = np.concatenate(([1], pos, lw_list[j], ori))
-                        label[j] = element
-                    cv2.imwrite(os.path.join(data_root, 'origin_images/%012d.png') % epoch, my_im2)
-                    np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % epoch), label, fmt='%.04f')
-            else:
-                conf_test, lw_list, new_num_list = env.reset_table(close_flag=CLOSE_FLAG, use_lego_urdf=use_lego_urdf,
-                                                               data_root=data_root,
-                                                               lego_list=lego_list, num_item=num_item, thread=thread,
-                                                               epoch=epoch, pile_flag=pile_flag,
-                                                               try_grasp_flag=try_grasp_flag, test_pile_detection=test_pile_detection)
-                conf_crowded_total.append(conf_test[0])
-                conf_normal_total.append(conf_test[1])
-        conf_crowded_total = np.mean(np.asarray(conf_crowded_total))
-        conf_normal_total = np.mean(np.asarray(conf_normal_total))
-        print('this is conf crowded total', conf_crowded_total)
-        print('this is conf normal total', conf_normal_total)
