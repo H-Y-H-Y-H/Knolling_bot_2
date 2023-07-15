@@ -129,13 +129,13 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'decive': 'cuda:1',
-             'num_img': 1650000,
+para_dict = {'decive': 'cuda:0',
+             'num_img': 240000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_714_12_cross_no_scaler/',
-             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714/labels/',
-             'learning_rate': 0.0001, 'patience': 20, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_715_3_cross_no_scaler_heavy/',
+             'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_714_laptop/labels/',
+             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 32,
              'input_size': 6,
@@ -143,13 +143,15 @@ para_dict = {'decive': 'cuda:1',
              'box_one_img': 10,
              'num_layers': 8,
              'output_size': 2,
-             'abort_learning': 30,
+             'abort_learning': 20,
              'set_dropout': 0.05,
-             'run_name': '714_12',
-             'project_name': 'zzz_LSTM_cross_no_scaler',
+             'run_name': '715_3',
+             'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
              'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False}
+
+# 'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_pile_714_laptop/labels/',
 
 # # no conf
 # para_dict = {'num_img': 180000,
