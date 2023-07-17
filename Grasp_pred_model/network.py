@@ -17,6 +17,8 @@ class LSTMRegressor(nn.Module):
         self.tar_success = 0
         self.grasp_dominated_tar_success = 0
         self.grasp_dominated_pred_success = 0
+        self.yolo_dominated_tar_success = 0
+        self.yolo_dominated_pred_success = 0
         self.pred_sucess = 0
         self.pred_positive = 0
         self.true_positive = 0
@@ -103,6 +105,10 @@ class LSTMRegressor(nn.Module):
                         self.grasp_dominated_tar_success += 1
                         if criterion:
                             self.grasp_dominated_pred_success += 1
+                    if j == 0:
+                        self.yolo_dominated_tar_success += 1
+                        if criterion:
+                            self.yolo_dominated_pred_success += 1
                     elif criterion:
                         pass
                 elif tar[i, j, 0] == -100:
@@ -117,8 +123,10 @@ class LSTMRegressor(nn.Module):
                 # print('here')
                 pass
 
-        return self.tar_success, self.pred_sucess, self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, \
-               self.pred_positive, self.true_positive, self.not_one_result
+        return self.tar_success, self.pred_sucess, \
+               self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, \
+               self.pred_positive, self.true_positive, self.not_one_result, \
+               self.yolo_dominated_tar_success, self.yolo_dominated_pred_success
 
     # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
     # f.write(f'model_path: {para_dict["model_path"]}\n')

@@ -130,27 +130,28 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'decive': 'cuda:0',
-             'num_img': 240000,
+             'num_img': 2130000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_715_3_cross_no_scaler_heavy/',
-             'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_714_laptop/labels/',
-             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_716_4_cross_no_scaler_714_14/',
+             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714/labels/',
+             'learning_rate': 0.0001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
-             'batch_size': 32,
+             'batch_size': 128,
              'input_size': 6,
-             'hidden_size': 32,
+             'hidden_size': 64,
              'box_one_img': 10,
-             'num_layers': 8,
+             'num_layers': 4,
              'output_size': 2,
              'abort_learning': 20,
-             'set_dropout': 0.05,
-             'run_name': '715_3',
-             'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
+             'set_dropout': 0.1,
+             'run_name': '716_4',
+             'project_name': 'zzz_LSTM_cross_no_scaler',
              'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False}
 
+# 'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_714_laptop/labels/'
 # 'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_pile_714_laptop/labels/',
 
 # # no conf
@@ -233,9 +234,9 @@ if __name__ == '__main__':
                               num_layers=num_layers,
                               batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss(), set_dropout=para_dict['set_dropout'])
 
-    ###########################################################################
-    # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
-    ###########################################################################
+    #########################################################################
+    model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    #########################################################################
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
