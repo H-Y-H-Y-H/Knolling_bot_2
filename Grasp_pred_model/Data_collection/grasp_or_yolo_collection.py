@@ -1181,17 +1181,17 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 240000, 'end_num': 260000, 'thread': 0,
+    para_dict = {'start_num': 420000, 'end_num': 480000, 'thread': 3,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
                  'try_grasp_flag': True,
                  'test_pile_detection': False,
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
@@ -1234,8 +1234,8 @@ if __name__ == '__main__':
     # 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'C:/Users/24356/Desktop/knolling_dataset/'
-    np.random.seed(175)
-    random.seed(175)
+    # np.random.seed(175)
+    # random.seed(175)
 
     startnum = para_dict['start_num']
     endnum =   para_dict['end_num']
@@ -1250,8 +1250,8 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
 
     if try_grasp_flag == True:
-        data_root = para_dict['dataset_path'] + 'grasp_pile_714_laptop_test/'
-        with open(para_dict['dataset_path'] + 'grasp_pile_714_laptop_test_readme.txt', "w") as f:
+        data_root = para_dict['dataset_path'] + 'grasp_pile_714_laptop/'
+        with open(para_dict['dataset_path'] + 'grasp_pile_714_laptop_readme.txt', "w") as f:
             for key, value in para_dict.items():
                 f.write(key + ': ')
                 f.write(str(value) + '\n')

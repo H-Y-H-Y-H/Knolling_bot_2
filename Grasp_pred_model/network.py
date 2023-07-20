@@ -4,7 +4,9 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 import numpy as np
 
 class LSTMRegressor(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2, device=None, batch_size=None, criterion=None, set_dropout=0.05):
+    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2,
+                 device=None, batch_size=None, criterion=None, set_dropout=0.05,
+                 hidden_node_1=None, hidden_node_2=None):
         super(LSTMRegressor, self).__init__()
 
         self.input_dim = input_dim
@@ -32,7 +34,9 @@ class LSTMRegressor(nn.Module):
             self.num_directions = 2
 
         # Define the output layer
-        self.linear = nn.Linear(self.hidden_dim * self.num_directions, output_dim).to(self.device)
+        self.linear1 = nn.Linear(self.hidden_dim * self.num_directions, hidden_node_1).to(self.device)
+        self.linear2 = nn.Linear(hidden_node_1, hidden_node_2).to(self.device)
+        self.linear3 = nn.Linear(hidden_node_2, output_dim).to(self.device)
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=2)
 
@@ -51,7 +55,9 @@ class LSTMRegressor(nn.Module):
         if self.criterion == None:
             out = self.softmax(self.linear(unpacked_out))
         else:
-            out = self.linear(unpacked_out)
+            out = self.linear1(unpacked_out)
+            out = self.linear2(out)
+            out = self.linear3(out)
         return out
 
     def maskedMSELoss(self, predict, target, ignore_index = -100):

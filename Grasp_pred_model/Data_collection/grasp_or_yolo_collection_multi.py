@@ -1,7 +1,6 @@
 import pybullet as p
 import pybullet_data as pd
 import os
-import gym
 import numpy as np
 import random
 import math
@@ -31,114 +30,6 @@ def change_sequence(pos_before):
     distance = np.linalg.norm(pos_before[:, :2] - origin_point, axis=1)
     order = np.argsort(distance)
     return order
-
-# def find_corner(x,y,type,yaw):
-#
-#     gamma = yaw
-#
-#     rot_z = [[np.cos(gamma), -np.sin(gamma)],
-#              [np.sin(gamma), np.cos(gamma)]]
-#
-#     pos = [x, y]
-#
-#     rot_z = np.asarray(rot_z)
-#
-#     if type == 0:
-#         c1 = [16/2,16/2]
-#         c2 = [16/2,-16/2]
-#         c3 = [-16/2,16/2]
-#         c4 = [-16/2,-16/2]
-#
-#     elif type == 1:
-#         c1 = [24/2,16/2]
-#         c2 = [24/2,-16/2]
-#         c3 = [-24/2,16/2]
-#         c4 = [-24/2,-16/2]
-#
-#     elif type == 2:
-#         c1 = [32/2,16/2]
-#         c2 = [32/2,-16/2]
-#         c3 = [-32/2,16/2]
-#         c4 = [-32/2,-16/2]
-#
-#     c1,c2,c3,c4 = np.asarray(c1),np.asarray(c2),np.asarray(c3),np.asarray(c4)
-#     c1 = c1/1000
-#     c2 = c2/1000
-#     c3 = c3/1000
-#     c4 = c4/1000
-#
-#     corn1 = np.dot(rot_z,c1)
-#     corn2 = np.dot(rot_z,c2)
-#     corn3 = np.dot(rot_z,c3)
-#     corn4 = np.dot(rot_z,c4)
-#
-#     corn11 = [corn1[0] + x, corn1[1] + y]
-#     corn22 = [corn2[0] + x, corn2[1] + y]
-#     corn33 = [corn3[0] + x, corn3[1] + y]
-#     corn44 = [corn4[0] + x, corn4[1] + y]
-#
-#     return corn11, corn22, corn33, corn44
-
-
-# def resolve_img(corn1,corn2,corn3,corn4):
-#
-#     along_axis = [abs(np.arctan(corn1[1] / (corn1[0]-0.15))), abs(np.arctan(corn2[1] / (corn2[0]-0.15))), abs(np.arctan(corn3[1] / (corn3[0]-0.15))),
-#                   abs(np.arctan(corn4[1] / (corn4[0]-0.15)))]
-#
-#     # print(along_axis)
-#
-#
-#     cube_h = 12/1000 # cube height (m)
-#
-#     dist1 = math.dist([0.15, 0], [corn1[0], corn1[1]])
-#     dist2 = math.dist([0.15, 0], [corn2[0], corn2[1]])
-#     dist3 = math.dist([0.15, 0], [corn3[0], corn3[1]])
-#     dist4 = math.dist([0.15, 0], [corn4[0], corn4[1]])
-#
-#     # print(dist1,dist2,dist3,dist4)
-#     add_value1 = (cube_h * dist1) / (0.387 - cube_h)
-#     add_value2 = (cube_h * dist2) / (0.387 - cube_h)
-#     add_value3 = (cube_h * dist3) / (0.387 - cube_h)
-#     add_value4 = (cube_h * dist4) / (0.387 - cube_h)
-#
-#     # new_dist1 = dist1 + add_value1
-#     # new_dist2 = dist2 + add_value2
-#     # new_dist3 = dist3 + add_value3
-#     # new_dist4 = dist4 + add_value4
-#
-#
-#     # sign = lambda x: math.copysign(1, x)
-#
-#     corn1[0] = corn1[0] + np.sign(corn1[0]-0.15) * add_value1 * math.cos(along_axis[0])
-#     corn1[1] = corn1[1] + np.sign(corn1[1]) * add_value1 * math.sin(along_axis[0])
-#
-#     corn2[0] = corn2[0] + np.sign(corn2[0]-0.15) * add_value2 * math.cos(along_axis[1])
-#     corn2[1] = corn2[1] + np.sign(corn2[1]) * add_value2 * math.sin(along_axis[1])
-#
-#     corn3[0] = corn3[0] + np.sign(corn3[0]-0.15) * add_value3 * math.cos(along_axis[2])
-#     corn3[1] = corn3[1] + np.sign(corn3[1]) * add_value3 * math.sin(along_axis[2])
-#
-#     corn4[0] = corn4[0] + np.sign(corn4[0]-0.15) * add_value4 * math.cos(along_axis[3])
-#     corn4[1] = corn4[1] + np.sign(corn4[1]) * add_value4 * math.sin(along_axis[3])
-#
-#     return corn1, corn2, corn3, corn4
-
-# def xyz_resolve(x,y):
-#
-#     dist = math.dist([0.15, 0], [x, y])
-#
-#     cube_h = 12/1000
-#
-#     add_value = (cube_h * dist) / (0.387 - cube_h)
-#
-#     along_axis = abs(np.arctan(y/(x-0.15)))
-#
-#     # sign = lambda x: math.copysign(1, x)
-#
-#     x_new = x + np.sign(x-0.15) * add_value * math.cos(along_axis)
-#     y_new = y + np.sign(y) * add_value * math.sin(along_axis)
-#
-#     return x_new, y_new
 
 class PosePredictor(DetectionPredictor):
 
@@ -244,9 +135,10 @@ class Yolo_predict():
         # y_px_center = y_mm_center * mm2px + 320
         x_px_center = scaled_xylw[1] * 480
         y_px_center = scaled_xylw[0] * 640
-        height = height_data[int(x_px_center), int(y_px_center)] - 0.01
-        if height <= 0.006:
-            height = 0.006
+        z_mm_center = height_data[int(x_px_center), int(y_px_center)] - 0.01
+        if z_mm_center <= 0.006:
+            z_mm_center = 0.006
+        # z_mm_center = 0.006
 
         # this is the knolling sequence, not opencv!!!!
         keypoints_x = ((keypoints[:, 1] * 480 - 6) / mm2px).reshape(-1, 1)
@@ -326,7 +218,7 @@ class Yolo_predict():
         label2 = 'index: %d, x: %.4f, y: %.4f' % (index, plot_x, plot_y)
         label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
         if label:
-            w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, height
+            w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
             # cv2.rectangle(self.im, p1, p2, color, 0, cv2.LINE_AA)  # filled
             if truth_flag == True:
@@ -340,8 +232,8 @@ class Yolo_predict():
                                  0, zzz_lw / 3, (0, 0, 255), thickness=tf, lineType=cv2.LINE_AA)
                 im = cv2.putText(im, label2, (p1[0] - 50, p1[1] + 32 if outside else p1[1] + h + 12),
                                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
-                # m = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
-                #                 0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
+                m = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
+                                0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
             # im = cv2.putText(im, label1, (c1[0] - 70, c1[1] - 35), 0, tl / 3, color, thickness=tf, lineType=cv2.LINE_AA)
         ############### zzz plot the box ###############
 
@@ -368,18 +260,20 @@ class Yolo_predict():
             im = cv2.circle(im, (int(x_coord), int(y_coord)), radius, color_k, -1, lineType=cv2.LINE_AA)
         ############### zzz plot the keypoints ###############
 
-        result = np.concatenate((box_center, [height], [round(length, 4)], [round(width, 4)], [my_ori]))
+        result = np.concatenate((box_center, [z_mm_center], [round(length, 4)], [round(width, 4)], [my_ori]))
 
         return im, result
 
     def yolov8_predict(self, cfg=DEFAULT_CFG, use_python=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
-        model = '/home/zhizhuo/ADDdisk/Create Machine Lab/YOLOv8/runs/pose/train_pile_overlap_627/weights/best.pt'
+        model = '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
+        # model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
+        # model = 'C:/Users/24356/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # img = adjust_img(img)
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=0.5, iou=0.4, device='cpu')
+        args = dict(model=model, source=img_path_input, conf=para_dict['yolo_conf'], iou=para_dict['yolo_iou'], device=para_dict['device'])
         use_python = True
         if use_python:
             from ultralytics import YOLO
@@ -387,7 +281,6 @@ class Yolo_predict():
         else:
             predictor = PosePredictor(overrides=args)
             predictor.predict_cli()
-        device = 'cuda:0'
 
         origin_img = cv2.imread(img_path_input)
 
@@ -459,13 +352,15 @@ class Yolo_predict():
 
         return pred_result, pred_conf
 
-class Arm_env(gym.Env):
+class Arm_env():
 
     def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
-                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False, para_dict=None, total_error=None):
+                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None, use_grasp_model=False,
+                 para_dict=None, total_error=None, init_pos_range=None):
         self.endnum = endnum
         self.kImageSize = {'width': 480, 'height': 480}
 
+        self.init_pos_range = init_pos_range
         self.urdf_path = urdf_path
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
@@ -572,15 +467,30 @@ class Arm_env(gym.Env):
         p.changeVisualShape(baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         if try_grasp_flag == True:
-            self.arm_id = p.loadURDF(os.path.join(self.urdf_path, "robot_arm928/robot_arm1.urdf"),
+            self.arm_id = p.loadURDF(os.path.join(self.urdf_path, "robot_arm928/robot_arm1_backup.urdf"),
                                      basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                      flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-            p.changeDynamics(self.arm_id, 7, lateralFriction=1, spinningFriction=1, rollingFriction=0.001,
-                                            linearDamping=1, angularDamping=1, jointDamping=1, restitution=0.0,
-                                            contactDamping=0.001, contactStiffness=10000)
-            p.changeDynamics(self.arm_id, 8, lateralFriction=1, spinningFriction=1, rollingFriction=0.001,
-                                            linearDamping=1, angularDamping=1, jointDamping=1, restitution=0.0,
-                                            contactDamping=0.001, contactStiffness=10000)
+
+            p.changeDynamics(self.arm_id, 7, lateralFriction=para_dict['gripper_lateral_friction'],
+                             spinningFriction=para_dict['gripper_spinning_friction'],
+                             rollingFriction=para_dict['gripper_rolling_friction'],
+                             linearDamping=para_dict['gripper_linear_damping'],
+                             angularDamping=para_dict['gripper_angular_damping'],
+                             jointDamping=para_dict['gripper_joint_damping'],
+                             restitution=para_dict['gripper_restitution'],
+                             contactDamping=para_dict['gripper_contact_damping'],
+                             contactStiffness=para_dict['gripper_contact_stiffness'])
+
+            p.changeDynamics(self.arm_id, 8, lateralFriction=para_dict['gripper_lateral_friction'],
+                             spinningFriction=para_dict['gripper_spinning_friction'],
+                             rollingFriction=para_dict['gripper_rolling_friction'],
+                             linearDamping=para_dict['gripper_linear_damping'],
+                             angularDamping=para_dict['gripper_angular_damping'],
+                             jointDamping=para_dict['gripper_joint_damping'],
+                             restitution=para_dict['gripper_restitution'],
+                             contactDamping=para_dict['gripper_contact_damping'],
+                             contactStiffness=para_dict['gripper_contact_stiffness'])
+
 
             ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.reset_pos,
                                                       maxNumIterations=200,
@@ -633,10 +543,10 @@ class Arm_env(gym.Env):
             # rdm_ori = np.concatenate((np.ones((self.num_item, 1)) * (np.pi / 2.5),
             #                           np.zeros((self.num_item, 1)),
             #                           np.ones((self.num_item, 1)) * (np.pi / 9)), axis=1)
-            rdm_ori = np.random.uniform(-np.pi / 2, np.pi / 2, size=(self.num_item, 3))
-            rdm_pos_x = np.random.uniform(0.10, 0.20, size=(self.num_item, 1))
-            rdm_pos_y = np.random.uniform(-0.05, 0.05, size=(self.num_item, 1))
-            rdm_pos_z = np.random.uniform(0.05, 0.2, size=(self.num_item, 1))
+            rdm_ori = np.random.uniform(-np.pi / 4, np.pi / 4, size=(self.num_item, 3))
+            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_item, 1))
+            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_item, 1))
+            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_item, 1))
             rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
         else:
             while True:
@@ -696,6 +606,7 @@ class Arm_env(gym.Env):
         height_range = np.round(np.random.uniform(0.010, 0.020, size=(self.num_item, 1)), decimals=3)
 
         for i in range(self.num_item):
+            temp_box.links[0].inertial.mass = para_dict['box_mass']
             temp_box.links[0].collisions[0].origin[2, 3] = 0
             self.gt_lwh_list.append(np.concatenate((length_range[i], width_range[i], height_range[i])))
             temp_box.links[0].visuals[0].geometry.box.size = np.concatenate((length_range[i], width_range[i], height_range[i]))
@@ -714,28 +625,37 @@ class Arm_env(gym.Env):
                 p.changeVisualShape(self.obj_idx[i], -1, rgbaColor=(r, g, b, 1))
 
         self.gt_lwh_list = np.asarray(self.gt_lwh_list)
-        for _ in range(int(200)):
-            # time.sleep(1/48)
+        for _ in range(int(100)):
             p.stepSimulation()
-        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.0, restitution=0.0,
-                         contactDamping=0.001, contactStiffness=10000)
+            if self.is_render == True:
+                time.sleep(1/48)
+        p.changeDynamics(baseid, -1, lateralFriction=para_dict['base_lateral_friction'],
+                             spinningFriction=para_dict['base_spinning_friction'],
+                             rollingFriction=para_dict['base_rolling_friction'],
+                             restitution=para_dict['base_restitution'],
+                            contactDamping=para_dict['base_contact_damping'],
+                            contactStiffness=para_dict['base_contact_stiffness'])
 
         # if try_grasp_flag == True:
         #     for i in range(len(self.obj_idx)):
         #         p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.8, spinningFriction=0.8, rollingFriction=0.00,
         #                          linearDamping=0, angularDamping=0, jointDamping=0,
         #                          restitution=0.0, contactDamping=0.001, contactStiffness=10000)
-        #     for _ in range(int(100)):
-        #         # time.sleep(1/48)
-        #         p.stepSimulation()
-        # else:
         forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
         while True:
             new_num_item = len(self.obj_idx)
             delete_index = []
             for i in range(len(self.obj_idx)):
-                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.3, spinningFriction=0.3, rollingFriction=0.00,
-                                 linearDamping=0.04, angularDamping=0.04, jointDamping=0, restitution=0.0, contactDamping=0.001, contactStiffness=10000)
+                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=para_dict['box_lateral_friction'],
+                                 spinningFriction=para_dict['box_spinning_friction'],
+                                 rollingFriction=para_dict['box_rolling_friction'],
+                                 linearDamping=para_dict['box_linear_damping'],
+                                 angularDamping=para_dict['box_angular_damping'],
+                                 jointDamping=para_dict['box_joint_damping'],
+                                 restitution=para_dict['box_restitution'],
+                                 contactDamping=para_dict['box_contact_damping'],
+                                 contactStiffness=para_dict['box_contact_stiffness'])
+
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
@@ -756,13 +676,14 @@ class Arm_env(gym.Env):
                 p.removeBody(self.obj_idx[i])
                 self.obj_idx.pop(i)
                 self.gt_lwh_list = np.delete(self.gt_lwh_list, i, axis=0)
-            for _ in range(int(200)):
+            for _ in range(int(100)):
                 # time.sleep(1/96)
                 p.stepSimulation()
 
             check_delete_index = []
             for i in range(len(self.obj_idx)):
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
+                cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
                 roll_flag = False
                 pitch_flag = False
                 for j in range(len(forbid_range)):
@@ -794,6 +715,13 @@ class Arm_env(gym.Env):
                 np.savetxt(data_root + 'total_error.txt', self.total_error)
             quit()
         manipulator_before, pred_lwh_list, pred_conf = self.get_obs(format='grasp', data_root=data_root, epoch=self.img_per_epoch + img_index_start)
+
+        if len(manipulator_before) <= 1:
+            print('no pile in the environment, try to reset!')
+            return self.img_per_epoch
+        # if np.any(manipulator_before[:, 2].reshape(1, -1) > 0.01) == False:
+        #     print('no pile in the environment, try to reset!')
+        #     return self.img_per_epoch
 
         if self.use_grasp_model == True:
 
@@ -856,48 +784,60 @@ class Arm_env(gym.Env):
                 last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
                 last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
 
+                success_grasp_flag = True
+                left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+                right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
                 for j in range(len(trajectory_pos_list)):
                     if len(trajectory_pos_list[j]) == 3:
-                        last_pos = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+                        if j == 1:
+                            last_pos, left_pos, right_pos, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
+                        elif j == 2:
+                            last_pos, _, _, success_grasp_flag = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j],
+                                                                           origin_left_pos=left_pos, origin_right_pos=right_pos, index=j)
+                            if success_grasp_flag == False:
+                                break
+                        else:
+                            last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
                         last_ori = np.copy(trajectory_ori_list[j])
                     elif len(trajectory_pos_list[j]) == 2:
-                        self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+                        # time.sleep(2)
+                        success_grasp_flag = self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1], left_pos, right_pos)
 
                 # find which box is moved and judge whether the grasp is success
-                end_flag = False
-                for j in range(len(self.obj_idx)):
-                    success_break_flag = False
-                    fail_break_flag = False
-                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[j])[0])  # this is the pos after of the grasped box
-                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.03:
-                        for m in range(len(self.obj_idx)):
-                            box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
-                            ori_qua_after = p.getBasePositionAndOrientation(self.obj_idx[m])[1]
-                            box_ori_after = np.asarray(ori_qua_after)
-                            upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
-                            if (np.linalg.norm(box_pos_after - box_pos_before[m]) > 0.005 or 0.08 < np.linalg.norm(
-                                    box_ori_after - box_ori_before[m]) < upper_limit or \
-                                upper_limit - 0.002 < np.linalg.norm(
-                                        box_ori_after - box_ori_before[m]) < upper_limit + 0.002) and m != j:
-                                print(
-                                    f'The {m} boxes have been disturbed, pos_before is {box_pos_before[m]}, pos_after is {box_pos_after}, \n'
-                                    f'ori_before is {box_ori_before[m]}, ori_after is {box_ori_after}, grasp fail!')
-                                p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
-                                grasp_flag.append(0)
-                                fail_break_flag = True
+                if success_grasp_flag == False:
+                    print('fail!')
+                    grasp_flag.append(0)
+                    pass
+                else:
+                    for j in range(len(self.obj_idx)):
+                        success_grasp_flag = False
+                        fail_break_flag = False
+                        box_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[j])[0])  # this is the pos after of the grasped box
+                        if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
+                            np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
+                            for m in range(len(self.obj_idx)):
+                                box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
+                                ori_qua_after = p.getBasePositionAndOrientation(self.obj_idx[m])[1]
+                                box_ori_after = np.asarray(ori_qua_after)
+                                upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
+                                if box_pos_after[2] > 0.06 and m != j:
+                                    print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
+                                    p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
+                                    grasp_flag.append(0)
+                                    fail_break_flag = True
+                                    success_grasp_flag = False
+                                    break
+                                elif m == len(self.obj_idx) - 1:
+                                    grasp_flag.append(1)
+                                    print('grasp success!')
+                                    success_grasp_flag = True
+                                    fail_break_flag = False
+                            if success_grasp_flag == True or fail_break_flag == True:
                                 break
-                            elif m == len(self.obj_idx) - 1:
-                                grasp_flag.append(1)
-                                print('grasp success!')
-                                success_break_flag = True
-                        if success_break_flag == True:
-                            end_flag = True
-                            break
-                        elif fail_break_flag == True:
-                            break
-                    elif j == len(self.obj_idx) - 1:
-                        print('the target box does not move to the designated pos, grasp fail!')
-                        grasp_flag.append(0)
+                        elif j == len(self.obj_idx) - 1:
+                            print('the target box does not move to the designated pos, grasp fail!')
+                            success_grasp_flag = False
+                            grasp_flag.append(0)
 
                 # gt_index = np.argmin(np.linalg.norm(box_pos_before[:, :2] - start_end[i, :2], axis=1))
 
@@ -911,7 +851,7 @@ class Arm_env(gym.Env):
                 gt_data.append(
                     np.concatenate((manipulator_before[i, :3], pred_lwh_list[i, :3], manipulator_before[i, 3:])))
 
-                if end_flag == True:
+                if success_grasp_flag == True:
                     print('we should remove this box and try the rest boxes!')
                     rest_len = len(exist_gt_index)
                     for m in range(1, len(start_end) - rest_len + 1):
@@ -923,10 +863,40 @@ class Arm_env(gym.Env):
                         # gt_data.append(np.concatenate(
                         #     (box_pos_before[gt_index], self.gt_lwh_list[gt_index], self.gt_pos_ori[gt_index, 3:])))
                         # exist_gt_index.append(gt_index)
-                    p.restoreState(state_id)
+                    # p.restoreState(state_id)
                     p.removeBody(self.obj_idx[gt_index_grasp])
+                    print('this is len of self.obj', len(self.obj_idx))
                     del self.obj_idx[gt_index_grasp]
                     self.gt_lwh_list = np.delete(self.gt_lwh_list, gt_index_grasp, axis=0)
+
+                    ######## after every grasp, check pos and ori of every box which are out of the field ########
+                    forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
+                    delete_index = []
+                    print('this is len of self.obj', len(self.obj_idx))
+                    for m in range(len(self.obj_idx)):
+                        cur_ori = np.asarray(
+                            p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[m])[1]))
+                        cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[m])[0])
+                        roll_flag = False
+                        pitch_flag = False
+                        for n in range(len(forbid_range)):
+                            if np.abs(cur_ori[0] - forbid_range[n]) < 0.01:
+                                roll_flag = True
+                            if np.abs(cur_ori[1] - forbid_range[n]) < 0.01:
+                                pitch_flag = True
+                        if roll_flag == True and pitch_flag == True and (
+                                np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
+                                cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
+                            1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
+                            delete_index.append(m)
+                    delete_index.reverse()
+                    for idx in delete_index:
+                        print('this is delete index', idx)
+                        p.removeBody(self.obj_idx[idx])
+                        self.obj_idx.pop(idx)
+                        self.gt_lwh_list = np.delete(self.gt_lwh_list, idx, axis=0)
+                    ######## after every grasp, check pos and ori of every box which are out of the field ########
+
                     break
                 else:
                     p.restoreState(state_id)
@@ -966,7 +936,7 @@ class Arm_env(gym.Env):
                 self.img_per_epoch += 1
                 return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
 
-    def move(self, cur_pos, cur_ori, tar_pos, tar_ori, sim_height=-0.01):
+    def move(self, cur_pos, cur_ori, tar_pos, tar_ori, sim_height=-0.01, origin_left_pos=None, origin_right_pos=None, index=None):
 
         # add the offset manually
         if tar_ori[2] > 3.1416 / 2:
@@ -1001,10 +971,27 @@ class Arm_env(gym.Env):
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=50)
-            for i in range(6):
-                p.stepSimulation()
-                # time.sleep(1 / 240)
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=para_dict['move_force'])
+            move_success_flag = True
+            if index == 2 or index == 4:
+                for i in range(6):
+                    p.stepSimulation()
+                    gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+                    gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+                    if np.abs(origin_left_pos[1] - gripper_left_pos[1]) > para_dict['move_threshold'] or \
+                            np.abs(origin_right_pos[1] - gripper_right_pos[1]) > para_dict['move_threshold']:
+                        move_success_flag = False
+                        print('during moving, fail')
+                        break
+                    if self.is_render:
+                        time.sleep(1 / 120)
+                if move_success_flag == False:
+                    break
+            else:
+                for i in range(3):
+                    p.stepSimulation()
+                    if self.is_render:
+                        time.sleep(1 / 120)
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
                     target_pos[2] - tar_pos[2]) < 0.001 and \
                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
@@ -1012,31 +999,57 @@ class Arm_env(gym.Env):
                 break
             cur_pos = tar_pos
             cur_ori = tar_ori
+        gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+        gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+        return cur_pos, gripper_left_pos, gripper_right_pos, move_success_flag
 
-        return cur_pos
-
-    def gripper(self, gap, obj_width):
+    def gripper(self, gap, obj_width, left_pos, right_pos):
         obj_width += 0.010
-        # close_open_gap = 0.053
-        close_open_gap = 0.048
+        close_open_gap = 0.053
+        # close_open_gap = 0.048
         obj_width_range = np.array([0.022, 0.057])
         motor_pos_range = np.array([0.022, 0.010])  # 0.0273
         formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 1)
         motor_pos = np.poly1d(formula_parameters)
 
+        gripper_success_flag = True
+        # gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+        # gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+        # print('left pos', gripper_left_pos)
+        # print('right pos', gripper_right_pos)
+
+        num_step = para_dict['gripper_sim_step']
         if gap > 0.0265:  # close
+            tar_pos = motor_pos(obj_width) + close_open_gap
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=1)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=1)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=para_dict['gripper_force'])
+            for i in range(num_step):
+
+                # step_left = (gripper_left_pos[1] + (motor_pos(obj_width) + close_open_gap)) * i / num_step
+                # step_right = (gripper_right_pos[1] + (motor_pos(obj_width) + close_open_gap)) * i / num_step
+                # p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
+                #                         targetPosition=step_left, force=0.3)
+                # p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
+                #                         targetPosition=step_right, force=0.3)
+                p.stepSimulation()
+                gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+                gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+                if gripper_left_pos[1] - left_pos[1] > para_dict['gripper_threshold'] or right_pos[1] - gripper_right_pos[1] > para_dict['gripper_threshold']:
+                    print('during grasp, fail')
+                    gripper_success_flag = False
+                    break
+                if self.is_render:
+                    time.sleep(1 / 24)
         else:  # open
-            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width),
-                                    force=10)
-            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width),
-                                        force=10)
-        for i in range(20):
-            p.stepSimulation()
-            # time.sleep(1 / 96)
+            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=para_dict['gripper_force'])
+            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=para_dict['gripper_force'])
+            for i in range(para_dict['gripper_sim_step']):
+                p.stepSimulation()
+                if self.is_render:
+                    time.sleep(1 / 24)
+        return gripper_success_flag
 
     def get_obs(self, format=None, data_root=None, epoch=None, test_pile_detection=False):
 
@@ -1123,25 +1136,6 @@ class Arm_env(gym.Env):
                 results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=my_im,
                                                                     height_data=top_height,
                                                                     target=gt_label, test_pile_detection=test_pile_detection)
-                # # align the pred box and gt box
-                # gt_compare_index = []
-                # crowded_index = []
-                # for i in range(len(results)):
-                #     gt_index = np.argsort(np.linalg.norm(self.gt_pos_ori[:, :2] - results[i, :2], axis=1))
-                #     gt_index_grasp = gt_index[0]
-                #     # gt_data.append(np.concatenate((box_pos_before[gt_index_grasp], self.gt_lwh_list[gt_index_grasp], self.gt_pos_ori[gt_index_grasp, 3:])))
-                #     gt_compare_index.append(gt_index_grasp)
-                # gt_compare_index = np.asarray(gt_compare_index)
-                # for i in range(len(gt_compare_index)):
-                #     # seg_area = seg_mask[seg_mask == gt_compare_index[i]]
-                #     for j in range(len(gt_compare_index)):
-                #         length_i = np.max(self.gt_lwh_list[gt_compare_index[i]])
-                #         length_j = np.max(self.gt_lwh_list[gt_compare_index[j]])
-                #         if np.linalg.norm(self.gt_pos_ori[gt_compare_index[i], :2] - self.gt_pos_ori[gt_compare_index[j], :2]) < (length_i + length_j) / 2 and i != j:
-                #         # if (np.abs(self.gt_pos_ori[gt_compare_index[i], 3] - 0) > 0.01 or np.abs(self.gt_pos_ori[gt_compare_index[i], 4] - 0) > 0.01):
-                #             crowded_index.append(i)
-                #             print('this is normal box ori', self.gt_pos_ori[gt_compare_index[i]])
-                #             break
                 crowded_index = []
                 for i in range(len(results)):
                     # seg_area = seg_mask[seg_mask == gt_compare_index[i]]
@@ -1187,29 +1181,92 @@ class Arm_env(gym.Env):
 
 if __name__ == '__main__':
 
-    startnum = 98000
-    endnum =   100000
-    thread = 17
-    CLOSE_FLAG = False
-    pile_flag = True
-    use_lego_urdf = False
-    try_grasp_flag = True
-    test_pile_detection = False
-    save_img_flag = False
+    para_dict = {'start_num': 420000, 'end_num': 480000, 'thread': 3,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'close_flag': False,
+                 'pile_flag': True,
+                 'use_lego_urdf': False,
+                 'try_grasp_flag': True,
+                 'test_pile_detection': False,
+                 'save_img_flag': False,
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
+                 'max_box_num': 5, 'min_box_num': 4,
+                 'is_render': False,
+                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
+                 'box_mass': 0.1,
+                 'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
+                 'move_threshold': 0.005, 'move_force': 3,
+                 'box_lateral_friction': 0.8, 'box_spinning_friction': 0.8, 'box_rolling_friction': 0.0,
+                 'box_linear_damping': 0.01, 'box_angular_damping': 0.01, 'box_joint_damping': 0.1,
+                 'box_restitution': 0, 'box_contact_damping': 100, 'box_contact_stiffness': 1000000,
+                 'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
+                 'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
+                 'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
+                 'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
+                 'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
+                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'}
+
+    # para_dict = {'start_num': 80000, 'end_num': 100000, 'thread': 4,
+    #              'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    #              'close_flag': False,
+    #              'pile_flag': True,
+    #              'use_lego_urdf': False,
+    #              'try_grasp_flag': True,
+    #              'test_pile_detection': False,
+    #              'save_img_flag': False,
+    #              'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
+    #              'max_box_num': 5, 'min_box_num': 4,
+    #              'is_render': True,
+    #              'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
+    #              'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
+    #              'move_threshold': 0.005, 'move_force': 3,
+    #              'box_lateral_friction': 0.8, 'box_spinning_friction': 0.8, 'box_rolling_friction': 0.0,
+    #              'box_linear_damping': 0.01, 'box_angular_damping': 0.01, 'box_joint_damping': 0.1,
+    #              'box_restitution': 0, 'box_contact_damping': 100, 'box_contact_stiffness': 1000000,
+    #              'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
+    #              'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
+    #              'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
+    #              'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
+    #              'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
+    #              'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'}
+
+    # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
+    # 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
+    # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
+    # 'C:/Users/24356/Desktop/knolling_dataset/'
+    # np.random.seed(175)
+    # random.seed(175)
+
+    startnum = para_dict['start_num']
+    endnum =   para_dict['end_num']
+    thread = para_dict['thread']
+    CLOSE_FLAG = para_dict['close_flag']
+    pile_flag = para_dict['pile_flag']
+    use_lego_urdf = para_dict['use_lego_urdf']
+    try_grasp_flag = para_dict['try_grasp_flag']
+    test_pile_detection = para_dict['test_pile_detection']
+    save_img_flag = para_dict['save_img_flag']
+
+    init_pos_range = para_dict['init_pos_range']
+
     if try_grasp_flag == True:
-        data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_705_laptop/'
+        data_root = para_dict['dataset_path'] + 'grasp_pile_714_laptop/'
+        with open(para_dict['dataset_path'] + 'grasp_pile_714_laptop_readme.txt', "w") as f:
+            for key, value in para_dict.items():
+                f.write(key + ': ')
+                f.write(str(value) + '\n')
     else:
         data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_pile_overlap_627_test/'
     os.makedirs(data_root, exist_ok=True)
-    max_box_num = 21
-    min_box_num = 18
+
+    max_box_num = para_dict['max_box_num']
+    min_box_num = para_dict['min_box_num']
     mm2px = 530 / 0.34
 
-    # np.random.seed(158)
-    # random.seed(158)
-
-    env = Arm_env(max_step=1, is_render=False, endnum=endnum, save_img_flag=save_img_flag,
-                  urdf_path='/home/zhizhuo/ADDdisk/Create Machine Lab/Knolling_bot_2/urdf/')
+    env = Arm_env(max_step=1, is_render=para_dict['is_render'], endnum=endnum, save_img_flag=save_img_flag,
+                  urdf_path='/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/', init_pos_range=init_pos_range)
+    # urdf_path = '/home/ubuntu/Desktop/Knolling_bot_2/urdf/'
+    # urdf_path='/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/'
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
     if try_grasp_flag == True:

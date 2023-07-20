@@ -153,12 +153,12 @@ if __name__ == '__main__':
     target_data_path = data_root + 'grasp_pile_714_laptop/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 240000
+    data_num = 480000
     start_index = 0
     target_start_index = 0
-    data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np_standard(data_path, data_num, start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
     # # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_710_lab/labels/'
     # # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_710_laptop/labels/'
