@@ -60,6 +60,9 @@ class LSTMRegressor(nn.Module):
             out = self.relu(self.linear1(unpacked_out))
             out = self.relu(self.linear2(out))
             out = self.linear3(out)
+            # out = self.linear1(unpacked_out)
+            # out = self.linear2(out)
+            # out = self.linear3(out)
         return out
 
     def maskedMSELoss(self, predict, target, ignore_index = -100):
@@ -133,7 +136,3 @@ class LSTMRegressor(nn.Module):
                self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, \
                self.pred_positive, self.true_positive, self.not_one_result, \
                self.yolo_dominated_tar_success, self.yolo_dominated_pred_success
-
-    # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
-    # f.write(f'model_path: {para_dict["model_path"]}\n')
-    # f.write(f'data_path: {para_dict["data_path"]}\n')
