@@ -25,13 +25,16 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 1650000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_714_4_cross_no_scaler/'
+        para_dict['num_img'] = 2130000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_720_10_cross_no_scaler/'
         para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
-        para_dict['hidden_size'] = 32
-        para_dict['num_layers'] = 8
-        test_file_para = '714_4_'
+        para_dict['hidden_size'] = 64
+        para_dict['num_layers'] = 4
+        para_dict['hidden_node_1'] = 32
+        para_dict['hidden_node_2'] = 8
+        para_dict['batch_size'] = 64
+        test_file_para = '720_10_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
@@ -59,8 +62,10 @@ if __name__ == '__main__':
                                   batch_size=batch_size, device=device)
         else:
             model = LSTMRegressor(input_dim=input_size, hidden_dim=hidden_size, output_dim=output_size,
-                                  num_layers=num_layers,
-                                  batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss())
+                                  num_layers=num_layers, hidden_node_1=para_dict['hidden_node_1'],
+                                  hidden_node_2=para_dict['hidden_node_2'],
+                                  batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss(),
+                                  set_dropout=para_dict['set_dropout'])
 
         ###########################################################################
         model.load_state_dict(torch.load(para_dict['model_path'] + 'best_model.pt'))

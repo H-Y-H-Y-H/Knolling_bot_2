@@ -10,12 +10,13 @@ def data_preprocess_csv(path, data_num, start_index):
     no_grasp = 0
     data = []
     i = 0
-    origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
-    data = np.delete(origin_data, [6, 7, 8], axis=1)
+    origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
+    data = origin_data
+    # data = np.delete(origin_data, [6, 7, 8], axis=1)
     # load data and remove four axis: z, height, roll, pitch
     for i in range(1, data_num):
-        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
-        origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
+        origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
+        # origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
         if origin_data[0, 0] == 1:
             print(f'yolo dominated {i}')
             max_conf_1 += 1
@@ -59,7 +60,6 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
 
     target_path = target_data_path + 'labels/'
     os.makedirs(target_path, exist_ok=True)
-    scaler = StandardScaler()
     scaler = MinMaxScaler()
     data_range = np.array([[0, 0, -0.14, 0, 0, 0, 0.5],
                            [1, 0.3, 0.14, 0.06, 0.06, np.pi, 1]])
@@ -73,9 +73,10 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
 
     max_length = 0
     for i in tqdm(range(start_index, data_num + start_index)):
-        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
+        origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
         # delete the
-        data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        # data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        data = origin_data
         tar_index = np.where(data[:, -2] < 0)[0]
         if len(tar_index) > 0:
             pass
@@ -93,24 +94,27 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
 
     print('this is the max length in the dataset', max_length)
 
-def data_preprocess_np_standard(path, data_num, start_index):
-    target_path = path + 'labels/'
+def data_preprocess_np_standard(path, data_num, start_index, target_data_path=None, target_start_index=None):
+    target_path = target_data_path + 'labels/'
     os.makedirs(target_path, exist_ok=True)
     scaler = StandardScaler()
 
-    total_array = np.loadtxt(path + 'origin_labels/%012d.txt' % start_index).reshape(-1, 11)
-    total_array = np.delete(total_array, [3, 6, 7, 8], axis=1)
+    print(np.loadtxt(path + 'labels/%012d.txt' % 50000).reshape(-1, 7))
+    print(np.loadtxt(path + 'labels/%012d.txt' % 60000).reshape(-1, 7))
+
+    total_array = np.loadtxt(path + 'labels/%012d.txt' % start_index).reshape(-1, 7)
+    # total_array = np.delete(total_array, [3, 6, 7, 8], axis=1)
     tar_index = np.where(total_array[:, -2] < 0)[0]
     total_array[tar_index, -2] += np.pi
     total_len = [total_array.shape[0]]
     for i in tqdm(range(start_index + 1, data_num + start_index)):
-        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
-        data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
-        tar_index = np.where(data[:, -2] < 0)[0]
-        data[tar_index, -2] += np.pi
+        origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
+        # data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        tar_index = np.where(origin_data[:, -2] < 0)[0]
+        origin_data[tar_index, -2] += np.pi
 
-        total_array = np.concatenate((total_array, data), axis=0)
-        total_len.append(data.shape[0])
+        total_array = np.concatenate((total_array, origin_data), axis=0)
+        total_len.append(origin_data.shape[0])
 
     total_array[:, 1:] = scaler.fit_transform(total_array[:, 1:])
 
@@ -120,9 +124,10 @@ def data_preprocess_np_standard(path, data_num, start_index):
         data_after = total_array[seg_start_index:seg_start_index + total_len[i - start_index], :]
         seg_start_index += total_len[i - start_index]
         # print('after\n', data_after)
-        np.savetxt(target_path + '%012d.txt' % (i - 20000), data_after, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data_after, fmt='%.04f')
 
-    # print('here')
+    print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
+    print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
 
 
 def data_move(source_path, target_path, source_start_index, data_num, target_start_index):
@@ -145,20 +150,21 @@ def check_dataset():
 if __name__ == '__main__':
 
     # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
+    data_root = '/home/ubuntu/Desktop/knolling_dataset/'
+    # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # data_path = data_root + 'grasp_dataset_03004/'
-    data_path = data_root + 'grasp_pile_714_laptop/'
+    data_path = data_root + 'grasp_dataset_714/'
     # data_path = data_root + 'origin_labels_713_lab/'
 
-    target_data_path = data_root + 'grasp_pile_714_laptop/'
+    target_data_path = data_root + 'grasp_dataset_714_minmax/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 240000
+    data_num = 500000
     start_index = 0
     target_start_index = 0
-    data_preprocess_csv(data_path, data_num, start_index)
-    # data_preprocess_np_standard(data_path, data_num, start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
     # # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/origin_labels_710_lab/labels/'
     # # source_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_pile_710_laptop/labels/'
