@@ -341,11 +341,11 @@ class Yolo_predict():
 
 
         if self.save_img_flag == True:
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow('zzz', origin_img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', origin_img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             img_path_output = img_path + '_pred.png'
             cv2.imwrite(img_path_output, origin_img)
         pred_result = np.asarray(pred_result)
@@ -1181,7 +1181,7 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 0, 'end_num': 2000, 'thread': 0,
+    para_dict = {'start_num': 8000, 'end_num': 10000, 'thread': 4,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'close_flag': False,
                  'pile_flag': True,
@@ -1191,7 +1191,7 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
