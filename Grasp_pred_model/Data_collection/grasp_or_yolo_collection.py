@@ -1181,14 +1181,14 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 240000, 'end_num': 260000, 'thread': 0,
+    para_dict = {'start_num': 0, 'end_num': 2000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
                  'try_grasp_flag': True,
                  'test_pile_detection': False,
-                 'save_img_flag': False,
+                 'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
                  'is_render': True,
@@ -1250,8 +1250,8 @@ if __name__ == '__main__':
     # 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'C:/Users/24356/Desktop/knolling_dataset/'
-    np.random.seed(180)
-    random.seed(180)
+    # np.random.seed(180)
+    # random.seed(180)
 
     startnum = para_dict['start_num']
     endnum =   para_dict['end_num']
