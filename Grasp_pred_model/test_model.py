@@ -26,15 +26,15 @@ if __name__ == '__main__':
 
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 2130000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_720_10_cross_no_scaler/'
-        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714/labels/'
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_721_1_cross_distance/'
+        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714_distance/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 64
-        para_dict['num_layers'] = 4
+        para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '720_10_'
+        test_file_para = '721_1_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
@@ -90,10 +90,15 @@ if __name__ == '__main__':
                     valid_loss.append(loss.item())
                 else:
                     # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, pred_positive, true_positive, not_one_result, yolo_dominated_tar_success, yolo_dominated_pred_success = model.detect_accuracy(predict=out, target=grasp_data_batch)
+                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
+                    valid_loss.append(loss.item())
+                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, \
+                    pred_positive, true_positive, \
+                    not_one_result, yolo_dominated_tar_success, yolo_dominated_pred_success = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch)
 
 
-        # avg_valid_loss = np.mean(valid_loss)
+        avg_valid_loss = np.mean(valid_loss)
+        print('\n avg valid loss', avg_valid_loss)
 
         print('total_img', int(num_img - num_img * ratio))
         print('not one result', not_one_result)

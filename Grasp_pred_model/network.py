@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.functional as F
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 import numpy as np
@@ -69,54 +70,98 @@ class LSTMRegressor(nn.Module):
         mse_loss_mean = mse_loss.sum() / mask.sum()
         return mse_loss_mean
 
-    def maskedCrossEntropyLoss(self, predict, target, ignore_index = -100):
+    def maskedCrossEntropyLoss(self, predict, target, boxes_data, ignore_index = -100):
 
         mask = target.view(-1, ).ne(ignore_index)
-        target = target.view(-1, )
-        predict = predict.view(self.batch_size * predict.size(1), 2)
-        pred_mask = predict[mask]
-        tar_mask = target[mask]
-        loss = self.criterion(predict[mask], target[mask].long())
+        target_merge = target.view(-1, )
+        predict_merge = predict.view(self.batch_size * predict.size(1), 2)
+        pred_mask = predict_merge[mask]
+        tar_mask = target_merge[mask]
+
+        pred_mask_soft = F.softmax(pred_mask)
+        pred_mask_soft_numpy = pred_mask_soft.cpu().detach().numpy()
+        tar_mask_numpy = tar_mask.cpu().detach().numpy().reshape(-1, 1)
+        boxes_data_mask_numpy = boxes_data.view(-1, 6)[mask].cpu().detach().numpy()
+
+        loss = self.criterion(pred_mask, tar_mask.long())
 
         return loss
 
-    def detect_accuracy(self, predict, target, ignore_index = -100):
+    def detect_accuracy(self, predict, target, box_conf, ignore_index = -100):
 
         mask_tar = target.ne(ignore_index)
         mask_pred = mask_tar.repeat(1, 1, 2)
         # tar = target[mask_tar].cpu().detach().numpy().reshape(-1, 1)
         # pred = predict[mask_pred].cpu().detach().numpy().reshape(-1, 2)
 
+        box_conf = box_conf[:, :, -1].cpu().detach().numpy()
         tar = target.cpu().detach().numpy()
         pred = predict.cpu().detach().numpy()
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
-        for i in range(pred_soft.shape[0]):
+        # for i in range(pred_soft.shape[0]):
+        #     pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
+        #     if len(pred_1_index) > 1:
+        #         # print('pred not only one result!')
+        #         # print(pred_soft[i])
+        #         self.not_one_result += 1
+        #         for j in range(len(pred_1_index)):
+        #             if tar[i, pred_1_index[j], 0] != -100:
+        #                 pass
+        #     for j in range(pred_soft.shape[1]):
+        #         criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
+        #         if tar[i, j, 0] == 1: # test the recall
+        #             self.tar_success += 1
+        #             if criterion:
+        #                 self.pred_sucess += 1
+        #             if j != 0:
+        #                 # print('grasp_dominated')
+        #                 self.grasp_dominated_tar_success += 1
+        #                 if criterion:
+        #                     self.grasp_dominated_pred_success += 1
+        #             if j == 0:
+        #                 self.yolo_dominated_tar_success += 1
+        #                 if criterion:
+        #                     self.yolo_dominated_pred_success += 1
+        #             elif criterion:
+        #                 pass
+        #         elif tar[i, j, 0] == -100:
+        #             continue
+        #
+        #         if criterion and tar[i, j, 0] != -100: # test the precision
+        #             self.pred_positive += 1
+        #             if tar[i, j, 0] == 1:
+        #                 self.true_positive += 1
+        #
+        #     if np.all(tar[i] < 0.5):
+        #         # print('here')
+        #         pass
+
+        for i in range(pred_soft.shape[0]): # every image
             pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
             if len(pred_1_index) > 1:
                 # print('pred not only one result!')
                 # print(pred_soft[i])
-                self.not_one_result += 1
                 for j in range(len(pred_1_index)):
                     if tar[i, pred_1_index[j], 0] != -100:
-                        pass
-            for j in range(pred_soft.shape[1]):
+                        self.not_one_result += 1
+            for j in range(pred_soft.shape[1]): # every boxes
                 criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
+                yolo_dominated_index = np.argmax(box_conf[i])
                 if tar[i, j, 0] == 1: # test the recall
                     self.tar_success += 1
                     if criterion:
                         self.pred_sucess += 1
-                    if j != 0:
+                    if j == yolo_dominated_index:
+                        self.yolo_dominated_tar_success += 1
+                        if criterion:
+                            self.yolo_dominated_pred_success += 1
+                    else:
                         # print('grasp_dominated')
                         self.grasp_dominated_tar_success += 1
                         if criterion:
                             self.grasp_dominated_pred_success += 1
-                    if j == 0:
-                        self.yolo_dominated_tar_success += 1
-                        if criterion:
-                            self.yolo_dominated_pred_success += 1
-                    elif criterion:
-                        pass
+
                 elif tar[i, j, 0] == -100:
                     continue
 

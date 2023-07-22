@@ -4,6 +4,14 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from tqdm import tqdm
 
+def change_sequence(pos_before):
+
+    origin_point = np.array([0, -0.2])
+    delete_index = np.where(pos_before == 0)[0]
+    distance = np.linalg.norm(pos_before[:, 1:3] - origin_point, axis=1)
+    order = np.argsort(distance)
+    return order
+
 def data_preprocess_csv(path, data_num, start_index):
 
     max_conf_1 = 0
@@ -74,7 +82,6 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
     max_length = 0
     for i in tqdm(range(start_index, data_num + start_index)):
         origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
-        # delete the
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
         # data = origin_data
         tar_index = np.where(data[:, -2] < 0)[0]
@@ -83,6 +90,10 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
             # print('this is tar index', tar_index)
             # print('this is ori', data[tar_index, :])
         data[tar_index, -2] += np.pi
+
+        order = change_sequence(data)
+        data = data[order]
+
         if len(data) > max_length:
             max_length = len(data)
         # print('this is origin data\n', data)
@@ -135,14 +146,12 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
     import shutil
 
     index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
-
     for i in index_list:
-        data = np.loadtxt(target_path + '%012d.txt' % i).reshape(-1, 7)
-        print(data)
+        data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
+        print(np.round(data, 4))
 
-
-    print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
-    print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
+    # print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
+    # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
 
     # for i in range(source_start_index, int(data_num + source_start_index)):
     #     cur_path = source_path + '%012d.txt' % (i)
@@ -155,27 +164,30 @@ def check_dataset():
 
 if __name__ == '__main__':
 
-    # # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    # # data_root = '/home/ubuntu/Desktop/knolling_dataset/'
-    # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
-    # # data_path = data_root + 'grasp_dataset_03004/'
-    # data_path = data_root + 'grasp_pile_715_lab_add/'
-    # # data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # target_data_path = data_root + 'grasp_dataset_721_heavy/'
-    # # target_data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # data_num = 320000
-    # start_index = 100000
-    # target_start_index = 580000
-    # # data_preprocess_csv(data_path, data_num, start_index)
-    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+    np.set_printoptions(suppress=True)
 
-    source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    target_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_721_heavy/labels/'
-    os.makedirs(target_path, exist_ok=True)
-    source_start_index = 100000
+    # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
+    data_root = '/home/ubuntu/Desktop/knolling_dataset/'
+    # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
+    # data_path = data_root + 'grasp_dataset_03004/'
+    data_path = data_root + 'grasp_dataset_721_heavy/'
+    # data_path = data_root + 'origin_labels_713_lab/'
+
+    target_data_path = data_root + 'grasp_dataset_721_heavy/'
+    # target_data_path = data_root + 'origin_labels_713_lab/'
+
+    data_num = 900000
+    start_index = 0
     target_start_index = 0
-    num = 800000
-    data_move(source_path, target_path, source_start_index, num, target_start_index)
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+
+    # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
+    # source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714_distance/'
+    # target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714_distance/'
+    # os.makedirs(target_path, exist_ok=True)
+    # source_start_index = 0
+    # target_start_index = 480000
+    # num = 300000
+    # data_move(source_path, target_path, source_start_index, num, target_start_index)
