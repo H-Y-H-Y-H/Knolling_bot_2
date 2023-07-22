@@ -132,24 +132,24 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'decive': 'cuda:1',
-             'num_img': 800000,
+             'num_img': 900000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_721_1_cross_distance_heavy/',
+             'model_path': '../Grasp_pred_model/results/LSTM_721_3_cross_distance_heavy/',
              'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/labels/',
-             'learning_rate': 0.00001, 'patience': 10, 'factor': 0.1,
+             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
              'input_size': 6,
-             'hidden_size': 64,
+             'hidden_size': 32,
              'box_one_img': 10,
              'num_layers': 8,
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '721_1_distance_',
+             'run_name': '721_3_distance',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
-             'wandb_flag': False,
+             'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False,
              'hidden_node_1': 32, 'hidden_node_2': 8}
@@ -237,9 +237,9 @@ if __name__ == '__main__':
                               num_layers=num_layers, hidden_node_1=para_dict['hidden_node_1'], hidden_node_2=para_dict['hidden_node_2'],
                               batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss(), set_dropout=para_dict['set_dropout'])
 
-    ##########################################################################
-    model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
-    ##########################################################################
+    # ##########################################################################
+    # model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    # ##########################################################################
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=para_dict['stepLR'], gamma=para_dict['gamma'])
@@ -292,7 +292,7 @@ if __name__ == '__main__':
                 if para_dict['use_mse'] == True:
                     loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
                 else:
-                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
+                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
                 valid_loss.append(loss.item())
 
         avg_valid_loss = np.mean(valid_loss)

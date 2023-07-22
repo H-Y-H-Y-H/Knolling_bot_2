@@ -1181,19 +1181,45 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    # para_dict = {'start_num': 240000, 'end_num': 260000, 'thread': 0,
-    #              'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    para_dict = {'start_num': 240000, 'end_num': 260000, 'thread': 0,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'close_flag': False,
+                 'pile_flag': True,
+                 'use_lego_urdf': False,
+                 'try_grasp_flag': True,
+                 'test_pile_detection': False,
+                 'save_img_flag': False,
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
+                 'max_box_num': 5, 'min_box_num': 4,
+                 'is_render': True,
+                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
+                 'box_mass': 0.1,
+                 'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
+                 'move_threshold': 0.005, 'move_force': 3,
+                 'box_lateral_friction': 0.8, 'box_spinning_friction': 0.8, 'box_rolling_friction': 0.0,
+                 'box_linear_damping': 0.01, 'box_angular_damping': 0.01, 'box_joint_damping': 0.1,
+                 'box_restitution': 0, 'box_contact_damping': 100, 'box_contact_stiffness': 1000000,
+                 'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
+                 'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
+                 'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
+                 'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
+                 'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
+                 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/',
+                 'urdf_path': '/home/ubuntu/Desktop/Knolling_bot_2/urdf/'}
+
+    # para_dict = {'start_num': 0, 'end_num': 2000, 'thread': 0,
+    #              'yolo_conf': 0.5, 'yolo_iou': 0.8, 'device': 'cuda:0',
     #              'close_flag': False,
     #              'pile_flag': True,
     #              'use_lego_urdf': False,
     #              'try_grasp_flag': True,
     #              'test_pile_detection': False,
-    #              'save_img_flag': True,
+    #              'save_img_flag': False,
     #              'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
     #              'max_box_num': 5, 'min_box_num': 4,
     #              'is_render': True,
     #              'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-    #              'box_mass': 0.1,
+    #              'box_mass': 0.01,
     #              'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
     #              'move_threshold': 0.005, 'move_force': 3,
     #              'box_lateral_friction': 0.8, 'box_spinning_friction': 0.8, 'box_rolling_friction': 0.0,
@@ -1204,40 +1230,28 @@ if __name__ == '__main__':
     #              'gripper_restitution': 0, 'gripper_contact_damping': 100, 'gripper_contact_stiffness': 1000000,
     #              'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
     #              'base_restitution': 0, 'base_contact_damping': 10, 'base_contact_stiffness': 1000000,
-    #              'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'}
+    #              'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/',
+    #              'urdf_path': '/home/ubuntu/Desktop/Knolling_bot_2/urdf/'}
 
-    para_dict = {'start_num': 0, 'end_num': 2000, 'thread': 0,
-                 'yolo_conf': 0.5, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'close_flag': False,
-                 'pile_flag': True,
-                 'use_lego_urdf': False,
-                 'try_grasp_flag': True,
-                 'test_pile_detection': False,
-                 'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
-                 'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
-                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-                 'box_mass': 0.01,
-                 'gripper_threshold': 0.004, 'gripper_force': 0.3, 'gripper_sim_step': 10,
-                 'move_threshold': 0.005, 'move_force': 1.5,
-                 'box_lateral_friction': 1, 'box_spinning_friction': 1, 'box_rolling_friction': 0.001,
-                 'box_linear_damping': 1, 'box_angular_damping': 1, 'box_joint_damping': 0,
-                 'box_restitution': 0, 'box_contact_damping': 0.001, 'box_contact_stiffness': 10000,
-                 'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
-                 'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
-                 'gripper_restitution': 0, 'gripper_contact_damping': 10, 'gripper_contact_stiffness': 100000,
-                 'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
-                 'base_restitution': 0, 'base_contact_damping': 0.001, 'base_contact_stiffness': 100000,
-                 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/',
-                 'urdf_path': '/home/ubuntu/Desktop/Knolling_bot_2/urdf/'}
+    # 'gripper_threshold': 0.004, 'gripper_force': 0.3, 'gripper_sim_step': 10,
+    # 'move_threshold': 0.005, 'move_force': 1.5,
+    # 'box_lateral_friction': 1, 'box_spinning_friction': 1, 'box_rolling_friction': 0.001,
+    # 'box_linear_damping': 1, 'box_angular_damping': 1, 'box_joint_damping': 0,
+    # 'box_restitution': 0, 'box_contact_damping': 0.001, 'box_contact_stiffness': 10000,
+    # 'gripper_lateral_friction': 1, 'gripper_spinning_friction': 1, 'gripper_rolling_friction': 0.001,
+    # 'gripper_linear_damping': 1, 'gripper_angular_damping': 1, 'gripper_joint_damping': 1,
+    # 'gripper_restitution': 0, 'gripper_contact_damping': 10, 'gripper_contact_stiffness': 100000,
+    # 'base_lateral_friction': 1, 'base_spinning_friction': 1, 'base_rolling_friction': 0,
+    # 'base_restitution': 0, 'base_contact_damping': 0.001, 'base_contact_stiffness': 100000,
+    # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/',
+    # 'urdf_path': '/home/ubuntu/Desktop/Knolling_bot_2/urdf/'
 
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # 'dataset_path': '/home/ubuntu/Desktop/knolling_dataset/'
     # 'C:/Users/24356/Desktop/knolling_dataset/'
-    # np.random.seed(175)
-    # random.seed(175)
+    np.random.seed(180)
+    random.seed(180)
 
     startnum = para_dict['start_num']
     endnum =   para_dict['end_num']

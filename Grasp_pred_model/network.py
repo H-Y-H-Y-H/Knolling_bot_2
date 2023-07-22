@@ -78,10 +78,10 @@ class LSTMRegressor(nn.Module):
         pred_mask = predict_merge[mask]
         tar_mask = target_merge[mask]
 
-        pred_mask_soft = F.softmax(pred_mask)
-        pred_mask_soft_numpy = pred_mask_soft.cpu().detach().numpy()
-        tar_mask_numpy = tar_mask.cpu().detach().numpy().reshape(-1, 1)
-        boxes_data_mask_numpy = boxes_data.view(-1, 6)[mask].cpu().detach().numpy()
+        # pred_mask_soft = F.softmax(pred_mask)
+        # pred_mask_soft_numpy = pred_mask_soft.cpu().detach().numpy()
+        # tar_mask_numpy = tar_mask.cpu().detach().numpy().reshape(-1, 1)
+        # boxes_data_mask_numpy = boxes_data.view(-1, 6)[mask].cpu().detach().numpy()
 
         loss = self.criterion(pred_mask, tar_mask.long())
 
