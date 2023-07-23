@@ -142,9 +142,12 @@ class LSTMRegressor(nn.Module):
             if len(pred_1_index) > 1:
                 # print('pred not only one result!')
                 # print(pred_soft[i])
+                temp_num = 0
                 for j in range(len(pred_1_index)):
                     if tar[i, pred_1_index[j], 0] != -100:
-                        self.not_one_result += 1
+                        temp_num += 1
+                if temp_num > 1:
+                    self.not_one_result += 1
             for j in range(pred_soft.shape[1]): # every boxes
                 criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
                 yolo_dominated_index = np.argmax(box_conf[i])

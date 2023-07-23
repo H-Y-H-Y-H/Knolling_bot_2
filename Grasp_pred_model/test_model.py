@@ -19,15 +19,15 @@ if __name__ == '__main__':
     if use_dataset == True:
 
         if torch.cuda.is_available():
-            device = 'cuda:0'
+            device = 'cuda:1'
         else:
             device = 'cpu'
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 2130000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_721_1_cross_distance/'
-        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_714_distance/labels/'
+        para_dict['num_img'] = 900000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_721_1_cross_distance_heavy/'
+        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 64
         para_dict['num_layers'] = 8
@@ -90,7 +90,7 @@ if __name__ == '__main__':
                     valid_loss.append(loss.item())
                 else:
                     # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
+                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
                     valid_loss.append(loss.item())
                     tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, \
                     pred_positive, true_positive, \

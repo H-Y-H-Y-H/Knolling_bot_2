@@ -1181,8 +1181,8 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 8000, 'end_num': 10000, 'thread': 4,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'close_flag': False,
                  'pile_flag': True,
                  'use_lego_urdf': False,
@@ -1191,7 +1191,7 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.004, 'gripper_force': 3, 'gripper_sim_step': 10,
@@ -1253,8 +1253,8 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
 
     if try_grasp_flag == True:
-        data_root = para_dict['dataset_path'] + 'grasp_pile_722_lab_test/'
-        with open(para_dict['dataset_path'] + 'grasp_pile_722_lab_test_readme.txt', "w") as f:
+        data_root = para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test/'
+        with open(para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test_readme.txt', "w") as f:
             for key, value in para_dict.items():
                 f.write(key + ': ')
                 f.write(str(value) + '\n')
