@@ -123,9 +123,13 @@ class Arm_env():
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        p.changeDynamics(self.arm_id, 7, lateralFriction=1, contactDamping=1, contactStiffness=50000)
+        p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
+                                         contactDamping=self.para_dict['gripper_contact_damping'],
+                                         contactStiffness=self.para_dict['gripper_contact_stiffness'])
 
-        p.changeDynamics(self.arm_id, 8, lateralFriction=1, contactDamping=1, contactStiffness=50000)
+        p.changeDynamics(self.arm_id, 8, lateralFriction=self.para_dict['gripper_lateral_friction'],
+                                         contactDamping=self.para_dict['gripper_contact_damping'],
+                                         contactStiffness=self.para_dict['gripper_contact_stiffness'])
 
 
         ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.reset_pos,
@@ -198,16 +202,22 @@ class Arm_env():
             p.stepSimulation()
             if self.is_render == True:
                 time.sleep(1/48)
-        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1,
-                         contactDamping=100, contactStiffness=100000, restitution=0)
+        p.changeDynamics(baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
+                                     spinningFriction=self.para_dict['base_spinning_friction'],
+                                     contactDamping=self.para_dict['base_contact_damping'],
+                                     contactStiffness=self.para_dict['base_contact_stiffness'],
+                                     restitution=self.para_dict['base_restitution'])
 
         forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
         while True:
             new_num_item = len(self.obj_idx)
             delete_index = []
             for i in range(len(self.obj_idx)):
-                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=1, spinningFriction=1,
-                                 contactDamping=100, contactStiffness=100000, restitution=0)
+                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
+                                                     spinningFriction=self.para_dict['box_spinning_friction'],
+                                                     contactDamping=self.para_dict['box_contact_damping'],
+                                                     contactStiffness=self.para_dict['box_contact_stiffness'],
+                                                     restitution=self.para_dict['box_restitution'])
 
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
@@ -486,10 +496,10 @@ class Arm_env():
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=25, force=1.5)
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=25, force=self.para_dict['move_force'])
             move_success_flag = True
             if index == 3 or index == 5:
-                for i in range(60):
+                for i in range(20):
                     p.stepSimulation()
                     bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
                     gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
@@ -542,11 +552,6 @@ class Arm_env():
         motor_pos = np.poly1d(formula_parameters)
 
         gripper_success_flag = True
-        # gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-        # gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-        # print('left pos', gripper_left_pos)
-        # print('right pos', gripper_right_pos)
-
         if index == 1:
             num_step = 30
         else:
@@ -555,9 +560,9 @@ class Arm_env():
         if gap > 0.0265:  # close
             tar_pos = motor_pos(obj_width) + close_open_gap
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.3)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=self.para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.3)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=self.para_dict['gripper_force'])
             for i in range(num_step):
 
                 p.stepSimulation()
@@ -570,8 +575,8 @@ class Arm_env():
                 if self.is_render:
                     time.sleep(1 / 24)
         else:  # open
-            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width))
-            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width))
+            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=self.para_dict['gripper_force'])
+            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=self.para_dict['gripper_force'])
             for i in range(num_step):
                 p.stepSimulation()
                 if self.is_render:
