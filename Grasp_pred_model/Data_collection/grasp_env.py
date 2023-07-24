@@ -1,4 +1,4 @@
-from yolo_model_deploy import *
+from pose_estimation import *
 import pybullet as p
 import pybullet_data as pd
 import os
@@ -26,7 +26,7 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
         self.save_img_flag = save_img_flag
-        self.yolo_model = Yolo_predict(save_img_flag=self.save_img_flag, para_dict=para_dict)
+        self.yolo_model = Yolo_predict(save_img_flag=self.save_img_flag)
         self.use_grasp_model = False
 
         self.x_low_obs = 0.03
@@ -654,24 +654,24 @@ class Arm_env():
         my_im[:, :, 2] = temp
         return my_im
 
+para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
+             'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+             'save_img_flag': True,
+             'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
+             'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
+             'max_box_num': 5, 'min_box_num': 4,
+             'is_render': True,
+             'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
+             'box_mass': 0.1,
+             'gripper_threshold': 0.002, 'gripper_sim_step': 10,
+             'move_threshold': 0.001,
+             'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/',
+             'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/'}
+
 if __name__ == '__main__':
 
     np.random.seed(183)
     random.seed(183)
-
-    para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
-                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'max_box_num': 5, 'min_box_num': 4,
-                 'is_render': True,
-                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-                 'box_mass': 0.1,
-                 'gripper_threshold': 0.002, 'gripper_sim_step': 10,
-                 'move_threshold': 0.001,
-                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/',
-                 'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/'}
 
     startnum = para_dict['start_num']
     endnum = para_dict['end_num']
@@ -693,7 +693,7 @@ if __name__ == '__main__':
     mm2px = 530 / 0.34
 
     env = Arm_env(max_step=1, is_render=para_dict['is_render'], endnum=endnum, save_img_flag=save_img_flag,
-                  urdf_path=para_dict['urdf_path'], init_pos_range=init_pos_range, init_ori_range=init_ori_range, para_dict=para_dict)
+                  urdf_path=para_dict['urdf_path'], init_pos_range=init_pos_range, init_ori_range=init_ori_range)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
 
