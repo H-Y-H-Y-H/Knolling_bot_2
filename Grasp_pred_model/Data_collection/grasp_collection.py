@@ -19,12 +19,13 @@ if __name__ == '__main__':
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
                  'move_threshold': 0.001, 'move_force': 3,
-                 'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
+                 'gripper_lateral_friction': 1, 'gripper_linear_damping': 100,
+                 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_spinning_friction': 1,
                  'box_restitution': 0, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_spinning_friction': 1,
                  'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/',
+                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_721_heavy_test/',
                  'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/',
                  'yolo_model_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'}
 
@@ -35,7 +36,7 @@ if __name__ == '__main__':
     init_pos_range = para_dict['init_pos_range']
     init_ori_range = para_dict['init_ori_range']
 
-    data_root = para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test/'
+    data_root = para_dict['dataset_path']
     # with open(para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test_readme.txt', "w") as f:
     #     for key, value in para_dict.items():
     #         f.write(key + ': ')

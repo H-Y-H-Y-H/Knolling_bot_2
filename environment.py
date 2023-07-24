@@ -123,11 +123,13 @@ class Arm_env():
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
+        p.changeDynamics(self.arm_id, 7, linearDamping=self.para_dict['gripper_linear_damping'],
+                                         lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
 
-        p.changeDynamics(self.arm_id, 8, lateralFriction=self.para_dict['gripper_lateral_friction'],
+        p.changeDynamics(self.arm_id, 8, linearDamping=self.para_dict['gripper_linear_damping'],
+                                         lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
 
