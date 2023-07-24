@@ -15,9 +15,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
-    def __init__(self,max_step, is_render=True, x_grasp_accuracy=0.2, y_grasp_accuracy=0.2,
-                 z_grasp_accuracy=0.2, endnum=None, save_img_flag=None, urdf_path=None,
-                 para_dict=None, total_error=None, init_pos_range=None, init_ori_range=None):
+    def __init__(self, endnum, save_img_flag, para_dict, init_pos_range, init_ori_range):
         self.endnum = endnum
         self.kImageSize = {'width': 480, 'height': 480}
 
@@ -36,6 +34,9 @@ class Arm_env():
         self.y_high_obs = 0.14
         self.z_low_obs = 0.0
         self.z_high_obs = 0.05
+        x_grasp_accuracy = 0.2
+        y_grasp_accuracy = 0.2
+        z_grasp_accuracy = 0.2
         self.x_grasp_interval = (self.x_high_obs - self.x_low_obs) * x_grasp_accuracy
         self.y_grasp_interval = (self.y_high_obs - self.y_low_obs) * y_grasp_accuracy
         self.z_grasp_interval = (self.z_high_obs - self.z_low_obs) * z_grasp_accuracy
@@ -462,6 +463,7 @@ class Arm_env():
                 os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
             return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
+        pass
 
     def move(self, cur_pos, cur_ori, tar_pos, tar_ori, sim_height=-0.01, origin_left_pos=None, origin_right_pos=None, index=None):
 
@@ -669,15 +671,22 @@ if __name__ == '__main__':
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
-                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'max_box_num': 5, 'min_box_num': 4,
+                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [3 * np.pi / 16, np.pi / 4]],
+                 'max_box_num': 2, 'min_box_num': 2,
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-                 'box_mass': 0.01,
-                 'gripper_threshold': 0.002, 'gripper_sim_step': 10,
-                 'move_threshold': 0.001,
-                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/',
-                 'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/'}
+                 'box_mass': 0.1,
+                 'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
+                 'move_threshold': 0.001, 'move_force': 3,
+                 'gripper_lateral_friction': 1, 'gripper_linear_damping': 100,
+                 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
+                 'box_lateral_friction': 1, 'box_spinning_friction': 1,
+                 'box_restitution': 0, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
+                 'base_lateral_friction': 1, 'base_spinning_friction': 1,
+                 'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
+                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_721_heavy_test/',
+                 'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/',
+                 'yolo_model_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'}
 
     startnum = para_dict['start_num']
     endnum = para_dict['end_num']
@@ -698,8 +707,7 @@ if __name__ == '__main__':
     min_box_num = para_dict['min_box_num']
     mm2px = 530 / 0.34
 
-    env = Arm_env(max_step=1, is_render=para_dict['is_render'], endnum=endnum, save_img_flag=save_img_flag,
-                  urdf_path=para_dict['urdf_path'], init_pos_range=init_pos_range, init_ori_range=init_ori_range, para_dict=para_dict)
+    env = Arm_env(endnum=endnum, save_img_flag=save_img_flag, init_pos_range=init_pos_range, init_ori_range=init_ori_range, para_dict=para_dict)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
 
