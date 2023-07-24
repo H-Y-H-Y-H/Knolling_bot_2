@@ -1,4 +1,5 @@
 from yolo_model_deploy import *
+from function import *
 import pybullet as p
 import pybullet_data as pd
 import os
@@ -22,12 +23,12 @@ class Arm_env():
 
         self.init_pos_range = init_pos_range
         self.init_ori_range = init_ori_range
-        self.urdf_path = urdf_path
+        self.urdf_path = para_dict['urdf_path']
         self.pybullet_path = pd.getDataPath()
-        self.is_render = is_render
+        self.is_render = para_dict['is_render']
         self.save_img_flag = save_img_flag
         self.yolo_model = Yolo_predict(save_img_flag=self.save_img_flag, para_dict=para_dict)
-        self.use_grasp_model = False
+        self.para_dict = para_dict
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -86,7 +87,7 @@ class Arm_env():
         # p.setPhysicsEngineParameter(numSolverIterations=10)
         p.setTimeStep(1. / 120.)
 
-    def reset_table(self, num_item=None, thread=None, epoch=None, data_root=None):
+    def reset(self, num_item=None, thread=None, epoch=None, data_root=None):
 
         p.resetSimulation()
         self.num_item = num_item
@@ -122,9 +123,9 @@ class Arm_env():
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        p.changeDynamics(self.arm_id, 7, lateralFriction=2)
+        p.changeDynamics(self.arm_id, 7, lateralFriction=1, contactDamping=1, contactStiffness=50000)
 
-        p.changeDynamics(self.arm_id, 8, lateralFriction=2)
+        p.changeDynamics(self.arm_id, 8, lateralFriction=1, contactDamping=1, contactStiffness=50000)
 
 
         ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.reset_pos,
@@ -174,7 +175,7 @@ class Arm_env():
         height_range = np.round(np.random.uniform(0.010, 0.020, size=(self.num_item, 1)), decimals=3)
 
         for i in range(self.num_item):
-            # temp_box.links[0].inertial.mass = para_dict['box_mass']
+            temp_box.links[0].inertial.mass = self.para_dict['box_mass']
             temp_box.links[0].collisions[0].origin[2, 3] = 0
             self.gt_lwh_list.append(np.concatenate((length_range[i], width_range[i], height_range[i])))
             temp_box.links[0].visuals[0].geometry.box.size = np.concatenate((length_range[i], width_range[i], height_range[i]))
@@ -197,16 +198,16 @@ class Arm_env():
             p.stepSimulation()
             if self.is_render == True:
                 time.sleep(1/48)
-        p.changeDynamics(baseid, -1, lateralFriction=0.9, spinningFriction=0.9,
-                         contactDamping=10, contactStiffness=100000)
+        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1,
+                         contactDamping=100, contactStiffness=100000, restitution=0)
 
         forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
         while True:
             new_num_item = len(self.obj_idx)
             delete_index = []
             for i in range(len(self.obj_idx)):
-                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=0.9, spinningFriction=0.9,
-                                 contactDamping=100, contactStiffness=100000)
+                p.changeDynamics(self.obj_idx[i], -1, lateralFriction=1, spinningFriction=1,
+                                 contactDamping=100, contactStiffness=100000, restitution=0)
 
                 cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.obj_idx[i])[1]))
                 cur_pos = np.asarray(p.getBasePositionAndOrientation(self.obj_idx[i])[0])
@@ -484,29 +485,27 @@ class Arm_env():
                                                       maxNumIterations=200,
                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
             for motor_index in range(5):
-                # p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                #                         targetPosition=ik_angles0[motor_index], maxVelocity=25, force=para_dict['move_force'])
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                        targetPosition=ik_angles0[motor_index], maxVelocity=100, force=3)
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=25, force=1.5)
             move_success_flag = True
             if index == 3 or index == 5:
-                for i in range(30):
+                for i in range(60):
                     p.stepSimulation()
                     bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
                     gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
                     gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
                     new_distance_left = np.linalg.norm(bar_pos[:2] - gripper_left_pos[:2])
                     new_distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
-                    # if np.abs(origin_left_pos[1] - gripper_left_pos[1]) > para_dict['move_threshold'] or \
-                    #         np.abs(origin_right_pos[1] - gripper_right_pos[1]) > para_dict['move_threshold']:
+                    # if np.abs(origin_left_pos[1] - gripper_left_pos[1]) > self.para_dict['move_threshold'] or \
+                    #         np.abs(origin_right_pos[1] - gripper_right_pos[1]) > self.para_dict['move_threshold']:
                     #     move_success_flag = False
                     #     print('during moving, fail')
                     #     break
-                    if np.abs(new_distance_left - self.distance_left) > para_dict['move_threshold'] or \
-                            np.abs(new_distance_right - self.distance_right) > para_dict['move_threshold']:
-                        move_success_flag = False
-                        print('during moving, fail')
-                        break
+                    # if np.abs(new_distance_left - self.distance_left) > self.para_dict['move_threshold'] or \
+                    #         np.abs(new_distance_right - self.distance_right) > self.para_dict['move_threshold']:
+                    #     move_success_flag = False
+                    #     print('during moving, fail')
+                    #     break
 
                     if self.is_render:
                         time.sleep(1 / 360)
@@ -556,15 +555,15 @@ class Arm_env():
         if gap > 0.0265:  # close
             tar_pos = motor_pos(obj_width) + close_open_gap
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.3)
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap)
+                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=0.3)
             for i in range(num_step):
 
                 p.stepSimulation()
                 gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
                 gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-                if gripper_left_pos[1] - left_pos[1] > para_dict['gripper_threshold'] or right_pos[1] - gripper_right_pos[1] > para_dict['gripper_threshold']:
+                if gripper_left_pos[1] - left_pos[1] > self.para_dict['gripper_threshold'] or right_pos[1] - gripper_right_pos[1] > self.para_dict['gripper_threshold']:
                     print('during grasp, fail')
                     gripper_success_flag = False
                     break
@@ -656,8 +655,8 @@ class Arm_env():
 
 if __name__ == '__main__':
 
-    np.random.seed(183)
-    random.seed(183)
+    # np.random.seed(183)
+    # random.seed(183)
 
     para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
@@ -667,7 +666,7 @@ if __name__ == '__main__':
                  'max_box_num': 5, 'min_box_num': 4,
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-                 'box_mass': 0.1,
+                 'box_mass': 0.01,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10,
                  'move_threshold': 0.001,
                  'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/',
@@ -700,6 +699,6 @@ if __name__ == '__main__':
     exist_img_num = startnum
     while True:
         num_item = int(np.random.uniform(min_box_num, max_box_num + 1))
-        env.reset_table(data_root=data_root, num_item=num_item, thread=thread, epoch=exist_img_num)
+        env.reset(data_root=data_root, num_item=num_item, thread=thread, epoch=exist_img_num)
         img_per_epoch = env.try_grasp(data_root=data_root, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch

@@ -241,7 +241,7 @@ class Yolo_predict():
 
     def yolov8_predict(self, cfg=DEFAULT_CFG, use_python=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
-        model = '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
+        model = self.para_dict['yolo_model_path']
         # model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # model = 'C:/Users/24356/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # img = adjust_img(img)
