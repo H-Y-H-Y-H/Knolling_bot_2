@@ -203,16 +203,15 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    np.random.seed(185)
-    random.seed(185)
-
-    para_dict = {'start_num': 220000, 'end_num': 240000, 'thread': 11,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    # np.random.seed(185)
+    # random.seed(185)
+    para_dict = {'start_num': 45000, 'end_num': 50000, 'thread': 9,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -225,10 +224,7 @@ if __name__ == '__main__':
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False, 'data_collection': True}
 
-
     startnum = para_dict['start_num']
-    endnum = para_dict['end_num']
-    thread = para_dict['thread']
 
     data_root = para_dict['dataset_path']
     with open('../../../knolling_dataset/grasp_dataset_725_readme.txt', "w") as f:
