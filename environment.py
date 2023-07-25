@@ -15,16 +15,16 @@ from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
-    def __init__(self, endnum, save_img_flag, para_dict, init_pos_range, init_ori_range):
-        self.endnum = endnum
-        self.kImageSize = {'width': 480, 'height': 480}
+    def __init__(self, para_dict):
 
-        self.init_pos_range = init_pos_range
-        self.init_ori_range = init_ori_range
+        self.kImageSize = {'width': 480, 'height': 480}
+        self.endnum = para_dict['end_num']
+        self.init_pos_range = para_dict['init_pos_range']
+        self.init_ori_range = para_dict['init_ori_range']
         self.urdf_path = para_dict['urdf_path']
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
-        self.save_img_flag = save_img_flag
+        self.save_img_flag = para_dict['save_img_flag']
         self.yolo_model = Yolo_predict(save_img_flag=self.save_img_flag, para_dict=para_dict)
         self.para_dict = para_dict
 
@@ -647,20 +647,6 @@ class Arm_env():
         # print('this is manipulator before after the detection \n', manipulator_before)
 
         return manipulator_before, new_lwh_list, pred_conf
-
-    def get_image(self):
-        # reset camera
-        (width, length, image, _, _) = p.getCameraImage(width=640,
-                                                        height=480,
-                                                        viewMatrix=self.view_matrix,
-                                                        projectionMatrix=self.projection_matrix,
-                                                        renderer=p.ER_BULLET_HARDWARE_OPENGL)
-                                                        # lightDirection = [light_x, light_y, light_z])
-        my_im = image[:, :, :3]
-        temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
-        my_im[:, :, 0] = my_im[:, :, 2]
-        my_im[:, :, 2] = temp
-        return my_im
 
 if __name__ == '__main__':
 

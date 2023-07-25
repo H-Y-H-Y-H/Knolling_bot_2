@@ -10,8 +10,7 @@ class Grasp_env(Arm_env):
     def __init__(self, endnum=None, save_img_flag=None,
                  para_dict=None, init_pos_range=None, init_ori_range=None):
 
-        super(Grasp_env, self).__init__(endnum=endnum, save_img_flag=save_img_flag,
-                 para_dict=para_dict, init_pos_range=init_pos_range, init_ori_range=init_ori_range)
+        super(Grasp_env, self).__init__(para_dict=para_dict)
 
     def try_grasp(self, data_root=None, img_index_start=None):
         print('this is img_index start while grasping', img_index_start)
@@ -217,7 +216,7 @@ if __name__ == '__main__':
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
-                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [3 * np.pi / 16, np.pi / 4]],
+                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'max_box_num': 5, 'min_box_num': 4,
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
@@ -242,10 +241,10 @@ if __name__ == '__main__':
     init_ori_range = para_dict['init_ori_range']
 
     data_root = para_dict['dataset_path']
-    # with open(para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test_readme.txt', "w") as f:
-    #     for key, value in para_dict.items():
-    #         f.write(key + ': ')
-    #         f.write(str(value) + '\n')
+    with open(para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test_readme.txt', "w") as f:
+        for key, value in para_dict.items():
+            f.write(key + ': ')
+            f.write(str(value) + '\n')
 
     os.makedirs(data_root, exist_ok=True)
 
@@ -253,8 +252,7 @@ if __name__ == '__main__':
     min_box_num = para_dict['min_box_num']
     mm2px = 530 / 0.34
 
-    env = Grasp_env(endnum=endnum, save_img_flag=save_img_flag,
-                  init_pos_range=init_pos_range, init_ori_range=init_ori_range, para_dict=para_dict)
+    env = Grasp_env(para_dict=para_dict)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
 
