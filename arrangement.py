@@ -1,4 +1,150 @@
 import numpy as np
+
+class Sort_objects():
+
+    def __init__(self, manual_knolling_parameters, general_parameters):
+        self.error_rate = 0.05
+        self.manual_knolling_parameters = manual_knolling_parameters
+        self.general_parameters = general_parameters
+    def get_data_virtual(self):
+
+        xyz_list = []
+        length_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][0][0],
+                                                  self.manual_knolling_parameters['box_range'][0][1],
+                                                  size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
+        width_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][1][0],
+                                                 np.minimum(length_range, 0.036),
+                                                 size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
+        height_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][2][0],
+                                                  self.manual_knolling_parameters['box_range'][2][1],
+                                                  size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
+
+        xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
+        print(xyz_list)
+
+        return xyz_list
+
+
+    def get_data_real(self, yolo_model, evaluations, check='before'):
+
+        img_path = self.general_parameters['img_save_path'] + 'images_%s_%s' % (evaluations, check)
+        # img_path = './learning_data_demo/demo_8/images_before'
+        # structure of results: x, y, length, width, ori
+        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.manual_knolling_parameters['boxes_num'])
+
+        item_pos = results[:, :3]
+        item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
+        item_ori = np.concatenate((np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+
+        category_num = int(self.manual_knolling_parameters['area_num'] * self.manual_knolling_parameters['ratio_num'] + 1)
+        s = item_lw[:, 0] * item_lw[:, 1]
+        s_min, s_max = np.min(s), np.max(s)
+        s_range = np.linspace(s_max, s_min, int(self.manual_knolling_parameters['area_num'] + 1))
+        lw_ratio = item_lw[:, 0] / item_lw[:, 1]
+        ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.manual_knolling_parameters['ratio_num'] + 1))
+
+        # ! initiate the number of items
+        all_index = []
+        new_item_xyz = []
+        new_item_pos = []
+        new_item_ori = []
+        transform_flag = []
+        rest_index = np.arange(len(item_lw))
+        index = 0
+
+        for i in range(self.manual_knolling_parameters['area_num']):
+            for j in range(self.manual_knolling_parameters['ratio_num']):
+                kind_index = []
+                for m in range(len(item_lw)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if s_range[i] >= s[m] >= s_range[i + 1]:
+                            if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
+                                transform_flag.append(0)
+                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                                kind_index.append(index)
+                                new_item_xyz.append(item_lw[m])
+                                new_item_pos.append(item_pos[m])
+                                new_item_ori.append(item_ori[m])
+                                index += 1
+                                rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+
+        new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
+        new_item_pos = np.asarray(new_item_pos)
+        new_item_ori = np.asarray(new_item_ori)
+        transform_flag = np.asarray(transform_flag)
+        if len(rest_index) != 0:
+            # we should implement the rest of boxes!
+            rest_xyz = item_lw[rest_index]
+            new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
+            all_index.append(list(np.arange(index, len(item_lw))))
+            transform_flag = np.append(transform_flag, np.zeros(len(item_lw) - index))
+
+        # the sequence of them are based on area and ratio!
+        return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
+
+    def judge(self, item_xyz, pos_before, ori_before, boxes_index):
+        # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
+
+        category_num = int(self.manual_knolling_parameters['area_num'] * self.manual_knolling_parameters['ratio_num'] + 1)
+        s = item_xyz[:, 0] * item_xyz[:, 1]
+        s_min, s_max = np.min(s), np.max(s)
+        s_range = np.linspace(s_max, s_min, int(self.manual_knolling_parameters['area_num'] + 1))
+        lw_ratio = item_xyz[:, 0] / item_xyz[:, 1]
+        ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.manual_knolling_parameters['ratio_num'] + 1))
+        ratio_range_high = np.linspace(ratio_max, 1, int(self.manual_knolling_parameters['ratio_num'] + 1))
+        ratio_range_low = np.linspace(1 / ratio_max, 1, int(self.manual_knolling_parameters['ratio_num'] + 1))
+
+        # ! initiate the number of items
+        all_index = []
+        new_item_xyz = []
+        transform_flag = []
+        new_pos_before = []
+        new_ori_before = []
+        new_boxes_index = []
+        rest_index = np.arange(len(item_xyz))
+        index = 0
+
+        for i in range(self.manual_knolling_parameters['area_num']):
+            for j in range(self.manual_knolling_parameters['ratio_num']):
+                kind_index = []
+                for m in range(len(item_xyz)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if s_range[i] >= s[m] >= s_range[i + 1]:
+                            if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
+                                transform_flag.append(0)
+                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                                kind_index.append(index)
+                                new_item_xyz.append(item_xyz[m])
+                                new_pos_before.append(pos_before[m])
+                                new_ori_before.append(ori_before[m])
+                                new_boxes_index.append(boxes_index[m])
+                                index += 1
+                                rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+
+        new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
+        new_pos_before = np.asarray(new_pos_before).reshape(-1, 3)
+        new_ori_before = np.asarray(new_ori_before).reshape(-1, 3)
+        transform_flag = np.asarray(transform_flag)
+        new_boxes_index = np.asarray(new_boxes_index)
+        if len(rest_index) != 0:
+            # we should implement the rest of boxes!
+            rest_xyz = item_xyz[rest_index]
+            new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
+            all_index.append(list(np.arange(index, len(item_xyz))))
+            transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
+
+        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_boxes_index
+
 class configuration_zzz():
 
     def __init__(self, xyz_list, all_index, transform_flag, manual_knolling_parameters):

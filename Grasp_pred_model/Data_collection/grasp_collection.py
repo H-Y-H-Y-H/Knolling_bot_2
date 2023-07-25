@@ -210,8 +210,8 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    np.random.seed(183)
-    random.seed(183)
+    # np.random.seed(183)
+    # random.seed(183)
 
     para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
@@ -230,9 +230,9 @@ if __name__ == '__main__':
                  'box_restitution': 0, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_spinning_friction': 1,
                  'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_721_heavy_test/',
-                 'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/',
-                 'yolo_model_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'}
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_721_heavy_test/',
+                 'urdf_path': '../../urdf/',
+                 'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt'}
 
     startnum = para_dict['start_num']
     endnum = para_dict['end_num']
