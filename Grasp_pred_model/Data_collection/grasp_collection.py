@@ -100,9 +100,10 @@ class Grasp_env(Arm_env):
                 for j in range(len(self.boxes_index)):
                     success_grasp_flag = False
                     fail_break_flag = False
-                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])  # this is the pos after of the grasped box
+                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])
+                    box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[j])[1]))# this is the pos after of the grasped box
                     if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
+                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005 and np.all(np.abs(box_ori[:2]) < 0.05):
                         for m in range(len(self.boxes_index)):
                             box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
                             ori_qua_after = p.getBasePositionAndOrientation(self.boxes_index[m])[1]
@@ -123,7 +124,7 @@ class Grasp_env(Arm_env):
                         if success_grasp_flag == True or fail_break_flag == True:
                             break
                     elif j == len(self.boxes_index) - 1:
-                        print('the target box does not move to the designated pos, grasp fail!')
+                        print('the target box does not move to the designated pos or in a tilted state, grasp fail!')
                         success_grasp_flag = False
                         grasp_flag.append(0)
             ###################### Judge whether the grasp is success ######################
@@ -233,7 +234,7 @@ if __name__ == '__main__':
     thread = para_dict['thread']
 
     data_root = para_dict['dataset_path']
-    with open(para_dict['dataset_path'] + 'grasp_dataset_721_heavy_test_readme.txt', "w") as f:
+    with open('../../../knolling_dataset/grasp_dataset_721_heavy_test_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
