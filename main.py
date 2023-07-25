@@ -954,30 +954,27 @@ class knolling_main(Arm_env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'save_img_flag': True,
+    para_dict = {'start_num': 45000, 'end_num': 50000, 'thread': 9,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(2, 3),
-                 'is_render': True,
+                 'boxes_num': np.random.randint(4, 6),
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
                  'move_threshold': 0.001, 'move_force': 3,
-                 'gripper_lateral_friction': 1, 'gripper_linear_damping': 100,
-                 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
-                 'box_lateral_friction': 1, 'box_spinning_friction': 1,
-                 'box_restitution': 0, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
-                 'base_lateral_friction': 1, 'base_spinning_friction': 1,
-                 'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_721_heavy_test/',
+                 'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
+                 'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
+                 'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_725/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False,
-                 'data_collection': True}
+                 'data_collection': False}
 
-    knolling_generate_parameters = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
+    knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
                                     'gap_block': 0.015, 'random_offset': False,
                                     'area_num': 2, 'ratio_num': 1,
                                     'order_flag': 'confidence',
@@ -986,17 +983,13 @@ if __name__ == '__main__':
                                     'upper_left_max': True,
                                     'forced_rotate_box': False}
 
-    max_box_num = para_dict['max_box_num']
-    min_box_num = para_dict['min_box_num']
-
-    env = knolling_main()
-    knolling_env = Env(is_render=general_parameters['is_render'])
+    main_env = knolling_main()
 
     evaluations = 1
     for evaluation in range(para_dict['evaluations']):
-        env.get_parameters(evaluations=evaluation,
-                           knolling_generate_parameters=knolling_generate_parameters,
-                           dynamic_parameters=dynamic_parameters,
-                           general_parameters=general_parameters,
-                           knolling_env=knolling_env)
-        env.step()
+        # env.get_parameters(evaluations=evaluation,
+        #                    knolling_generate_parameters=knolling_generate_parameters,
+        #                    dynamic_parameters=dynamic_parameters,
+        #                    general_parameters=general_parameters,
+        #                    knolling_env=knolling_env)
+        main_env.step()

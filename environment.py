@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
-    def __init__(self, para_dict):
+    def __init__(self, para_dict, knolling_para=None):
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.endnum = para_dict['end_num']
@@ -32,6 +32,7 @@ class Arm_env():
         self.boxes_sort = Sort_objects(para_dict=para_dict)
         self.grasp_model = Grasp_model(para_dict=para_dict)
         self.para_dict = para_dict
+        self.knolling_para = knolling_para
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -183,10 +184,6 @@ class Arm_env():
         os.makedirs(box_path, exist_ok=True)
         temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
 
-        length_range = np.round(np.random.uniform(0.016, 0.048, size=(self.num_boxes, 1)), decimals=3)
-        width_range = np.round(np.random.uniform(0.016, np.minimum(length_range, 0.036), size=(self.num_boxes, 1)),decimals=3)
-        height_range = np.round(np.random.uniform(0.010, 0.020, size=(self.num_boxes, 1)), decimals=3)
-
         for i in range(self.num_boxes):
             temp_box.links[0].inertial.mass = self.para_dict['box_mass']
             temp_box.links[0].collisions[0].origin[2, 3] = 0
@@ -227,8 +224,7 @@ class Arm_env():
                 time.sleep(1/48)
         p.changeDynamics(baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                                      contactDamping=self.para_dict['base_contact_damping'],
-                                     contactStiffness=self.para_dict['base_contact_stiffness'],
-                                     )
+                                     contactStiffness=self.para_dict['base_contact_stiffness'])
 
         if self.para_dict['real_operate'] == False:
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
@@ -240,8 +236,7 @@ class Arm_env():
                 for i in range(len(self.boxes_index)):
                     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
                                                          contactDamping=self.para_dict['box_contact_damping'],
-                                                         contactStiffness=self.para_dict['box_contact_stiffness'],
-                                                         )
+                                                         contactStiffness=self.para_dict['box_contact_stiffness'])
 
                     cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
@@ -281,8 +276,7 @@ class Arm_env():
                 self.ori_before = []
                 check_delete_index = []
                 for i in range(len(self.boxes_index)):
-                    cur_ori = np.asarray(
-                        p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
                     self.pos_before.append(cur_pos)
                     self.ori_before.append(cur_ori)
@@ -311,6 +305,105 @@ class Arm_env():
 
         self.img_per_epoch = 0
         # return img_per_epoch_result
+
+    def manual_knolling(self):  # this is main function!!!!!!!!!
+
+        if self.para_dict['use_knolling_model'] == True:
+            ######################## knolling demo ###############################
+
+            ################## change order based on distance between boxes and upper left corner ##################
+            order = change_sequence(self.pos_before)
+            self.pos_before = self.pos_before[order]
+            self.ori_before = self.ori_before[order]
+            self.lwh_list = self.lwh_list[order]
+            knolling_model_input = np.concatenate((self.pos_before[:, :2], self.lwh_list[:, :2],
+                                                   self.ori_before[:, 2].reshape(-1, 1)), axis=1).reshape(1, -1)
+            ################## change order based on distance between boxes and upper left corner ##################
+
+            ################## input the demo data ##################
+            knolling_demo_data = np.loadtxt('./num_10_after_demo_8.txt')[0].reshape(-1, 5)
+            ################## input the demo data ##################
+
+            index = []
+            after_knolling = []
+            after_knolling = np.asarray(after_knolling)
+
+            self.pos_after = np.concatenate((knolling_demo_data[:, :2], np.zeros(len(knolling_demo_data)).reshape(-1, 1)), axis=1)
+            self.ori_after = np.concatenate((np.zeros((len(knolling_demo_data), 2)), knolling_demo_data[:, 4].reshape(-1, 1)),
+                                            axis=1)
+            for i in range(len(knolling_demo_data)):
+                if knolling_demo_data[i, 2] < knolling_demo_data[i, 3]:
+                    self.ori_after[i, 2] += np.pi / 2
+
+            # self.items_pos_list = np.concatenate((after_knolling[:, :2], np.zeros(len(after_knolling)).reshape(-1, 1)), axis=1)
+            # self.items_ori_list = np.concatenate((np.zeros((len(after_knolling), 2)), after_knolling[:, 4].reshape(-1, 1)), axis=1)
+            # self.xyz_list = np.concatenate((after_knolling[:, 2:4], (np.ones(len(after_knolling)) * 0.012).reshape(-1, 1)), axis=1)
+            ######################## knolling demo ###############################
+        else:
+            # determine the center of the tidy configuration
+            calculate_reorder = configuration_zzz(self.lwh_list, self.all_index, self.transform_flag, self.manual_knolling_parameters)
+            self.pos_after, self.ori_after = calculate_reorder.calculate_block()
+            # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
+            # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!
+            # the order of pos after and ori after is based on lwh list!!!!!!!!!!!!!!
+
+            ################## change order based on distance between boxes and upper left corner ##################
+            order = change_sequence(self.pos_before)
+            self.pos_before = self.pos_before[order]
+            self.ori_before = self.ori_before[order]
+            self.lwh_list = self.lwh_list[order]
+            self.pos_after = self.pos_after[order]
+            self.ori_after = self.ori_after[order]
+            self.boxes_index = self.boxes_index[order]
+            ################## change order based on distance between boxes and upper left corner ##################
+
+            x_low = np.min(self.pos_after, axis=0)[0]
+            x_high = np.max(self.pos_after, axis=0)[0]
+            y_low = np.min(self.pos_after, axis=0)[1]
+            y_high = np.max(self.pos_after, axis=0)[1]
+            center = np.array([(x_low + x_high) / 2, (y_low + y_high) / 2, 0])
+            x_length = abs(x_high - x_low)
+            y_length = abs(y_high - y_low)
+            print(x_low, x_high, y_low, y_high)
+            if self.manual_knolling_parameters['random_offset'] == True:
+                self.manual_knolling_parameters['total_offset'] = np.array([random.uniform(self.x_low_obs + x_length / 2, self.x_high_obs - x_length / 2),
+                                              random.uniform(self.y_low_obs + y_length / 2, self.y_high_obs - y_length / 2), 0.0])
+            else:
+                pass
+            self.pos_after += np.array([0, 0, 0.006])
+            self.pos_after = self.pos_after + self.manual_knolling_parameters['total_offset']
+
+            ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
+            items_ori_list_arm = np.copy(self.ori_after)
+            for i in range(len(self.lwh_list)):
+                if self.lwh_list[i, 0] <= self.lwh_list[i, 1]:
+                    self.ori_after[i, 2] += np.pi / 2
+            ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
+
+            self.manipulator_after = np.concatenate((self.pos_after, self.ori_after), axis=1)
+            print('this is manipulator after\n', self.manipulator_after)
+
+            # # self.boxes_index = []
+            # for i in range(len(self.lwh_list)):
+            #     p.loadURDF(self.save_urdf_path_one_img + 'box_%d.urdf' % (self.boxes_index[i] - 6),
+            #                basePosition=self.pos_after[i] + np.array([0, 0, 0.006]),
+            #                baseOrientation=p.getQuaternionFromEuler(self.ori_after[i]), useFixedBase=False,
+            #                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+            #     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.000,
+            #                      linearDamping=0, angularDamping=0, jointDamping=0)
+            #     r = np.random.uniform(0, 0.9)
+            #     g = np.random.uniform(0, 0.9)
+            #     b = np.random.uniform(0, 0.9)
+            #     p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+            # for i in range(30):
+            #     p.stepSimulation()
+
+        # if the urdf is lego, all ori after knolling should be 0, not pi / 2
+        self.ori_after[:, 2] = 0
+        data_after = np.concatenate((self.pos_after[:, :2], self.lwh_list[:, :2], self.ori_after[:, 2].reshape(-1, 1)), axis=1)
+        # np.savetxt('./real_world_data_demo/cfg_4_519/labels_after/label_8_%d.txt' % self.evaluations, data_after, fmt='%.03f')
+
+        return self.get_obs('images'), self.manipulator_after
 
     def try_grasp(self, img_index_start=None):
         # print('this is img_index start while grasping', img_index_start)
