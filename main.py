@@ -975,6 +975,7 @@ if __name__ == '__main__':
                  'urdf_path': 'urdf/',
                  'yolo_model_path': 'train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False}
+
     knolling_generate_parameters = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
                                     'gap_block': 0.015, 'random_offset': False,
                                     'area_num': 2, 'ratio_num': 1,

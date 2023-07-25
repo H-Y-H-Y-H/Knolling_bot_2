@@ -45,20 +45,24 @@ class Grasp_env(Arm_env):
         exist_gt_index = []
         offset_low = np.array([0, 0, 0.0])
         offset_high = np.array([0, 0, 0.05])
+        ######################## Initiate the calculator of gripper #####################
+        self.calculate_gripper()
+        ######################## Initiate the calculator of gripper #####################
+
         for i in range(len(start_end)):
 
             trajectory_pos_list = [self.reset_pos, # the origin position
-                                   [0.02, grasp_width[i]],  # gripper open!
+                                   [0, grasp_width[i]],  # gripper open!
                                    offset_high + start_end[i][:3], # move directly to the above of the target
                                    offset_low + start_end[i][:3], # decline slowly
-                                   [0.0273, grasp_width[i]],  # gripper close
+                                   [1, grasp_width[i]],  # gripper close
                                    offset_high + start_end[i][:3], # lift the target up
                                    start_end[i][6:9]] # move to the destination
             trajectory_ori_list = [self.reset_ori,
                                    self.reset_ori + start_end[i][3:6],
                                    self.reset_ori + start_end[i][3:6],
                                    self.reset_ori + start_end[i][3:6],
-                                   [0.0273, grasp_width[i]],
+                                   [1, grasp_width[i]],
                                    self.reset_ori + start_end[i][3:6],
                                    self.reset_ori + start_end[i][9:12]]
 
@@ -80,7 +84,7 @@ class Grasp_env(Arm_env):
                             break
                         ####################### Detect whether the gripper is disturbed by other objects during moving the gripper ####################
                     else: # 0, 4, 5, 6
-                        last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+                        last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
                     last_ori = np.copy(trajectory_ori_list[j])
                 elif len(trajectory_pos_list[j]) == 2:
                     ####################### Dtect whether the gripper is disturbed by other objects during closing the gripper ####################
@@ -198,8 +202,8 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    # np.random.seed(183)
-    # random.seed(183)
+    np.random.seed(183)
+    random.seed(183)
 
     para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',

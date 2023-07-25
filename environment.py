@@ -510,6 +510,14 @@ class Arm_env():
         #     return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
         pass
 
+    def calculate_gripper(self):
+        self.close_open_gap = 0.053
+        # close_open_gap = 0.048
+        obj_width_range = np.array([0.022, 0.057])
+        motor_pos_range = np.array([0.022, 0.010])  # 0.0273
+        formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 1)
+        self.motor_pos = np.poly1d(formula_parameters)
+
     def move(self, cur_pos, cur_ori, tar_pos, tar_ori, sim_height=-0.01, origin_left_pos=None, origin_right_pos=None, index=None):
 
         # add the offset manually
@@ -537,6 +545,17 @@ class Arm_env():
         num_step = np.ceil(distance / move_slice)
         step_pos = (target_pos - cur_pos) / num_step
         step_ori = (target_ori - cur_ori) / num_step
+
+        #################### ensure the gripper will not drift while lifting the boxes ###########################
+        if index == 6 or index == 5:
+            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
+                                    targetPosition=self.motor_pos(self.keep_obj_width) + self.close_open_gap,
+                                    force=self.para_dict['gripper_force'] * 10)
+            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
+                                    targetPosition=self.motor_pos(self.keep_obj_width) + self.close_open_gap,
+                                    force=self.para_dict['gripper_force'] * 10)
+        #################### ensure the gripper will not drift while lifting the boxes ###########################
+
         while True:
             tar_pos = cur_pos + step_pos
             tar_ori = cur_ori + step_ori
@@ -592,26 +611,21 @@ class Arm_env():
         return cur_pos, gripper_left_pos, gripper_right_pos, move_success_flag
 
     def gripper(self, gap, obj_width, left_pos, right_pos, index=None):
+        if index == 4:
+            self.keep_obj_width = obj_width + 0.01
         obj_width += 0.010
-        close_open_gap = 0.053
-        # close_open_gap = 0.048
-        obj_width_range = np.array([0.022, 0.057])
-        motor_pos_range = np.array([0.022, 0.010])  # 0.0273
-        formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 1)
-        motor_pos = np.poly1d(formula_parameters)
-
         gripper_success_flag = True
         if index == 1:
             num_step = 30
         else:
             num_step = 10
 
-        if gap > 0.0265:  # close
-            tar_pos = motor_pos(obj_width) + close_open_gap
+        if gap > 0.5:  # close
+            tar_pos = self.motor_pos(obj_width) + self.close_open_gap
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=self.para_dict['gripper_force'])
+                                    targetPosition=self.motor_pos(obj_width) + self.close_open_gap, force=self.para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                    targetPosition=motor_pos(obj_width) + close_open_gap, force=self.para_dict['gripper_force'])
+                                    targetPosition=self.motor_pos(obj_width) + self.close_open_gap, force=self.para_dict['gripper_force'])
             for i in range(num_step):
 
                 p.stepSimulation()
@@ -624,8 +638,8 @@ class Arm_env():
                 if self.is_render:
                     time.sleep(1 / 24)
         else:  # open
-            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=self.para_dict['gripper_force'])
-            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=motor_pos(obj_width), force=self.para_dict['gripper_force'])
+            p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
+            p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             for i in range(num_step):
                 p.stepSimulation()
                 if self.is_render:
