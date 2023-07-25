@@ -123,11 +123,11 @@ class Arm_env():
         ######################################## Texture change ########################################
 
         #################################### Gripper dynamic change #########################################
-        p.changeDynamics(self.arm_id, 7, linearDamping=self.para_dict['gripper_linear_damping'],
+        p.changeDynamics(self.arm_id, 7,
                                          lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
-        p.changeDynamics(self.arm_id, 8, linearDamping=self.para_dict['gripper_linear_damping'],
+        p.changeDynamics(self.arm_id, 8,
                                          lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
@@ -226,10 +226,9 @@ class Arm_env():
             if self.is_render == True:
                 time.sleep(1/48)
         p.changeDynamics(baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                                     spinningFriction=self.para_dict['base_spinning_friction'],
                                      contactDamping=self.para_dict['base_contact_damping'],
                                      contactStiffness=self.para_dict['base_contact_stiffness'],
-                                     restitution=self.para_dict['base_restitution'])
+                                     )
 
         if self.para_dict['real_operate'] == False:
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
@@ -238,12 +237,11 @@ class Arm_env():
                 delete_index = []
                 self.pos_before = []
                 self.ori_before = []
-                for i in range(self.num_boxes):
+                for i in range(len(self.boxes_index)):
                     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
-                                                         spinningFriction=self.para_dict['box_spinning_friction'],
                                                          contactDamping=self.para_dict['box_contact_damping'],
                                                          contactStiffness=self.para_dict['box_contact_stiffness'],
-                                                         restitution=self.para_dict['box_restitution'])
+                                                         )
 
                     cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])

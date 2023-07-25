@@ -103,7 +103,7 @@ class Grasp_env(Arm_env):
                     box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])
                     box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[j])[1]))# this is the pos after of the grasped box
                     if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005 and np.all(np.abs(box_ori[:2]) < 0.05):
+                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
                         for m in range(len(self.boxes_index)):
                             box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
                             ori_qua_after = p.getBasePositionAndOrientation(self.boxes_index[m])[1]
@@ -203,27 +203,24 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    np.random.seed(183)
-    random.seed(183)
+    np.random.seed(185)
+    random.seed(185)
 
-    para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
+    para_dict = {'start_num': 220000, 'end_num': 240000, 'thread': 11,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(2, 3),
+                 'boxes_num': np.random.randint(4, 6),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
                  'move_threshold': 0.001, 'move_force': 3,
-                 'gripper_lateral_friction': 1, 'gripper_linear_damping': 100,
-                 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
-                 'box_lateral_friction': 1, 'box_spinning_friction': 1,
-                 'box_restitution': 0, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
-                 'base_lateral_friction': 1, 'base_spinning_friction': 1,
-                 'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_721_heavy_test/',
+                 'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
+                 'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
+                 'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_725/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False, 'data_collection': True}
@@ -234,7 +231,7 @@ if __name__ == '__main__':
     thread = para_dict['thread']
 
     data_root = para_dict['dataset_path']
-    with open('../../../knolling_dataset/grasp_dataset_721_heavy_test_readme.txt', "w") as f:
+    with open('../../../knolling_dataset/grasp_dataset_725_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
