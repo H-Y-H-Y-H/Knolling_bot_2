@@ -2,9 +2,10 @@ import numpy as np
 
 class Sort_objects():
 
-    def __init__(self, para_dict):
+    def __init__(self, para_dict, knolling_para):
         self.error_rate = 0.05
         self.para_dict = para_dict
+        self.knolling_para = knolling_para
     def get_data_virtual(self):
 
         xyz_list = []
@@ -24,24 +25,24 @@ class Sort_objects():
         return xyz_list
 
 
-    def get_data_real(self, yolo_model, evaluations, check='before'):
+    def get_data_real(self, yolo_model, evaluations=1, check='before'):
 
-        img_path = self.general_parameters['img_save_path'] + 'images_%s_%s' % (evaluations, check)
+        img_path = self.para_dict['img_save_path'] + 'images_%s_%s' % (evaluations, check)
         # img_path = './learning_data_demo/demo_8/images_before'
         # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.manual_knolling_parameters['boxes_num'])
+        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.para_dict['boxes_num'])
 
         item_pos = results[:, :3]
         item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
         item_ori = np.concatenate((np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
 
-        category_num = int(self.manual_knolling_parameters['area_num'] * self.manual_knolling_parameters['ratio_num'] + 1)
+        category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
         s = item_lw[:, 0] * item_lw[:, 1]
         s_min, s_max = np.min(s), np.max(s)
-        s_range = np.linspace(s_max, s_min, int(self.manual_knolling_parameters['area_num'] + 1))
+        s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
         lw_ratio = item_lw[:, 0] / item_lw[:, 1]
         ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
-        ratio_range = np.linspace(ratio_max, ratio_min, int(self.manual_knolling_parameters['ratio_num'] + 1))
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
 
         # ! initiate the number of items
         all_index = []
@@ -52,8 +53,8 @@ class Sort_objects():
         rest_index = np.arange(len(item_lw))
         index = 0
 
-        for i in range(self.manual_knolling_parameters['area_num']):
-            for j in range(self.manual_knolling_parameters['ratio_num']):
+        for i in range(self.knolling_para['area_num']):
+            for j in range(self.knolling_para['ratio_num']):
                 kind_index = []
                 for m in range(len(item_lw)):
                     if m not in rest_index:
@@ -89,15 +90,15 @@ class Sort_objects():
     def judge(self, item_xyz, pos_before, ori_before, boxes_index):
         # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
 
-        category_num = int(self.manual_knolling_parameters['area_num'] * self.manual_knolling_parameters['ratio_num'] + 1)
+        category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
         s = item_xyz[:, 0] * item_xyz[:, 1]
         s_min, s_max = np.min(s), np.max(s)
-        s_range = np.linspace(s_max, s_min, int(self.manual_knolling_parameters['area_num'] + 1))
+        s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
         lw_ratio = item_xyz[:, 0] / item_xyz[:, 1]
         ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
-        ratio_range = np.linspace(ratio_max, ratio_min, int(self.manual_knolling_parameters['ratio_num'] + 1))
-        ratio_range_high = np.linspace(ratio_max, 1, int(self.manual_knolling_parameters['ratio_num'] + 1))
-        ratio_range_low = np.linspace(1 / ratio_max, 1, int(self.manual_knolling_parameters['ratio_num'] + 1))
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
+        ratio_range_high = np.linspace(ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
+        ratio_range_low = np.linspace(1 / ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
 
         # ! initiate the number of items
         all_index = []
@@ -109,8 +110,8 @@ class Sort_objects():
         rest_index = np.arange(len(item_xyz))
         index = 0
 
-        for i in range(self.manual_knolling_parameters['area_num']):
-            for j in range(self.manual_knolling_parameters['ratio_num']):
+        for i in range(self.knolling_para['area_num']):
+            for j in range(self.knolling_para['ratio_num']):
                 kind_index = []
                 for m in range(len(item_xyz)):
                     if m not in rest_index:
@@ -146,17 +147,17 @@ class Sort_objects():
 
 class configuration_zzz():
 
-    def __init__(self, xyz_list, all_index, transform_flag, manual_knolling_parameters):
+    def __init__(self, xyz_list, all_index, transform_flag, knolling_para):
 
         self.xyz_list = xyz_list
         self.all_index = all_index
         self.transform_flag = transform_flag
-        self.gap_item = manual_knolling_parameters['gap_item']
-        self.gap_block = manual_knolling_parameters['gap_block']
-        self.item_odd_prevent = manual_knolling_parameters['item_odd_prevent']
-        self.block_odd_prevent = manual_knolling_parameters['block_odd_prevent']
-        self.upper_left_max = manual_knolling_parameters['upper_left_max']
-        self.forced_rotate_box = manual_knolling_parameters['forced_rotate_box']
+        self.gap_item = knolling_para['gap_item']
+        self.gap_block = knolling_para['gap_block']
+        self.item_odd_prevent = knolling_para['item_odd_prevent']
+        self.block_odd_prevent = knolling_para['block_odd_prevent']
+        self.upper_left_max = knolling_para['upper_left_max']
+        self.forced_rotate_box = knolling_para['forced_rotate_box']
 
     def calculate_items(self, item_num, item_xyz):
 

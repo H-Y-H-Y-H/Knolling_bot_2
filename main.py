@@ -8,13 +8,12 @@ import socket
 import cv2
 import torch
 from urdfpy import URDF
-from env import Env
 import shutil
 
 class knolling_main(Arm_env):
 
-    def __init__(self, para_dict=None):
-        super(knolling_main, self).__init__(para_dict=para_dict)
+    def __init__(self, para_dict=None, knolling_para=None):
+        super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para)
 
     def planning(self, order, conn, real_height, sim_height):
         def get_start_end():  # generating all trajectories of all items in normal condition
@@ -878,16 +877,17 @@ class knolling_main(Arm_env):
             return error
 
     def step(self):
-        _, self.arm_id, self.boxes_id = self.knolling_env.reset()
-        self.boxes_id_recover = np.copy(self.boxes_id)
-        # image_trim, self.manipulator_after = self.knolling_env.manual_knolling()
+
+        self.reset() # reset the table
+        self.boxes_id_recover = np.copy(self.boxes_index)
+        self.manual_knolling() # generate the knolling after data based on manual or the model
         #
         # if self.general_parameters['real_operate'] == True:
         #     cv2.imwrite(self.general_parameters['img_save_path'] + '602_real_tar.png', image_trim)
         # else:
         #     cv2.imwrite(self.general_parameters['img_save_path'] + 'images_%s_tar.png' % self.evaluations, image_trim)
 
-        if self.general_parameters['real_operate'] == True:
+        if self.para_dict['real_operate'] == True:
 
             # with open(file="Cartisian_data/cmd.txt", mode="w", encoding="utf-8") as f:
             #     f.truncate(0)
@@ -912,9 +912,9 @@ class knolling_main(Arm_env):
             num_motor = 5
             # ! reset the pos in both real and sim
             # self.general_parameters['reset_pos = [0.005, 0, 0.1]
-            ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.general_parameters['reset_pos'],
+            ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
                                                      maxNumIterations=300,
-                                                     targetOrientation=p.getQuaternionFromEuler(self.general_parameters['reset_ori']))
+                                                     targetOrientation=p.getQuaternionFromEuler(self.para_dict['reset_ori']))
             reset_real = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles[0:5])), dtype=np.float32)
             conn.sendall(reset_real.tobytes())
 
@@ -937,30 +937,29 @@ class knolling_main(Arm_env):
         self.planning(4, conn, table_surface_height, sim_table_surface_height)
         #######################################################################################
 
-        if self.general_parameters['obs_order'] == 'sim_image_obj_evaluate':
+        if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
             return error
 
-        if self.general_parameters['real_operate'] == True:
+        if self.para_dict['real_operate'] == True:
             end = np.array([0], dtype=np.float32)
             conn.sendall(end.tobytes())
 
-        delete_path = './urdf/knolling_box/'
+        delete_path = self.para_dict['dataset_path']
         # for f in os.listdir(delete_path):
         #     os.remove(delete_path + f)
         shutil.rmtree(delete_path)
         os.mkdir(delete_path)
 
-        print(f'evaluation {self.evaluations} over!!!!!')
-
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 45000, 'end_num': 50000, 'thread': 9,
+    para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+                 'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -968,24 +967,26 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_725/',
-                 'urdf_path': '../../urdf/',
-                 'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
+                 'dataset_path': './knolling_box/',
+                 'urdf_path': './urdf/',
+                 'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False,
                  'data_collection': False}
 
+    # 'dataset_path': '../../../knolling_dataset/grasp_dataset_725/',
+
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
-                                    'gap_block': 0.015, 'random_offset': False,
-                                    'area_num': 2, 'ratio_num': 1,
-                                    'order_flag': 'confidence',
-                                    'item_odd_prevent': True,
-                                    'block_odd_prevent': True,
-                                    'upper_left_max': True,
-                                    'forced_rotate_box': False}
+                        'gap_block': 0.015, 'random_offset': False,
+                        'area_num': 2, 'ratio_num': 1,
+                        'order_flag': 'confidence',
+                        'item_odd_prevent': True,
+                        'block_odd_prevent': True,
+                        'upper_left_max': True,
+                        'forced_rotate_box': False}
 
-    main_env = knolling_main()
+    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para)
 
-    evaluations = 1
+    evaluation = 1
     for evaluation in range(para_dict['evaluations']):
         # env.get_parameters(evaluations=evaluation,
         #                    knolling_generate_parameters=knolling_generate_parameters,

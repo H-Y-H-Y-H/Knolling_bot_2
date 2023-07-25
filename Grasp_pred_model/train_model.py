@@ -132,14 +132,14 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'decive': 'cuda:1',
-             'num_img': 10000,
+             'num_img': 50000,
              'ratio': 0.8,
              'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_721_2_cross_distance_heavy/',
-             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_pile_722_lab_test/labels/',
-             'learning_rate': 0.000001, 'patience': 10, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_725_1_heavy/',
+             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725/labels/',
+             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
-             'batch_size': 2,
+             'batch_size': 64,
              'input_size': 6,
              'hidden_size': 32,
              'box_one_img': 10,
@@ -147,11 +147,12 @@ para_dict = {'decive': 'cuda:1',
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '721_2_distance',
+             'run_name': '725_1_distance',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
-             'wandb_flag': False,
+             'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False,
+             'fine-tuning': False,
              'hidden_node_1': 32, 'hidden_node_2': 8}
 
 # 'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_714_laptop/labels/',
@@ -238,7 +239,8 @@ if __name__ == '__main__':
                               batch_size=batch_size, device=device, criterion=nn.CrossEntropyLoss(), set_dropout=para_dict['set_dropout'])
 
     ##########################################################################
-    model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    if para_dict['fine-tuning'] == True:
+        model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
     ##########################################################################
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)

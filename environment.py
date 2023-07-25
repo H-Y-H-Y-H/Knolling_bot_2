@@ -29,7 +29,7 @@ class Arm_env():
         self.num_boxes = para_dict['boxes_num']
         self.save_img_flag = para_dict['save_img_flag']
         self.yolo_model = Yolo_predict(para_dict=para_dict)
-        self.boxes_sort = Sort_objects(para_dict=para_dict)
+        self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         self.grasp_model = Grasp_model(para_dict=para_dict)
         self.para_dict = para_dict
         self.knolling_para = knolling_para
@@ -47,8 +47,6 @@ class Arm_env():
         self.y_grasp_interval = (self.y_high_obs - self.y_low_obs) * y_grasp_accuracy
         self.z_grasp_interval = (self.z_high_obs - self.z_low_obs) * z_grasp_accuracy
         self.table_boundary = 0.03
-        self.reset_pos = np.array([0, 0, 0.12])
-        self.reset_ori = np.array([0, np.pi / 2, 0])
 
         if self.is_render:
             p.connect(p.GUI, options="--width=1280 --height=720")
@@ -124,20 +122,18 @@ class Arm_env():
         ######################################## Texture change ########################################
 
         #################################### Gripper dynamic change #########################################
-        p.changeDynamics(self.arm_id, 7,
-                                         lateralFriction=self.para_dict['gripper_lateral_friction'],
+        p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
-        p.changeDynamics(self.arm_id, 8,
-                                         lateralFriction=self.para_dict['gripper_lateral_friction'],
+        p.changeDynamics(self.arm_id, 8, lateralFriction=self.para_dict['gripper_lateral_friction'],
                                          contactDamping=self.para_dict['gripper_contact_damping'],
                                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
         #################################### Gripper dynamic change #########################################
 
         ####################### gripper to the origin position ########################
-        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.reset_pos,
+        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
                                                   maxNumIterations=200,
-                                                  targetOrientation=p.getQuaternionFromEuler(self.reset_ori))
+                                                  targetOrientation=p.getQuaternionFromEuler(self.para_dict['reset_ori']))
         for motor_index in range(5):
             p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
                                     targetPosition=ik_angles0[motor_index], maxVelocity=20)
@@ -180,7 +176,10 @@ class Arm_env():
             sim_pos[:, :2] += 0.006
 
         self.boxes_index = []
-        box_path = self.para_dict['dataset_path'] + "box_urdf/thread_%d/epoch_%d/" % (self.para_dict['thread'], epoch)
+        if self.para_dict['data_collection'] == True:
+            box_path = self.para_dict['dataset_path'] + "box_urdf/thread_%d/epoch_%d/" % (self.para_dict['thread'], epoch)
+        else:
+            box_path = self.para_dict['dataset_path']
         os.makedirs(box_path, exist_ok=True)
         temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
 
@@ -341,7 +340,9 @@ class Arm_env():
             ######################## knolling demo ###############################
         else:
             # determine the center of the tidy configuration
-            calculate_reorder = configuration_zzz(self.lwh_list, self.all_index, self.transform_flag, self.manual_knolling_parameters)
+            if len(self.lwh_list) <= 2:
+                print('the number of item is too low, no need to knolling!')
+            calculate_reorder = configuration_zzz(self.lwh_list, self.all_index, self.transform_flag, self.knolling_para)
             self.pos_after, self.ori_after = calculate_reorder.calculate_block()
             # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
             # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!
@@ -365,13 +366,13 @@ class Arm_env():
             x_length = abs(x_high - x_low)
             y_length = abs(y_high - y_low)
             print(x_low, x_high, y_low, y_high)
-            if self.manual_knolling_parameters['random_offset'] == True:
-                self.manual_knolling_parameters['total_offset'] = np.array([random.uniform(self.x_low_obs + x_length / 2, self.x_high_obs - x_length / 2),
+            if self.knolling_para['random_offset'] == True:
+                self.knolling_para['total_offset'] = np.array([random.uniform(self.x_low_obs + x_length / 2, self.x_high_obs - x_length / 2),
                                               random.uniform(self.y_low_obs + y_length / 2, self.y_high_obs - y_length / 2), 0.0])
             else:
                 pass
             self.pos_after += np.array([0, 0, 0.006])
-            self.pos_after = self.pos_after + self.manual_knolling_parameters['total_offset']
+            self.pos_after = self.pos_after + self.knolling_para['total_offset']
 
             ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
             items_ori_list_arm = np.copy(self.ori_after)
@@ -383,27 +384,11 @@ class Arm_env():
             self.manipulator_after = np.concatenate((self.pos_after, self.ori_after), axis=1)
             print('this is manipulator after\n', self.manipulator_after)
 
-            # # self.boxes_index = []
-            # for i in range(len(self.lwh_list)):
-            #     p.loadURDF(self.save_urdf_path_one_img + 'box_%d.urdf' % (self.boxes_index[i] - 6),
-            #                basePosition=self.pos_after[i] + np.array([0, 0, 0.006]),
-            #                baseOrientation=p.getQuaternionFromEuler(self.ori_after[i]), useFixedBase=False,
-            #                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-            #     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.000,
-            #                      linearDamping=0, angularDamping=0, jointDamping=0)
-            #     r = np.random.uniform(0, 0.9)
-            #     g = np.random.uniform(0, 0.9)
-            #     b = np.random.uniform(0, 0.9)
-            #     p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
-            # for i in range(30):
-            #     p.stepSimulation()
-
         # if the urdf is lego, all ori after knolling should be 0, not pi / 2
         self.ori_after[:, 2] = 0
         data_after = np.concatenate((self.pos_after[:, :2], self.lwh_list[:, :2], self.ori_after[:, 2].reshape(-1, 1)), axis=1)
         # np.savetxt('./real_world_data_demo/cfg_4_519/labels_after/label_8_%d.txt' % self.evaluations, data_after, fmt='%.03f')
 
-        return self.get_obs('images'), self.manipulator_after
 
     def try_grasp(self, img_index_start=None):
         # print('this is img_index start while grasping', img_index_start)

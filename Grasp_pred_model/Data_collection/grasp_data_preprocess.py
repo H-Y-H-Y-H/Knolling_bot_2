@@ -18,13 +18,13 @@ def data_preprocess_csv(path, data_num, start_index):
     no_grasp = 0
     data = []
     i = 0
-    origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
-    data = origin_data
-    # data = np.delete(origin_data, [6, 7, 8], axis=1)
+    origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
+    # data = origin_data
+    data = np.delete(origin_data, [6, 7, 8], axis=1)
     # load data and remove four axis: z, height, roll, pitch
     for i in range(1, data_num):
-        origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
-        # origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
+        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
+        origin_data = np.delete(origin_data, [6, 7, 8], axis=1)
         if origin_data[0, 0] == 1:
             print(f'yolo dominated {i}')
             max_conf_1 += 1
@@ -166,28 +166,28 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    # # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
-    # data_root = '/home/ubuntu/Desktop/knolling_dataset/'
-    # # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
-    # # data_path = data_root + 'grasp_dataset_03004/'
-    # data_path = data_root + 'grasp_pile_722_lab_test/'
-    # # data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # target_data_path = data_root + 'grasp_pile_722_lab_test/'
-    # # target_data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # data_num = 10000
-    # start_index = 0
-    # target_start_index = 0
-    # # data_preprocess_csv(data_path, data_num, start_index)
-    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/'
+    data_root = '/home/ubuntu/Desktop/knolling_dataset/'
+    # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
+    # data_path = data_root + 'grasp_dataset_03004/'
+    data_path = data_root + 'grasp_dataset_725/'
+    # data_path = data_root + 'origin_labels_713_lab/'
+
+    target_data_path = data_root + 'grasp_dataset_725/'
+    # target_data_path = data_root + 'origin_labels_713_lab/'
+
+    data_num = 50000
+    start_index = 0
+    target_start_index = 0
+    data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
     # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
-    # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/'
-    target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/'
-    os.makedirs(target_path, exist_ok=True)
-    source_start_index = 0
-    target_start_index = 480000
-    num = 300000
-    data_move(source_path, target_path, source_start_index, num, target_start_index)
+    # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
+    # source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/'
+    # target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/'
+    # os.makedirs(target_path, exist_ok=True)
+    # source_start_index = 0
+    # target_start_index = 480000
+    # num = 300000
+    # data_move(source_path, target_path, source_start_index, num, target_start_index)
