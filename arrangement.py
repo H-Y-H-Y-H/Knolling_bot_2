@@ -2,22 +2,21 @@ import numpy as np
 
 class Sort_objects():
 
-    def __init__(self, manual_knolling_parameters, general_parameters):
+    def __init__(self, para_dict):
         self.error_rate = 0.05
-        self.manual_knolling_parameters = manual_knolling_parameters
-        self.general_parameters = general_parameters
+        self.para_dict = para_dict
     def get_data_virtual(self):
 
         xyz_list = []
-        length_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][0][0],
-                                                  self.manual_knolling_parameters['box_range'][0][1],
-                                                  size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
-        width_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][1][0],
+        length_range = np.round(np.random.uniform(self.para_dict['box_range'][0][0],
+                                                  self.para_dict['box_range'][0][1],
+                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
+        width_range = np.round(np.random.uniform(self.para_dict['box_range'][1][0],
                                                  np.minimum(length_range, 0.036),
-                                                 size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
-        height_range = np.round(np.random.uniform(self.manual_knolling_parameters['box_range'][2][0],
-                                                  self.manual_knolling_parameters['box_range'][2][1],
-                                                  size=(self.manual_knolling_parameters['boxes_num'], 1)), decimals=3)
+                                                 size=(self.para_dict['boxes_num'], 1)), decimals=3)
+        height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
+                                                  self.para_dict['box_range'][2][1],
+                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
 
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
         print(xyz_list)

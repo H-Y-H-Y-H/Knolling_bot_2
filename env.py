@@ -898,7 +898,6 @@ class Env:
         items_sort = Sort_objects(self.manual_knolling_parameters, self.general_parameters)
         if self.general_parameters['real_operate'] == False:
             self.lwh_list = items_sort.get_data_virtual()
-
             ############## generate the random pos and ori for boxes after knolling ############
 
             if self.manual_knolling_parameters['reset_style'] == 'normal':
@@ -954,7 +953,6 @@ class Env:
             # the sequence here is based on area and ratio!!! must be converted additionally!!!
             self.lwh_list, self.pos_before, self.ori_before, self.all_index, self.transform_flag = items_sort.get_data_real(self.yolo_model, self.evaluations)
             # these data has defined in function change_config, we don't need to define them twice!!!
-            num_lego = 0
             sim_pos = np.copy(self.pos_before)
             sim_pos[:, :2] += 0.006
 

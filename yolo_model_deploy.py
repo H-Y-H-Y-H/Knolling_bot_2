@@ -35,9 +35,8 @@ class PosePredictor(DetectionPredictor):
 
 class Yolo_predict():
 
-    def __init__(self, save_img_flag, para_dict):
+    def __init__(self, para_dict):
 
-        self.save_img_flag = save_img_flag
         self.para_dict = para_dict
 
     def find_keypoints(self, xpos, ypos, l, w, ori, mm2px):
@@ -315,7 +314,7 @@ class Yolo_predict():
                                                         use_xylw=use_xylw, truth_flag=True)
 
 
-        if self.save_img_flag == True:
+        if self.para_dict['save_img_flag'] == True:
             # cv2.namedWindow('zzz', 0)
             # cv2.resizeWindow('zzz', 1280, 960)
             # cv2.imshow('zzz', origin_img)

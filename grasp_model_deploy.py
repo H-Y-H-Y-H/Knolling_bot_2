@@ -1,10 +1,11 @@
 import numpy as np
 
 
-class grasp_model():
+class Grasp_model():
 
-    def __init__(self):
+    def __init__(self, para_dict):
 
+        self.para_dict = para_dict
         pass
 
     def pred(self, manipulator_before, lwh_list, conf_list):
