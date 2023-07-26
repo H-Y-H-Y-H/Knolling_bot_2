@@ -25,16 +25,16 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 50000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_725_1_heavy/'
-        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725/labels/'
+        para_dict['num_img'] = 180000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_726_4_heavy/'
+        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
-        para_dict['hidden_size'] = 32
+        para_dict['hidden_size'] = 16
         para_dict['num_layers'] = 8
-        para_dict['hidden_node_1'] = 32
+        para_dict['hidden_node_1'] = 16
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '725_1_'
+        test_file_para = '726_4_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
