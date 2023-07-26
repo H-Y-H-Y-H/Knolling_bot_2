@@ -20,8 +20,8 @@ class knolling_main(Arm_env):
             arm_z = 0
             roll = 0
             pitch = 0
-            if self.general_parameters['obs_order'] == 'sim_image_obj_evaluate':
-                manipulator_before, new_xyz_list, error = self.knolling_env.get_obs(self.general_parameters['obs_order'])
+            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
+                manipulator_before, new_xyz_list, error = self.get_obs(self.general_parameters['obs_order'])
                 return error
             else:
                 manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'])
@@ -881,7 +881,7 @@ class knolling_main(Arm_env):
         self.reset() # reset the table
         self.boxes_id_recover = np.copy(self.boxes_index)
         self.manual_knolling() # generate the knolling after data based on manual or the model
-        #
+
         # if self.general_parameters['real_operate'] == True:
         #     cv2.imwrite(self.general_parameters['img_save_path'] + '602_real_tar.png', image_trim)
         # else:
@@ -911,7 +911,6 @@ class knolling_main(Arm_env):
             sim_table_surface_height = -0.01
             num_motor = 5
             # ! reset the pos in both real and sim
-            # self.general_parameters['reset_pos = [0.005, 0, 0.1]
             ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
                                                      maxNumIterations=300,
                                                      targetOrientation=p.getQuaternionFromEuler(self.para_dict['reset_ori']))
@@ -959,7 +958,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,

@@ -729,7 +729,25 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, format=None, data_root=None, epoch=None):
+    def get_obs(self, data_root=None, epoch=None):
+
+        def get_images():
+            (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
+                                                                             height=480,
+                                                                             viewMatrix=self.view_matrix,
+                                                                             projectionMatrix=self.projection_matrix,
+                                                                             renderer=p.ER_BULLET_HARDWARE_OPENGL)
+            # far_range = self.camera_parameters['far']
+            # near_range = self.camera_parameters['near']
+            # depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
+            # top_height = 0.4 - depth_data
+            my_im = image[:, :, :3]
+            temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
+            my_im[:, :, 0] = my_im[:, :, 2]
+            my_im[:, :, 2] = temp
+            img = np.copy(my_im)
+
+            return img
 
         self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
         if len(self.boxes_index) == 0:
@@ -738,11 +756,6 @@ class Arm_env():
         for i in range(len(self.boxes_index)):
             box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
             box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-            # self.constrain_id.append(p.createConstraint(self.boxes_index[i], -1, -1, -1, p.JOINT_FIXED,
-            #                                             jointAxis=[1, 1, 1],
-            #                                             parentFramePosition=[0, 0, 0],
-            #                                             childFramePosition=box_pos,
-            #                                             childFrameOrientation=[1, 1, 1]))
             self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
             self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
             self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
@@ -757,8 +770,8 @@ class Arm_env():
                                                                 viewMatrix=self.view_matrix,
                                                                 projectionMatrix=self.projection_matrix,
                                                                 renderer=p.ER_BULLET_HARDWARE_OPENGL)
-        far_range = self.camera_parameters['far']
-        near_range = self.camera_parameters['near']
+        # far_range = self.camera_parameters['far']
+        # near_range = self.camera_parameters['near']
         # depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
         # top_height = 0.4 - depth_data
         my_im = image[:, :, :3]
