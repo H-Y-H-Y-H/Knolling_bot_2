@@ -4,7 +4,7 @@ import random
 import os
 sys.path.append('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/')
 sys.path.append('/home/ubuntu/Desktop/Knolling_bot_2/')
-from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
+# from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
 from network import LSTMRegressor
 import torch
 import torch.nn as nn
@@ -25,16 +25,16 @@ if __name__ == '__main__':
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 900000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_721_1_cross_distance_heavy/'
-        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_721_heavy/labels/'
+        para_dict['num_img'] = 50000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_725_1_heavy/'
+        para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
-        para_dict['hidden_size'] = 64
+        para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '721_1_'
+        test_file_para = '725_1_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 

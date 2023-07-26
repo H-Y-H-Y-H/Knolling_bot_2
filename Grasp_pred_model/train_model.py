@@ -131,12 +131,12 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'decive': 'cuda:1',
-             'num_img': 50000,
+para_dict = {'decive': 'cuda:0',
+             'num_img': 180000,
              'ratio': 0.8,
-             'epoch': 200,
-             'model_path': '../Grasp_pred_model/results/LSTM_725_1_heavy/',
-             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725/labels/',
+             'epoch': 300,
+             'model_path': '../Grasp_pred_model/results/LSTM_726_3_heavy/',
+             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726/labels/',
              'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
@@ -147,7 +147,7 @@ para_dict = {'decive': 'cuda:1',
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '725_1_distance',
+             'run_name': '726_3_distance',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
              'wandb_flag': True,
              'use_mse': False,
@@ -219,7 +219,7 @@ if __name__ == '__main__':
     batch_size = para_dict['batch_size']
     train_dataset = Generate_Dataset(box_data=box_train, grasp_data=grasp_train)
     test_dataset = Generate_Dataset(box_data=box_test, grasp_data=grasp_test)
-    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=False,
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True,
                               collate_fn=collate_fn, drop_last=True)
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False,
                              collate_fn=collate_fn, drop_last=True)
@@ -241,6 +241,8 @@ if __name__ == '__main__':
     ##########################################################################
     if para_dict['fine-tuning'] == True:
         model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+    else:
+        print('not fine-tuning')
     ##########################################################################
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
