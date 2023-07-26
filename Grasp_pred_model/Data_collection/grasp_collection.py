@@ -209,8 +209,8 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 000, 'end_num': 3, 'thread': 1,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+    para_dict = {'start_num': 77700, 'end_num': 80000, 'thread': 3,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
@@ -227,7 +227,7 @@ if __name__ == '__main__':
                  'dataset_path': '../../../knolling_dataset/grasp_dataset_725_test/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'use_knolling_model': False, 'data_collection': True}
+                 'real_operate': False, 'obs_order': 'data_collection', 'use_knolling_model': False, 'data_collection': True}
 
     startnum = para_dict['start_num']
 

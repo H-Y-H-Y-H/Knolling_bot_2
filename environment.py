@@ -737,64 +737,89 @@ class Arm_env():
                                                                              viewMatrix=self.view_matrix,
                                                                              projectionMatrix=self.projection_matrix,
                                                                              renderer=p.ER_BULLET_HARDWARE_OPENGL)
-            # far_range = self.camera_parameters['far']
-            # near_range = self.camera_parameters['near']
-            # depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
-            # top_height = 0.4 - depth_data
+            far_range = self.camera_parameters['far']
+            near_range = self.camera_parameters['near']
+            depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
+            top_height = 0.4 - depth_data
             my_im = image[:, :, :3]
             temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
             my_im[:, :, 0] = my_im[:, :, 2]
             my_im[:, :, 2] = temp
             img = np.copy(my_im)
+            return img, top_height
 
-            return img
+        if self.para_dict['obs_order'] == 'data_collection' or self.para_dict['obs_order'] == 'sim_image_obj':
+            self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
+            if len(self.boxes_index) == 0:
+                return np.array([]), np.array([]), np.array([])
+            self.constrain_id = []
+            for i in range(len(self.boxes_index)):
+                box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
+                self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
+            self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
+            self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
+            self.gt_ori_qua = np.asarray(self.gt_ori_qua)
+            self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
+            self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
 
-        self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
-        if len(self.boxes_index) == 0:
-            return np.array([]), np.array([]), np.array([])
-        self.constrain_id = []
-        for i in range(len(self.boxes_index)):
-            box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-            box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-            self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-            self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
-            self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
-        self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
-        self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
-        self.gt_ori_qua = np.asarray(self.gt_ori_qua)
-        self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
-        self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
+            img, _ = get_images()
+            os.makedirs(data_root + 'origin_images/', exist_ok=True)
+            img_path = data_root + 'origin_images/%012d' % (epoch)
 
-        (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
-                                                                height=480,
-                                                                viewMatrix=self.view_matrix,
-                                                                projectionMatrix=self.projection_matrix,
-                                                                renderer=p.ER_BULLET_HARDWARE_OPENGL)
-        # far_range = self.camera_parameters['far']
-        # near_range = self.camera_parameters['near']
-        # depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
-        # top_height = 0.4 - depth_data
-        my_im = image[:, :, :3]
-        temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
-        my_im[:, :, 0] = my_im[:, :, 2]
-        my_im[:, :, 2] = temp
-        img = np.copy(my_im)
-        os.makedirs(data_root + 'origin_images/', exist_ok=True)
-        img_path = data_root + 'origin_images/%012d' % (epoch)
+            ################### the results of object detection has changed the order!!!! ####################
+            # structure of results: x, y, z, length, width, ori
+            results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=img)
+            if len(results) == 0:
+                return np.array([]), np.array([]), np.array([])
+            print('this is the result of yolo-pose\n', results)
+            ################### the results of object detection has changed the order!!!! ####################
 
-        ################### the results of object detection has changed the order!!!! ####################
-        # structure of results: x, y, z, length, width, ori
-        results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=img)
-        if len(results) == 0:
-            return np.array([]), np.array([]), np.array([])
-        print('this is the result of yolo-pose\n', results)
-        ################### the results of object detection has changed the order!!!! ####################
+            manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+            new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
+            # print('this is manipulator before after the detection \n', manipulator_before)
 
-        manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
-        new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
-        # print('this is manipulator before after the detection \n', manipulator_before)
+            return manipulator_before, new_lwh_list, pred_conf
 
-        return manipulator_before, new_lwh_list, pred_conf
+        if self.para_dict['obs_order'] == 'real_image_obj':
+            # # temp useless because of knolling demo
+            # img_path = 'Test_images/image_real'
+            # # structure: x,y,length,width,yaw
+            # results = yolov8_predict(img_path=img_path, real_flag=self.general_parameters['real_operate, target=None)
+            # print('this is the result of yolo-pose\n', results)
+            #
+            # z = 0
+            # roll = 0
+            # pitch = 0
+            # index = []
+            # print('this is self.xyz\n', self.xyz_list)
+            # for i in range(len(self.xyz_list)):
+            #     for j in range(len(results)):
+            #         if (np.abs(self.xyz_list[i, 0] - results[j, 2]) <= 0.002 and np.abs(
+            #                 self.xyz_list[i, 1] - results[j, 3]) <= 0.002) or \
+            #                 (np.abs(self.xyz_list[i, 1] - results[j, 2]) <= 0.002 and np.abs(
+            #                     self.xyz_list[i, 0] - results[j, 3]) <= 0.002):
+            #             if j not in index:
+            #                 print(f"find first xyz{i} in second xyz{j}")
+            #                 index.append(j)
+            #                 break
+            #             else:
+            #                 pass
+            #
+            # manipulator_before = []
+            # for i in index:
+            #     manipulator_before.append([results[i][0], results[i][1], z, roll, pitch, results[i][4]])
+            # # for i in range(len(self.xyz_list)):
+            # #     manipulator_before.append([self.pos_before[i][0], self.pos_before[i][1], z, roll, pitch, self.ori_before[i][2]])
+
+            manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
+            manipulator_before = np.asarray(manipulator_before)
+            new_xyz_list = self.lwh_list
+            print('this is manipulator before after the detection \n', manipulator_before)
+
+            return manipulator_before, new_xyz_list
 
 if __name__ == '__main__':
 
