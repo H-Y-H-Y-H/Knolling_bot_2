@@ -86,7 +86,7 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
         # data = origin_data
         if np.any(data[:, 0] != 0):
-            print('this is index of not all zero data', i)
+            # print('this is index of not all zero data', i)
             total_not_all_zero += 1
             # print(total_not_all_zero)
         tar_index = np.where(data[:, -2] < 0)[0]
@@ -106,7 +106,7 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         # print('this is normal data\n', normal_data)
 
         # print(i + target_start_index - start_index)
-        # np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data, fmt='%.04f')
 
     print('this is total not all zero', total_not_all_zero)
     print('this is the max length in the dataset', max_length)
@@ -151,18 +151,18 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
 
     import shutil
 
-    index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
-    for i in index_list:
-        data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
-        print(np.round(data, 4))
+    # index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
+    # for i in index_list:
+    #     data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
+    #     print(np.round(data, 4))
     #
     # print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
     # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
 
-    # for i in range(source_start_index, int(data_num + source_start_index)):
-    #     cur_path = source_path + 'labels/%012d.txt' % (i)
-    #     tar_path = target_path + 'labels/%012d.txt' % (i + target_start_index - source_start_index)
-    #     shutil.copy(cur_path, tar_path)
+    for i in range(source_start_index, int(data_num + source_start_index)):
+        cur_path = source_path + 'origin_labels/%012d.txt' % (i)
+        tar_path = target_path + 'origin_labels/%012d.txt' % (i + target_start_index - source_start_index)
+        shutil.copy(cur_path, tar_path)
 
 def check_dataset():
 
@@ -176,14 +176,14 @@ if __name__ == '__main__':
     data_root = '/home/ubuntu/Desktop/knolling_dataset/'
     # data_root = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/'
     # data_path = data_root + 'grasp_dataset_03004/'
-    data_path = data_root + 'grasp_dataset_726/'
+    data_path = data_root + 'grasp_dataset_726_multi/'
     # data_path = data_root + 'origin_labels_713_lab/'
 
-    target_data_path = data_root + 'grasp_dataset_726/'
+    target_data_path = data_root + 'grasp_dataset_726_multi/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 100000
-    start_index = 80000
+    data_num = 120000
+    start_index = 0
     target_start_index = 0
     # data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
@@ -191,9 +191,9 @@ if __name__ == '__main__':
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
     # source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725_laptop/'
-    # target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725/'
+    # target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726/'
     # os.makedirs(target_path, exist_ok=True)
     # source_start_index = 0
-    # target_start_index = 00000
+    # target_start_index = 100000
     # num = 80000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
