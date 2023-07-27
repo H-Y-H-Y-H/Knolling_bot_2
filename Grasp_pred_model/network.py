@@ -17,14 +17,16 @@ class LSTMRegressor(nn.Module):
         self.batch_size = batch_size
         self.criterion = criterion
         self.nllloss = nn.NLLLoss
-        self.tar_success = 0
-        self.grasp_dominated_tar_success = 0
-        self.grasp_dominated_pred_success = 0
-        self.yolo_dominated_tar_success = 0
-        self.yolo_dominated_pred_success = 0
-        self.pred_sucess = 0
-        self.pred_positive = 0
-        self.true_positive = 0
+
+        self.tar_true = 0
+        self.tar_false = 0
+        self.TP = 0
+        self.TN = 0
+        self.FP = 0
+        self.FN = 0
+        self.yolo_dominated_TP = 0
+        self.grasp_dominated_TP = 0
+
         self.not_one_result = 0
 
         # Define the LSTM layer
@@ -99,44 +101,6 @@ class LSTMRegressor(nn.Module):
         pred = predict.cpu().detach().numpy()
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
-        # for i in range(pred_soft.shape[0]):
-        #     pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
-        #     if len(pred_1_index) > 1:
-        #         # print('pred not only one result!')
-        #         # print(pred_soft[i])
-        #         self.not_one_result += 1
-        #         for j in range(len(pred_1_index)):
-        #             if tar[i, pred_1_index[j], 0] != -100:
-        #                 pass
-        #     for j in range(pred_soft.shape[1]):
-        #         criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
-        #         if tar[i, j, 0] == 1: # test the recall
-        #             self.tar_success += 1
-        #             if criterion:
-        #                 self.pred_sucess += 1
-        #             if j != 0:
-        #                 # print('grasp_dominated')
-        #                 self.grasp_dominated_tar_success += 1
-        #                 if criterion:
-        #                     self.grasp_dominated_pred_success += 1
-        #             if j == 0:
-        #                 self.yolo_dominated_tar_success += 1
-        #                 if criterion:
-        #                     self.yolo_dominated_pred_success += 1
-        #             elif criterion:
-        #                 pass
-        #         elif tar[i, j, 0] == -100:
-        #             continue
-        #
-        #         if criterion and tar[i, j, 0] != -100: # test the precision
-        #             self.pred_positive += 1
-        #             if tar[i, j, 0] == 1:
-        #                 self.true_positive += 1
-        #
-        #     if np.all(tar[i] < 0.5):
-        #         # print('here')
-        #         pass
-
         for i in range(pred_soft.shape[0]): # every image
             pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
             if len(pred_1_index) > 1:
@@ -151,36 +115,57 @@ class LSTMRegressor(nn.Module):
             for j in range(pred_soft.shape[1]): # every boxes
                 criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
                 yolo_dominated_index = np.argmax(box_conf[i])
-                if tar[i, j, 0] == 1: # test the recall
-                    self.tar_success += 1
-                    if criterion:
-                        self.pred_sucess += 1
-                    if j == yolo_dominated_index:
-                        self.yolo_dominated_tar_success += 1
-                        if criterion:
-                            self.yolo_dominated_pred_success += 1
-                    else:
-                        # print('grasp_dominated')
-                        self.grasp_dominated_tar_success += 1
-                        if criterion:
-                            self.grasp_dominated_pred_success += 1
 
-                elif tar[i, j, 0] == -100:
+                if tar[i, j, 0] == -100:
                     continue
-
-                if criterion and tar[i, j, 0] != -100: # test the precision
-                    self.pred_positive += 1
+                else:
                     if tar[i, j, 0] == 1:
-                        self.true_positive += 1
+                        self.tar_true += 1
+                        if criterion:
+                            self.TP += 1
+                            if j == yolo_dominated_index:
+                                self.yolo_dominated_TP += 1
+                            else:
+                                self.grasp_dominated_TP += 1
+                        else:
+                            self.TN += 1
+                    if tar[i, j, 0] == 0:
+                        self.tar_false += 1
+                        if criterion:
+                            self.FP += 1
+                        else:
+                            self.FN += 1
+
+                # if tar[i, j, 0] == 1: # test the recall
+                #     self.tar_true += 1
+                #     if criterion:
+                #         self.pred_positive += 1
+                #     if j == yolo_dominated_index:
+                #         self.yolo_dominated_tar_true += 1
+                #         if criterion:
+                #             self.yolo_dominated_pred_positive += 1
+                #     else:
+                #         # print('grasp_dominated')
+                #         self.grasp_dominated_tar_true += 1
+                #         if criterion:
+                #             self.grasp_dominated_pred_positive += 1
+                #
+                # elif tar[i, j, 0] == 0:
+                #     self.tar_false += 1
+                #     if criterion == False:
+                #         self.pred_negative += 1
+                #
+                # if criterion and tar[i, j, 0] != -100: # test the precision
+                #     self.pred_positive += 1
+                #     if tar[i, j, 0] == 1:
+                #         self.true_positive += 1
 
             if np.all(tar[i] < 0.5):
                 # print('here')
                 pass
 
-        return self.tar_success, self.pred_sucess, \
-               self.grasp_dominated_tar_success, self.grasp_dominated_pred_success, \
-               self.pred_positive, self.true_positive, self.not_one_result, \
-               self.yolo_dominated_tar_success, self.yolo_dominated_pred_success
+        return self.not_one_result, self.tar_true, self.tar_false, self.TP, self.TN, self.FP, self.FN, \
+               self.yolo_dominated_TP, self.grasp_dominated_TP
 
     # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
     # f.write(f'model_path: {para_dict["model_path"]}\n')

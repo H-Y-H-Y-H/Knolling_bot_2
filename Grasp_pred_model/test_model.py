@@ -19,22 +19,22 @@ if __name__ == '__main__':
     if use_dataset == True:
 
         if torch.cuda.is_available():
-            device = 'cuda:1'
+            device = 'cuda:0'
         else:
             device = 'cpu'
         print("Device:", device)
 
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 180000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_726_4_heavy/'
+        para_dict['num_img'] = 450000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_727_1_heavy/'
         para_dict['data_path'] = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726/labels/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
-        para_dict['hidden_size'] = 16
+        para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
-        para_dict['hidden_node_1'] = 16
+        para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '726_4_'
+        test_file_para = '727_1_TPFN_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test, yolo_dominated = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
+        box_test, grasp_test, yolo_dominated, grasp_dominated = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -92,9 +92,8 @@ if __name__ == '__main__':
                     # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
                     loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
                     valid_loss.append(loss.item())
-                    tar_success, pred_success, grasp_dominated_tar_success, grasp_dominated_pred_success, \
-                    pred_positive, true_positive, \
-                    not_one_result, yolo_dominated_tar_success, yolo_dominated_pred_success = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch)
+                    not_one_result, tar_true, tar_false, TP, TN, FP, FN,\
+                    yolo_dominated_TP, grasp_dominated_TP = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch)
 
 
         avg_valid_loss = np.mean(valid_loss)
@@ -103,40 +102,51 @@ if __name__ == '__main__':
         print('total_img', int(num_img - num_img * ratio))
         print('not one result', not_one_result)
 
-        print('tar_success', tar_success)
-        print('pred_success', pred_success)
-        print('Recall %.04f\n' % (pred_success / tar_success))
+        print('tar_true', tar_true)
+        print('tar_false', tar_false)
+        print('TP:', TP)
+        print('TN:', TN)
+        print('FP:', FP)
+        print('FN:', FN)
+        print('Accuracy (TP + FN) / all: %.04f' % ((TP + FN) / (tar_true + tar_false)))
+        print('Recall (TP / (TP + FN)) %.04f' % (TP / (TP + FN)))
+        print('Precision (TP / (TP + FP)) %.04f' % (TP / (TP + FP)))
+        print('(FN / (FP + FN)) %.04f' % (FN / (FP + FN)))
+        print('yolo_dominated_TP:', yolo_dominated_TP)
+        print('grasp_dominated_TP:', grasp_dominated_TP)
+        print('yolo ratio %.04f' % (yolo_dominated_TP / yolo_dominated))
+        print('grasp ratio %.04f' % (grasp_dominated_TP / grasp_dominated))
 
-        print('pred_positive', pred_positive)
-        print('true_positive', true_positive)
-        print('Precision %.04f\n' % (true_positive/pred_positive))
+        # print('grasp_dominated_tar_true', grasp_dominated_tar_true)
+        # print('grasp_dominated_pred_positive', grasp_dominated_pred_positive)
+        # print('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_positive / grasp_dominated_tar_true))
+        #
+        # print('yolo_dominated_tar_true', yolo_dominated)
+        # print('yolo_dominated_pred_positive', yolo_dominated_pred_positive)
+        # print('yolo_dominated_success_pred_rate %.04f\n' % (yolo_dominated_pred_positive / yolo_dominated))
 
-        print('grasp_dominated_tar_success', grasp_dominated_tar_success)
-        print('grasp_dominated_pred_success', grasp_dominated_pred_success)
-        print('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_success / grasp_dominated_tar_success))
 
-        print('yolo_dominated_tar_success', yolo_dominated)
-        print('yolo_dominated_pred_success', yolo_dominated_pred_success)
-        print('yolo_dominated_success_pred_rate %.04f\n' % (yolo_dominated_pred_success / yolo_dominated))
+
+
 
         print('Yolo_success_tar_rate %.04f' % (yolo_dominated / int(num_img - num_img * ratio)))
 
         with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
             f.write(f'total img: {int(num_img - num_img * ratio)}\n')
             f.write(f'yolo dominated: {yolo_dominated}\n')
+            f.write(f'grasp dominated: {grasp_dominated}\n')
+            f.write(f'yolo ratio: {yolo_dominated_TP / yolo_dominated}\n')
+            f.write(f'grasp ratio: {grasp_dominated_TP / grasp_dominated}\n')
             f.write(f'not one result: {not_one_result}\n')
-            f.write(f'tar_success: {tar_success}\n')
-            f.write(f'pred_success: {pred_success}\n')
-            f.write('Recall %.04f\n' % (pred_success / tar_success))
-            f.write(f'pred_positive: {pred_positive}\n')
-            f.write(f'true_positive: {true_positive}\n')
-            f.write('Precision %.04f\n' % (true_positive/pred_positive))
-            f.write(f'grasp_dominated_tar_success: {grasp_dominated_tar_success}\n')
-            f.write(f'grasp_dominated_pred_success: {grasp_dominated_pred_success}\n')
-            f.write('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_success / grasp_dominated_tar_success))
-            f.write(f'yolo_dominated_tar_success: {yolo_dominated}\n')
-            f.write(f'yolo_dominated_pred_success: {yolo_dominated_pred_success}\n')
-            f.write('yolo_dominated_success_pred_rate %.04f\n' % (yolo_dominated_pred_success / yolo_dominated))
+            f.write(f'tar_true {tar_true}\n')
+            f.write(f'tar_false {tar_false}\n')
+            f.write(f'TP: {TP}\n')
+            f.write(f'TN: {TN}\n')
+            f.write(f'FP: {FP}\n')
+            f.write(f'FN: {FN}\n')
+            f.write(f'Recall: {(TP / (TP + FN))}\n')
+            f.write(f'Precision: {(TP / (TP + FP))}\n')
+            f.write(f'FN / (FN + FP): {(FN / (FP + FN))}\n')
             f.write('Yolo_success_pred_rate %.04f\n' % (yolo_dominated / int(num_img - num_img * ratio)))
         print('over!')
 
