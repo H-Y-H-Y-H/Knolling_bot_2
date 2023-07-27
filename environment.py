@@ -220,7 +220,7 @@ class Arm_env():
         for _ in range(int(100)):
             p.stepSimulation()
             if self.is_render == True:
-                time.sleep(1/48)
+                time.sleep(1/96)
         p.changeDynamics(baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                                      contactDamping=self.para_dict['base_contact_damping'],
                                      contactStiffness=self.para_dict['base_contact_stiffness'])
@@ -365,7 +365,7 @@ class Arm_env():
             center = np.array([(x_low + x_high) / 2, (y_low + y_high) / 2, 0])
             x_length = abs(x_high - x_low)
             y_length = abs(y_high - y_low)
-            print(x_low, x_high, y_low, y_high)
+            # print(x_low, x_high, y_low, y_high)
             if self.knolling_para['random_offset'] == True:
                 self.knolling_para['total_offset'] = np.array([random.uniform(self.x_low_obs + x_length / 2, self.x_high_obs - x_length / 2),
                                               random.uniform(self.y_low_obs + y_length / 2, self.y_high_obs - y_length / 2), 0.0])
@@ -662,14 +662,14 @@ class Arm_env():
                     #     break
 
                     if self.is_render:
-                        time.sleep(1 / 360)
+                        time.sleep(1 / 720)
                 if move_success_flag == False:
                     break
             else:
                 for i in range(10):
                     p.stepSimulation()
                     if self.is_render:
-                        time.sleep(1 / 360)
+                        time.sleep(1 / 720)
             cur_pos = tar_pos
             cur_ori = tar_ori
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
@@ -712,16 +712,16 @@ class Arm_env():
                     gripper_success_flag = False
                     break
                 if self.is_render:
-                    time.sleep(1 / 24)
+                    time.sleep(1 / 48)
         else:  # open
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             for i in range(num_step):
                 p.stepSimulation()
                 if self.is_render:
-                    time.sleep(1 / 24)
+                    time.sleep(1 / 48)
         if index == 1:
-            print('initialize the distance from gripper to bar')
+            # print('initialize the distance from gripper to bar')
             bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
             gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
             gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
@@ -774,7 +774,7 @@ class Arm_env():
             results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=img)
             if len(results) == 0:
                 return np.array([]), np.array([]), np.array([])
-            print('this is the result of yolo-pose\n', results)
+            # print('this is the result of yolo-pose\n', results)
             ################### the results of object detection has changed the order!!!! ####################
 
             manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)

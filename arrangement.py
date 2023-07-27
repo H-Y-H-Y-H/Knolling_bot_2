@@ -20,7 +20,7 @@ class Sort_objects():
                                                   size=(self.para_dict['boxes_num'], 1)), decimals=3)
 
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-        print(xyz_list)
+        # print(xyz_list)
 
         return xyz_list
 
