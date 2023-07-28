@@ -16,7 +16,7 @@ import torch.nn.functional as F
 from sklearn.preprocessing import StandardScaler
 
 
-def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=False):
+def data_split(path, total_num, ratio, max_box, valid_num, test_model=False, use_scaler=False):
 
     num_train = int(total_num * ratio)
 
@@ -75,39 +75,9 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             grasp_dominated_true = 0
             tar_true_grasp = 0
             tar_false_grasp = 0
-            conf_num_97 = 0
-            conf_num_95 = 0
-            conf_num_90 = 0
-            conf_num_80 = 0
-            conf_true_97 = 0
-            conf_true_95 = 0
-            conf_true_90 = 0
-            conf_true_80 = 0
-
-            for i in tqdm(range(num_train, total_num)):
+            for i in tqdm(range(num_train, valid_num + num_train)):
                 data_test = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
                 yolo_dominated_index = np.argmax(data_test[:, -1])
-
-                conf_index_97 = np.where(data_test[:, -1] > 0.97)[0]
-                conf_num_97 += len(conf_index_97)
-                for j in conf_index_97:
-                    if data_test[j, 0] == 1:
-                        conf_true_97 += 1
-                conf_index_95 = np.where(data_test[:, -1] > 0.95)[0]
-                conf_num_95 += len(conf_index_95)
-                for j in conf_index_95:
-                    if data_test[j, 0] == 1:
-                        conf_true_95 += 1
-                conf_index_90 = np.where(data_test[:, -1] > 0.90)[0]
-                conf_num_90 += len(conf_index_90)
-                for j in conf_index_90:
-                    if data_test[j, 0] == 1:
-                        conf_true_90 += 1
-                conf_index_80 = np.where(data_test[:, -1] > 0.80)[0]
-                conf_num_80 += len(conf_index_80)
-                for j in conf_index_80:
-                    if data_test[j, 0] == 1:
-                        conf_true_80 += 1
 
                 if np.all(data_test[:, 0] == 0):
                     no_grasp_img += 1
@@ -121,27 +91,15 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
                     else:
                         pass
 
-                    for j in range(len(data_test)):
-                        if data_test[j, 0] == 1:
-                            tar_true_grasp += 1
-                        else:
-                            tar_false_grasp += 1
+                for j in range(len(data_test)):
+                    if data_test[j, 0] == 1:
+                        tar_true_grasp += 1
+                    else:
+                        tar_false_grasp += 1
 
                 box_data_test.append(data_test[:, 1:])
                 grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
             print('total valid data:', int(total_num - num_train))
-            print('this is conf num 97:', conf_num_97)
-            print('this is conf true 97:', conf_true_97)
-            print('ratio: %.04f' % (conf_true_97 / conf_num_97))
-            print('this is conf num 95:', conf_num_95)
-            print('this is conf true 95:', conf_true_95)
-            print('ratio: %.04f' % (conf_true_95 / conf_num_95))
-            print('this is conf num 90:', conf_num_90)
-            print('this is conf true 90:', conf_true_90)
-            print('ratio: %.04f' % (conf_true_90 / conf_num_90))
-            print('this is conf num 80:', conf_num_80)
-            print('this is conf true 80:', conf_true_80)
-            print('ratio: %.04f\n' % (conf_true_80 / conf_num_80))
 
             print('this is yolo dominated true:', yolo_dominated_true)
             print('this is grasp dominated true:', tar_true_grasp - yolo_dominated_true)
@@ -152,7 +110,7 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             print('this is yolo dominated true rate in dataset', yolo_dominated_true / tar_true_grasp)
             # print('this is grasp dominated:', grasp_dominated_true)
 
-            return box_data_test, grasp_data_test, yolo_dominated_true, grasp_dominated_true, tar_true_grasp, tar_false_grasp
+            return box_data_test, grasp_data_test
 
 def collate_fn(data):
     data.sort(key=lambda x: len(x[1]), reverse=True)

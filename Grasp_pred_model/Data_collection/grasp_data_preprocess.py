@@ -179,15 +179,15 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
     # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
 
     for i in range(source_start_index, int(data_num + source_start_index)):
-        cur_path = source_path + 'origin_labels/%012d.txt' % (i)
-        tar_path = target_path + 'origin_labels/%012d.txt' % (i + target_start_index - source_start_index)
+        cur_path = source_path + '%012d.txt' % (i)
+        tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
 
-def yolo_accuracy_analysis(path, total_num, ratio, threshold_start, threshold_end, check_point = 20):
+def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_start, threshold_end, valid_num, check_point = 20):
 
     valid_start_index = int(total_num * ratio)
     data = np.loadtxt(path + '%012d.txt' % valid_start_index)
-    for i in tqdm(range(valid_start_index + 1, total_num)):
+    for i in tqdm(range(valid_start_index + 1, valid_num + valid_start_index + 1)):
         new_data = np.loadtxt(path + '%012d.txt' % i)
         data = np.concatenate((data, new_data), axis=0)
 
@@ -251,7 +251,20 @@ def yolo_accuracy_analysis(path, total_num, ratio, threshold_start, threshold_en
     plt.xlabel('yolo_threshold')
     plt.title('analysis of yolo prediction')
     plt.legend()
+    plt.savefig(analysis_path + 'yolo_pred_analysis.png')
     plt.show()
+
+
+    with open(analysis_path + "yolo_pred_anlysis.txt", "w") as f:
+        f.write('----------- Dataset -----------\n')
+        f.write(f'valid_num: {valid_num}\n')
+        f.write(f'tar_true: {len(tar_True)}\n')
+        f.write(f'tar_false: {len(tar_False)}\n')
+        f.write(f'threshold_start: {threshold_start}\n')
+        f.write(f'threshold_end: {threshold_end}\n')
+        f.write(f'threshold: {max_accuracy_threshold}, max accuracy: {max_accuracy}\n')
+        f.write(f'threshold: {max_precision_threshold}, max precision: {max_precision}\n')
+        f.write('----------- Dataset -----------\n')
 
 if __name__ == '__main__':
 
@@ -270,13 +283,15 @@ if __name__ == '__main__':
     # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    # source_path = '../../../knolling_dataset/grasp_dataset_726_multi/'
-    # target_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
+    # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
+    # target_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
     # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 200000
-    # target_start_index = 240000
-    # num = 180000
+    # source_start_index = 420000
+    # target_start_index = 420000
+    # num = 100000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/labels_1/'
-    yolo_accuracy_analysis(path=data_path, total_num=100000, ratio=0.8, threshold_start=0.6, threshold_end=1, check_point=50)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
+    analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
+    valid_num = 10000
+    yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.6, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)

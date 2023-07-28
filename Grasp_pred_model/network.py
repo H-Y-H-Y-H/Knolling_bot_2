@@ -33,7 +33,7 @@ class LSTMRegressor(nn.Module):
         self.grasp_dominated_FP = 0
         self.grasp_dominated_FN = 0
 
-        self.not_one_result = 0
+        self.not_one_result_per_img = 0
 
         # Define the LSTM layer
         binary = True
@@ -95,7 +95,7 @@ class LSTMRegressor(nn.Module):
 
         return loss
 
-    def detect_accuracy(self, predict, target, box_conf, ignore_index = -100):
+    def detect_accuracy(self, predict, target, box_conf, model_threshold, ignore_index = -100):
 
         mask_tar = target.ne(ignore_index)
         mask_pred = mask_tar.repeat(1, 1, 2)
@@ -108,7 +108,7 @@ class LSTMRegressor(nn.Module):
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
         for i in range(pred_soft.shape[0]): # every image
-            pred_1_index = np.where(pred_soft[i, :, 1] > pred_soft[i, :, 0])[0]
+            pred_1_index = np.where(pred_soft[i, :, 1] > model_threshold)[0]
             if len(pred_1_index) > 1:
                 # print('pred not only one result!')
                 # print(pred_soft[i])
@@ -117,9 +117,9 @@ class LSTMRegressor(nn.Module):
                     if tar[i, pred_1_index[j], 0] != -100:
                         temp_num += 1
                 if temp_num > 1:
-                    self.not_one_result += 1
+                    self.not_one_result_per_img += 1
             for j in range(pred_soft.shape[1]): # every boxes
-                criterion = pred_soft[i, j, 1] > pred_soft[i, j, 0]
+                criterion = pred_soft[i, j, 1] > model_threshold
                 yolo_dominated_index = np.argmax(box_conf[i])
 
                 if tar[i, j, 0] == -100:
@@ -176,7 +176,7 @@ class LSTMRegressor(nn.Module):
                 # print('here')
                 pass
 
-        return self.not_one_result, self.tar_true, self.tar_false, self.TP, self.TN, self.FP, self.FN, \
+        return self.not_one_result_per_img, self.tar_true, self.tar_false, self.TP, self.TN, self.FP, self.FN, \
                self.yolo_dominated_TP, self.yolo_dominated_TN, self.yolo_dominated_FP, self.yolo_dominated_FN, \
                self.grasp_dominated_TP, self.grasp_dominated_TN, self.grasp_dominated_FP, self.grasp_dominated_FN,
 

@@ -26,8 +26,8 @@ if __name__ == '__main__':
         print("Device:", device)
 
         model_threshold_start = 0.3
-        model_threshold_end = 1
-        check_point = 50
+        model_threshold_end = 0.7
+        check_point = 20
         valid_num = 10000
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
@@ -48,12 +48,12 @@ if __name__ == '__main__':
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num)
+        box_test, grasp_test, yolo_dominated_true, grasp_dominated, tar_true_grasp, tar_false_grasp = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
         test_dataset = Generate_Dataset(box_data=box_test, grasp_data=grasp_test)
-        test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False,
+        test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True,
                                  collate_fn=collate_fn, drop_last=True)
 
         # initialize the parameters of the model
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                         # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
                         loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
                         valid_loss.append(loss.item())
-                        not_one_result_per_img, tar_true, tar_false, TP, TN, FP, FN,\
+                        not_one_result, tar_true, tar_false, TP, TN, FP, FN,\
                         yolo_dominated_TP, yolo_dominated_TN, yolo_dominated_FP, yolo_dominated_FN, \
                         grasp_dominated_TP, grasp_dominated_TN, grasp_dominated_FP, grasp_dominated_FN = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch, model_threshold=model_threshold[i])
 
@@ -135,8 +135,8 @@ if __name__ == '__main__':
             print('\n avg valid loss', avg_valid_loss)
 
             print('total_img', valid_num)
-            print('not one result per img', not_one_result_per_img)
-            print('threshold', model_threshold[i])
+            print('not one result', not_one_result)
+
             print('tar_true', tar_true)
             print('tar_false', tar_false)
             print('TP:', TP)
@@ -144,14 +144,8 @@ if __name__ == '__main__':
             print('FP:', FP)
             print('FN:', FN)
             print('Accuracy (TP + FN) / all: %.04f' % ((TP + FN) / (tar_true + tar_false)))
-            if (TP + FN) == 0:
-                print('Recall (TP / (TP + FN)) 0')
-            else:
-                print('Recall (TP / (TP + FN)) %.04f' % (TP / (TP + FN)))
-            if (TP + FP) == 0:
-                print('Precision (TP / (TP + FP)) 0')
-            else:
-                print('Precision (TP / (TP + FP)) %.04f' % (TP / (TP + FP)))
+            print('Recall (TP / (TP + FN)) %.04f' % (TP / (TP + FN)))
+            print('Precision (TP / (TP + FP)) %.04f' % (TP / (TP + FP)))
             print('(FN / (FP + FN)) %.04f' % (FN / (FP + FN)))
 
             model.tar_true = 0
@@ -193,25 +187,13 @@ if __name__ == '__main__':
         print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
         print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
 
-        plt.plot(model_threshold, model_pred_recall, label='model_pred_recall')
-        plt.plot(model_threshold, model_pred_precision, label='model_pred_precision')
-        plt.plot(model_threshold, model_pred_accuracy, label='model_pred_accuracy')
-        plt.xlabel('model_threshold')
-        plt.title('analysis of model prediction')
+        plt.plot(model_threshold, model_pred_recall, label='yolo_pred_recall')
+        plt.plot(model_threshold, model_pred_precision, label='yolo_pred_precision')
+        plt.plot(model_threshold, model_pred_accuracy, label='yolo_pred_accuracy')
+        plt.xlabel('yolo_threshold')
+        plt.title('analysis of yolo prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis.png')
         plt.show()
-
-        with open(para_dict['model_path'] + "model_pred_anlysis.txt", "w") as f:
-            f.write('----------- Dataset -----------\n')
-            f.write(f'valid_num: {valid_num}\n')
-            f.write(f'tar_true: {tar_true}\n')
-            f.write(f'tar_false: {tar_false}\n')
-            f.write(f'threshold_start: {model_threshold_start}\n')
-            f.write(f'threshold_end: {model_threshold_end}\n')
-            f.write(f'threshold: {max_accuracy_threshold}, max accuracy: {max_accuracy}\n')
-            f.write(f'threshold: {max_precision_threshold}, max precision: {max_precision}\n')
-            f.write('----------- Dataset -----------\n')
 
         # with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
         #     f.write('----------- Dataset -----------\n')
