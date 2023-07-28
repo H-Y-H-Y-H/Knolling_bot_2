@@ -182,7 +182,7 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
         tar_path = target_path + 'origin_labels/%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
 
-def yolo_accuracy_analysis(path, total_num, ratio, start_conf, end_conf):
+def yolo_accuracy_analysis(path, total_num, ratio, threshold):
 
     valid_start_index = int(total_num * ratio)
     data = np.loadtxt(path + 'labels/%012d.txt' % valid_start_index)
@@ -190,27 +190,33 @@ def yolo_accuracy_analysis(path, total_num, ratio, start_conf, end_conf):
         new_data = np.loadtxt(path + 'labels/%012d.txt' % i)
         data = np.concatenate((data, new_data), axis=0)
 
-    conf_range_index = np.where((data[:, -1] >= end_conf) & (data[:, -1] <= start_conf))[0]
-    conf_range_success_index = np.where(data[conf_range_index, 0] == 1)[0]
-    # print(conf_range_success_index)
-    ratio = len(conf_range_success_index) / len(conf_range_index)
-    print(f'this is the yolo success rate in range {end_conf} - {start_conf}: %.04f' % ratio)
+    yolo_pred_P = np.where((data[:, -1] >= threshold))[0]
+    yolo_pred_N = np.where((data[:, -1] < threshold))[0]
+    tar_True = np.where(data[:, 0] == 1)[0]
+    tar_False = np.where(data[:, 0] == 0)[0]
+
+    yolo_pred_TP = np.intersect1d(yolo_pred_P, tar_True)
+    yolo_pred_TN = np.intersect1d(yolo_pred_N, tar_True)
+    yolo_pred_FP = np.intersect1d(yolo_pred_P, tar_False)
+    yolo_pred_FN = np.intersect1d(yolo_pred_N, tar_False)
+    yolo_pred_accuracy = (yolo_pred_TP + yolo_pred_FN) / (yolo_pred_TP + yolo_pred_TN + yolo_pred_FP + yolo_pred_FN)
+    print('this is yolo pred accuracy %.04f' % yolo_pred_accuracy)
 
 if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
-    target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_3/'
-    # target_data_path = data_root + 'origin_labels_713_lab/'
-
-    data_num = 420000
-    start_index = 0
-    target_start_index = 0
-    dropout_prob = 1
-    # data_preprocess_csv(data_path, data_num, start_index)
-    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
+    # data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    # target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_3/'
+    # # target_data_path = data_root + 'origin_labels_713_lab/'
+    #
+    # data_num = 420000
+    # start_index = 0
+    # target_start_index = 0
+    # dropout_prob = 1
+    # # data_preprocess_csv(data_path, data_num, start_index)
+    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
     # source_path = '../../../knolling_dataset/grasp_dataset_726_multi/'
@@ -221,5 +227,5 @@ if __name__ == '__main__':
     # num = 180000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
-    # yolo_accuracy_analysis(path=data_path, total_num=10000, ratio=0.8, start_conf=1, end_conf=0.95)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/labels_2'
+    yolo_accuracy_analysis(path=data_path, total_num=10000, ratio=0.8, threshold=0.8)
