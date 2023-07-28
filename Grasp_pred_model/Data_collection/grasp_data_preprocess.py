@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 def change_sequence(pos_before):
 
@@ -182,25 +183,75 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
         tar_path = target_path + 'origin_labels/%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
 
-def yolo_accuracy_analysis(path, total_num, ratio, threshold):
+def yolo_accuracy_analysis(path, total_num, ratio, threshold_start, threshold_end, check_point = 20):
 
     valid_start_index = int(total_num * ratio)
-    data = np.loadtxt(path + 'labels/%012d.txt' % valid_start_index)
+    data = np.loadtxt(path + '%012d.txt' % valid_start_index)
     for i in tqdm(range(valid_start_index + 1, total_num)):
-        new_data = np.loadtxt(path + 'labels/%012d.txt' % i)
+        new_data = np.loadtxt(path + '%012d.txt' % i)
         data = np.concatenate((data, new_data), axis=0)
 
-    yolo_pred_P = np.where((data[:, -1] >= threshold))[0]
-    yolo_pred_N = np.where((data[:, -1] < threshold))[0]
-    tar_True = np.where(data[:, 0] == 1)[0]
-    tar_False = np.where(data[:, 0] == 0)[0]
+    yolo_threshold = np.linspace(threshold_start, threshold_end, check_point)
+    print(yolo_threshold)
 
-    yolo_pred_TP = np.intersect1d(yolo_pred_P, tar_True)
-    yolo_pred_TN = np.intersect1d(yolo_pred_N, tar_True)
-    yolo_pred_FP = np.intersect1d(yolo_pred_P, tar_False)
-    yolo_pred_FN = np.intersect1d(yolo_pred_N, tar_False)
-    yolo_pred_accuracy = (yolo_pred_TP + yolo_pred_FN) / (yolo_pred_TP + yolo_pred_TN + yolo_pred_FP + yolo_pred_FN)
-    print('this is yolo pred accuracy %.04f' % yolo_pred_accuracy)
+    yolo_pred_recall = []
+    yolo_pred_precision = []
+    yolo_pred_accuracy = []
+    max_precision = -np.inf
+    max_accuracy = -np.inf
+    for i in range(len(yolo_threshold)):
+        yolo_pred_P = np.where((data[:, -1] >= yolo_threshold[i]))[0]
+        yolo_pred_N = np.where((data[:, -1] < yolo_threshold[i]))[0]
+        tar_True = np.where(data[:, 0] == 1)[0]
+        tar_False = np.where(data[:, 0] == 0)[0]
+
+        yolo_pred_TP = len(np.intersect1d(yolo_pred_P, tar_True))
+        yolo_pred_TN = len(np.intersect1d(yolo_pred_N, tar_True))
+        yolo_pred_FP = len(np.intersect1d(yolo_pred_P, tar_False))
+        yolo_pred_FN = len(np.intersect1d(yolo_pred_N, tar_False))
+        if yolo_pred_TP + yolo_pred_FN == 0:
+            recall = 0
+            yolo_pred_recall.append(0)
+        else:
+            recall = (yolo_pred_TP) / (yolo_pred_TP + yolo_pred_FN)
+            yolo_pred_recall.append(recall)
+        if yolo_pred_TP + yolo_pred_FP == 0:
+            precision = 0
+            yolo_pred_precision.append(0)
+        else:
+            precision = (yolo_pred_TP) / (yolo_pred_TP + yolo_pred_FP)
+            yolo_pred_precision.append(precision)
+        accuracy = (yolo_pred_TP + yolo_pred_FN) / (yolo_pred_TP + yolo_pred_TN + yolo_pred_FP + yolo_pred_FN)
+        yolo_pred_accuracy.append(accuracy)
+
+        if precision > max_precision:
+            max_precision_threshold = yolo_threshold[i]
+            max_precision = precision
+        if accuracy > max_accuracy:
+            max_accuracy_threshold = yolo_threshold[i]
+            max_accuracy = accuracy
+
+        print('this is yolo pred P', len(yolo_pred_P))
+        print('this is yolo pred N', len(yolo_pred_N))
+        print('this is yolo pred TP', yolo_pred_TP)
+        print('this is yolo pred TN', yolo_pred_TN)
+        print('this is yolo pred FP', yolo_pred_FP)
+        print('this is yolo pred FN', yolo_pred_FN)
+
+    yolo_pred_recall = np.asarray(yolo_pred_recall)
+    yolo_pred_precision = np.asarray(yolo_pred_precision)
+    yolo_pred_accuracy = np.asarray(yolo_pred_accuracy)
+
+    print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
+    print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
+
+    plt.plot(yolo_threshold, yolo_pred_recall, label='yolo_pred_recall')
+    plt.plot(yolo_threshold, yolo_pred_precision, label='yolo_pred_precision')
+    plt.plot(yolo_threshold, yolo_pred_accuracy, label='yolo_pred_accuracy')
+    plt.xlabel('yolo_threshold')
+    plt.title('analysis of yolo prediction')
+    plt.legend()
+    plt.show()
 
 if __name__ == '__main__':
 
@@ -227,5 +278,5 @@ if __name__ == '__main__':
     # num = 180000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/labels_2'
-    yolo_accuracy_analysis(path=data_path, total_num=10000, ratio=0.8, threshold=0.8)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/labels_1/'
+    yolo_accuracy_analysis(path=data_path, total_num=100000, ratio=0.8, threshold_start=0.6, threshold_end=1, check_point=50)
