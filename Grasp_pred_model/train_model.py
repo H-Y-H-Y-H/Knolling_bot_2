@@ -69,9 +69,12 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             return box_data_train, box_data_test, grasp_data_train, grasp_data_test
         else:
             print('load the valid data ...')
-            yolo_dominated = 0
-            no_grasp = 0
-            grasp_dominated = 0
+            yolo_dominated_true = 0
+            no_grasp_img = 0
+            at_least_one_grasp_img = 0
+            grasp_dominated_true = 0
+            tar_true_grasp = 0
+            tar_false_grasp = 0
             conf_num_97 = 0
             conf_num_95 = 0
             conf_num_90 = 0
@@ -107,14 +110,23 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
                         conf_true_80 += 1
 
                 if np.all(data_test[:, 0] == 0):
-                    # print(f'no grasp {i}')
-                    no_grasp += 1
-                elif np.where(data_test[:, 0] == 1)[0][0] == yolo_dominated_index:
-                    # print(f'yolo dominated {i}')
-                    yolo_dominated += 1
-                # elif data_test[0, 0] != 1:
+                    no_grasp_img += 1
                 else:
-                    grasp_dominated += 1
+                    at_least_one_grasp_img += 1
+                    conf_sequence = np.argsort(data_test[:, -1])[::-1]
+                    data_conf_sequence = data_test[conf_sequence]
+                    if np.where(data_conf_sequence[:, 0] == 1)[0][0] == yolo_dominated_index:
+                        # print(f'yolo dominated {i}')
+                        yolo_dominated_true += 1
+                    else:
+                        pass
+
+                    for j in range(len(data_test)):
+                        if data_test[j, 0] == 1:
+                            tar_true_grasp += 1
+                        else:
+                            tar_false_grasp += 1
+
                 box_data_test.append(data_test[:, 1:])
                 grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
             print('total valid data:', int(total_num - num_train))
@@ -131,11 +143,16 @@ def data_split(path, total_num, ratio, max_box, test_model=False, use_scaler=Fal
             print('this is conf true 80:', conf_true_80)
             print('ratio: %.04f\n' % (conf_true_80 / conf_num_80))
 
-            print('this is yolo dominated:', yolo_dominated)
-            print('this is no grasp:', no_grasp)
-            print('this is grasp dominated:', grasp_dominated)
+            print('this is yolo dominated true:', yolo_dominated_true)
+            print('this is grasp dominated true:', tar_true_grasp - yolo_dominated_true)
+            print('this is no grasp per img:', no_grasp_img)
+            print('this is at least one grasp per img:', at_least_one_grasp_img)
+            print('this is tar success grasp:', tar_true_grasp)
+            print('this is tar false grasp:', tar_false_grasp)
+            print('this is yolo dominated true rate in dataset', yolo_dominated_true / tar_true_grasp)
+            # print('this is grasp dominated:', grasp_dominated_true)
 
-            return box_data_test, grasp_data_test, yolo_dominated, grasp_dominated
+            return box_data_test, grasp_data_test, yolo_dominated_true, grasp_dominated_true, tar_true_grasp, tar_false_grasp
 
 def collate_fn(data):
     data.sort(key=lambda x: len(x[1]), reverse=True)

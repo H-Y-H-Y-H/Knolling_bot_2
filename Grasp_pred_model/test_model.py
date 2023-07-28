@@ -42,7 +42,7 @@ if __name__ == '__main__':
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test, yolo_dominated, grasp_dominated = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
+        box_test, grasp_test, yolo_dominated_true, grasp_dominated, tar_true_grasp, tar_false_grasp = data_split(data_path, num_img, ratio, box_one_img, test_model=True)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -93,7 +93,8 @@ if __name__ == '__main__':
                     loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
                     valid_loss.append(loss.item())
                     not_one_result, tar_true, tar_false, TP, TN, FP, FN,\
-                    yolo_dominated_TP, grasp_dominated_TP = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch)
+                    yolo_dominated_TP, yolo_dominated_TN, yolo_dominated_FP, yolo_dominated_FN, \
+                    grasp_dominated_TP, grasp_dominated_TN, grasp_dominated_FP, grasp_dominated_FN = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch)
 
 
         avg_valid_loss = np.mean(valid_loss)
@@ -113,41 +114,54 @@ if __name__ == '__main__':
         print('Precision (TP / (TP + FP)) %.04f' % (TP / (TP + FP)))
         print('(FN / (FP + FN)) %.04f' % (FN / (FP + FN)))
         print('yolo_dominated_TP:', yolo_dominated_TP)
+        print('yolo_dominated_TN:', yolo_dominated_TN)
+        print('yolo_dominated_FP:', yolo_dominated_FP)
+        print('yolo_dominated_FN:', yolo_dominated_FN)
+        print('yolo_dominated_Accuracy: %.04f' % ((yolo_dominated_TP + yolo_dominated_FN) / (yolo_dominated_TP + yolo_dominated_TN + yolo_dominated_FP + yolo_dominated_FN)))
+        print('yolo_dominated_Recall: %.04f' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FN)))
+        print('yolo_dominated_Precision: %.04f' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FP)))
         print('grasp_dominated_TP:', grasp_dominated_TP)
-        print('yolo ratio %.04f' % (yolo_dominated_TP / yolo_dominated))
-        print('grasp ratio %.04f' % (grasp_dominated_TP / grasp_dominated))
-
-        # print('grasp_dominated_tar_true', grasp_dominated_tar_true)
-        # print('grasp_dominated_pred_positive', grasp_dominated_pred_positive)
-        # print('Grasp_dominated_success_pred_rate %.04f\n' % (grasp_dominated_pred_positive / grasp_dominated_tar_true))
-        #
-        # print('yolo_dominated_tar_true', yolo_dominated)
-        # print('yolo_dominated_pred_positive', yolo_dominated_pred_positive)
-        # print('yolo_dominated_success_pred_rate %.04f\n' % (yolo_dominated_pred_positive / yolo_dominated))
-
-
-
-
-
-        print('Yolo_success_tar_rate %.04f' % (yolo_dominated / int(num_img - num_img * ratio)))
+        print('grasp_dominated_TN:', grasp_dominated_TN)
+        print('grasp_dominated_FP:', grasp_dominated_FP)
+        print('grasp_dominated_FN:', grasp_dominated_FN)
+        print('grasp_dominated_Accuracy: %.04f' % ((grasp_dominated_TP + grasp_dominated_FN) / (grasp_dominated_TP + grasp_dominated_TN + grasp_dominated_FP + grasp_dominated_FN)))
+        print('grasp_dominated_Recall: %.04f' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FN)))
+        print('grasp_dominated_Precision: %.04f' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FP)))
 
         with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
+            f.write('----------- Dataset -----------\n')
             f.write(f'total img: {int(num_img - num_img * ratio)}\n')
-            f.write(f'yolo dominated: {yolo_dominated}\n')
+            f.write(f'yolo dominated: {yolo_dominated_true}\n')
+            f.write(f'yolo dominated: {yolo_dominated_true}\n')
             f.write(f'grasp dominated: {grasp_dominated}\n')
-            f.write(f'yolo ratio: {yolo_dominated_TP / yolo_dominated}\n')
-            f.write(f'grasp ratio: {grasp_dominated_TP / grasp_dominated}\n')
             f.write(f'not one result: {not_one_result}\n')
             f.write(f'tar_true {tar_true}\n')
             f.write(f'tar_false {tar_false}\n')
+            f.write('----------- Dataset -----------\n')
+            f.write('----------- Prediction -----------\n')
             f.write(f'TP: {TP}\n')
             f.write(f'TN: {TN}\n')
             f.write(f'FP: {FP}\n')
             f.write(f'FN: {FN}\n')
-            f.write(f'Recall: {(TP / (TP + FN))}\n')
-            f.write(f'Precision: {(TP / (TP + FP))}\n')
+            f.write('Accuracy (TP + FN) / all: %.04f\n' % ((TP + FN) / (tar_true + tar_false)))
+            f.write('Recall (TP / (TP + FN)) %.04f\n' % (TP / (TP + FN)))
+            f.write('Precision (TP / (TP + FP)) %.04f\n' % (TP / (TP + FP)))
             f.write(f'FN / (FN + FP): {(FN / (FP + FN))}\n')
-            f.write('Yolo_success_pred_rate %.04f\n' % (yolo_dominated / int(num_img - num_img * ratio)))
+            f.write(f'yolo_dominated_TP: {yolo_dominated_TP}\n')
+            f.write(f'yolo_dominated_TN: {yolo_dominated_TN}\n')
+            f.write(f'yolo_dominated_FP: {yolo_dominated_FP}\n')
+            f.write(f'yolo_dominated_FN: {yolo_dominated_FN}\n')
+            f.write('yolo_dominated_Accuracy: %.04f\n' % ((yolo_dominated_TP + yolo_dominated_FN) / (yolo_dominated_TP + yolo_dominated_TN + yolo_dominated_FP + yolo_dominated_FN)))
+            f.write('yolo_dominated_Recall: %.04f\n' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FN)))
+            f.write('yolo_dominated_Precision: %.04f\n' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FP)))
+            f.write(f'grasp_dominated_TP: {grasp_dominated_TP}\n')
+            f.write(f'grasp_dominated_TN: {grasp_dominated_TN}\n')
+            f.write(f'grasp_dominated_FP: {grasp_dominated_FP}\n')
+            f.write(f'grasp_dominated_FN: {grasp_dominated_FN}\n')
+            f.write('grasp_dominated_Accuracy: %.04f\n' % ((grasp_dominated_TP + grasp_dominated_FN) / (grasp_dominated_TP + grasp_dominated_TN + grasp_dominated_FP + grasp_dominated_FN)))
+            f.write('grasp_dominated_Recall: %.04f\n' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FN)))
+            f.write('grasp_dominated_Precision: %.04f\n' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FP)))
+            f.write('----------- Prediction -----------')
         print('over!')
 
 

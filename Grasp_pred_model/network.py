@@ -25,7 +25,13 @@ class LSTMRegressor(nn.Module):
         self.FP = 0
         self.FN = 0
         self.yolo_dominated_TP = 0
+        self.yolo_dominated_TN = 0
+        self.yolo_dominated_FP = 0
+        self.yolo_dominated_FN = 0
         self.grasp_dominated_TP = 0
+        self.grasp_dominated_TN = 0
+        self.grasp_dominated_FP = 0
+        self.grasp_dominated_FN = 0
 
         self.not_one_result = 0
 
@@ -119,6 +125,24 @@ class LSTMRegressor(nn.Module):
                 if tar[i, j, 0] == -100:
                     continue
                 else:
+
+                    # if tar[i, j, 0] == 1:
+                    #     self.tar_true += 1
+                    #     if criterion:
+                    #         self.TP += 1
+                    #         if j == yolo_dominated_index:
+                    #             self.yolo_dominated_TP += 1
+                    #         else:
+                    #             self.grasp_dominated_TP += 1
+                    #     else:
+                    #         self.TN += 1
+                    # if tar[i, j, 0] == 0:
+                    #     self.tar_false += 1
+                    #     if criterion:
+                    #         self.FP += 1
+                    #     else:
+                    #         self.FN += 1
+
                     if tar[i, j, 0] == 1:
                         self.tar_true += 1
                         if criterion:
@@ -129,43 +153,32 @@ class LSTMRegressor(nn.Module):
                                 self.grasp_dominated_TP += 1
                         else:
                             self.TN += 1
+                            if j == yolo_dominated_index:
+                                self.yolo_dominated_TN += 1
+                            else:
+                                self.grasp_dominated_TN += 1
                     if tar[i, j, 0] == 0:
                         self.tar_false += 1
                         if criterion:
                             self.FP += 1
+                            if j == yolo_dominated_index:
+                                self.yolo_dominated_FP += 1
+                            else:
+                                self.grasp_dominated_FP += 1
                         else:
                             self.FN += 1
-
-                # if tar[i, j, 0] == 1: # test the recall
-                #     self.tar_true += 1
-                #     if criterion:
-                #         self.pred_positive += 1
-                #     if j == yolo_dominated_index:
-                #         self.yolo_dominated_tar_true += 1
-                #         if criterion:
-                #             self.yolo_dominated_pred_positive += 1
-                #     else:
-                #         # print('grasp_dominated')
-                #         self.grasp_dominated_tar_true += 1
-                #         if criterion:
-                #             self.grasp_dominated_pred_positive += 1
-                #
-                # elif tar[i, j, 0] == 0:
-                #     self.tar_false += 1
-                #     if criterion == False:
-                #         self.pred_negative += 1
-                #
-                # if criterion and tar[i, j, 0] != -100: # test the precision
-                #     self.pred_positive += 1
-                #     if tar[i, j, 0] == 1:
-                #         self.true_positive += 1
+                            if j == yolo_dominated_index:
+                                self.yolo_dominated_FN += 1
+                            else:
+                                self.grasp_dominated_FN += 1
 
             if np.all(tar[i] < 0.5):
                 # print('here')
                 pass
 
         return self.not_one_result, self.tar_true, self.tar_false, self.TP, self.TN, self.FP, self.FN, \
-               self.yolo_dominated_TP, self.grasp_dominated_TP
+               self.yolo_dominated_TP, self.yolo_dominated_TN, self.yolo_dominated_FP, self.yolo_dominated_FN, \
+               self.grasp_dominated_TP, self.grasp_dominated_TN, self.grasp_dominated_FP, self.grasp_dominated_FN,
 
     # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
     # f.write(f'model_path: {para_dict["model_path"]}\n')
