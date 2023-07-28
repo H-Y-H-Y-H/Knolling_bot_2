@@ -64,9 +64,9 @@ def data_preprocess_csv(path, data_num, start_index):
         })
     data_frame.to_csv(path + 'grasp_data.csv', index=False)
 
-def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=None, target_start_index=None):
+def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=None, target_start_index=None, dropout_prob=None):
 
-    target_path = target_data_path + 'labels/'
+    target_path = target_data_path
     os.makedirs(target_path, exist_ok=True)
     scaler = MinMaxScaler()
     data_range = np.array([[0, 0, -0.14, 0, 0, 0, 0.5],
@@ -81,14 +81,27 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
 
     max_length = 0
     total_not_all_zero = 0
+    tar_true = 0
+    tar_false = 0
+    output_index = target_start_index - 1
     for i in tqdm(range(start_index, data_num + start_index)):
-        origin_data = np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11)
+        origin_data = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 11)
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
         # data = origin_data
         if np.any(data[:, 0] != 0):
             # print('this is index of not all zero data', i)
             total_not_all_zero += 1
+            output_index += 1
             # print(total_not_all_zero)
+        else:
+            flag = np.random.rand()
+            if flag < dropout_prob:
+                continue
+            else:
+                # print('this is output index', output_index)
+                output_index += 1
+                pass
+
         tar_index = np.where(data[:, -2] < 0)[0]
         if len(tar_index) > 0:
             pass
@@ -106,10 +119,15 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         # print('this is normal data\n', normal_data)
 
         # print(i + target_start_index - start_index)
-        np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data, fmt='%.04f')
+        tar_true += len(np.where(data[:, 0] == 1)[0])
+        tar_false += len(np.where(data[:, 0] == 0)[0])
+        np.savetxt(target_path + '%012d.txt' % (output_index), data, fmt='%.04f')
 
     print('this is total not all zero', total_not_all_zero)
     print('this is the max length in the dataset', max_length)
+    print('this is total tar true in the result dataset', tar_true)
+    print('this is total tar false in the result dataset', tar_false)
+    print('this is total num of images', output_index)
 
 def data_preprocess_np_standard(path, data_num, start_index, target_data_path=None, target_start_index=None):
     target_path = target_data_path + 'labels/'
@@ -182,24 +200,25 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
-    target_data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
+    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_3/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 40000
-    start_index = 200000
-    target_start_index = 200000
+    data_num = 420000
+    start_index = 0
+    target_start_index = 0
+    dropout_prob = 1
     # data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    # source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725_laptop/'
-    # target_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726/'
+    # source_path = '../../../knolling_dataset/grasp_dataset_726_multi/'
+    # target_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
     # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 0
-    # target_start_index = 100000
-    # num = 80000
+    # source_start_index = 200000
+    # target_start_index = 240000
+    # num = 180000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
     # data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
