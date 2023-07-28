@@ -187,7 +187,7 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
 
     valid_start_index = int(total_num * ratio)
     data = np.loadtxt(path + '%012d.txt' % valid_start_index)
-    for i in tqdm(range(valid_start_index + 1, valid_num + valid_start_index + 1)):
+    for i in tqdm(range(valid_start_index + 1, valid_num + valid_start_index)):
         new_data = np.loadtxt(path + '%012d.txt' % i)
         data = np.concatenate((data, new_data), axis=0)
 
