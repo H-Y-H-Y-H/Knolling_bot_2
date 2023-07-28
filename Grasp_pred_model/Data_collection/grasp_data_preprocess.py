@@ -182,16 +182,16 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
-    # target_data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
-    # # target_data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # data_num = 200000
-    # start_index = 0
-    # target_start_index = 0
-    # # data_preprocess_csv(data_path, data_num, start_index)
-    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
+    # target_data_path = data_root + 'origin_labels_713_lab/'
+
+    data_num = 40000
+    start_index = 200000
+    target_start_index = 200000
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
     # source_path = '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_725_laptop/'
@@ -202,5 +202,5 @@ if __name__ == '__main__':
     # num = 80000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
-    yolo_accuracy_analysis(path=data_path, total_num=10000, ratio=0.8, start_conf=1, end_conf=0.95)
+    # data_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/'
+    # yolo_accuracy_analysis(path=data_path, total_num=10000, ratio=0.8, start_conf=1, end_conf=0.95)

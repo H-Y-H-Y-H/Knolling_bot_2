@@ -174,52 +174,29 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'decive': 'cuda:1',
-             'num_img': 120000,
+para_dict = {'decive': 'cuda:0',
+             'num_img': 200000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': '../Grasp_pred_model/results/LSTM_727_4_heavy_multi/',
-             'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_dataset_726_multi/labels/',
+             'model_path': '../Grasp_pred_model/results/LSTM_727_5_heavy_multi/',
+             'data_path': '../../knolling_dataset/grasp_dataset_726_laptop_multi/labels/',
              'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
              'input_size': 6,
              'hidden_size': 32,
              'box_one_img': 10,
-             'num_layers': 4,
+             'num_layers': 8,
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '727_4_distance_multi',
+             'run_name': '727_5_distance_multi',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
              'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False,
              'fine-tuning': False,
              'hidden_node_1': 32, 'hidden_node_2': 8}
-
-# 'data_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_714_laptop/labels/',
-# 'data_path': '/home/ubuntu/Desktop/knolling_dataset/grasp_pile_714_laptop/labels/',
-
-# # no conf
-# para_dict = {'num_img': 180000,
-#              'ratio': 0.8,
-#              'epoch': 200,
-#              'model_path': '../Grasp_pred_model/results/LSTM_707_2_cross_no_conf/',
-#              'data_path': '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/grasp_dataset_707/labels/',
-#              'learning_rate': 0.01, 'patience': 20, 'factor': 0.1,
-#              'network': 'binary',
-#              'batch_size': 32,
-#              'input_size': 5,
-#              'hidden_size': 32,
-#              'box_one_img': 21,
-#              'num_layers': 2,
-#              'output_size': 2,
-#              'abort_learning': 30,
-#              'run_name': '707_2',
-#              'project_name': 'zzz_LSTM_cross_no_conf',
-#              'wandb_flag': True,
-#              'use_mse': False}
 
 if __name__ == '__main__':
 
