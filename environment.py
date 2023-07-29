@@ -17,7 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
-    def __init__(self, para_dict, knolling_para=None):
+    def __init__(self, para_dict, knolling_para=None, lstm_dict=None):
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.endnum = para_dict['end_num']
@@ -30,9 +30,10 @@ class Arm_env():
         self.save_img_flag = para_dict['save_img_flag']
         self.yolo_model = Yolo_predict(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
-        self.grasp_model = Grasp_model(para_dict=para_dict)
+        self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
         self.para_dict = para_dict
         self.knolling_para = knolling_para
+        self.lstm_dict = lstm_dict
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -729,7 +730,7 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, data_root=None, epoch=None):
+    def get_obs(self, epoch=0):
 
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
@@ -766,8 +767,8 @@ class Arm_env():
             self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
 
             img, _ = get_images()
-            os.makedirs(data_root + 'origin_images/', exist_ok=True)
-            img_path = data_root + 'origin_images/%012d' % (epoch)
+            os.makedirs(self.para_dict['dataset_path'] + 'origin_images/', exist_ok=True)
+            img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (epoch)
 
             ################### the results of object detection has changed the order!!!! ####################
             # structure of results: x, y, z, length, width, ori

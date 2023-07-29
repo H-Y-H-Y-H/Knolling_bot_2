@@ -19,7 +19,7 @@ class Grasp_env(Arm_env):
 
         ############################## Get the information of boxes #################################
         print('this is img_index start while grasping', img_index_start)
-        manipulator_before, pred_lwh_list, pred_conf = self.get_obs(data_root=data_root, epoch=self.img_per_epoch + img_index_start)
+        manipulator_before, pred_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
 
         if len(manipulator_before) <= 1 or len(self.gt_pos_ori) == 1:
             print('no pile in the environment, try to reset!')

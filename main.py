@@ -12,8 +12,8 @@ import shutil
 
 class knolling_main(Arm_env):
 
-    def __init__(self, para_dict=None, knolling_para=None):
-        super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para)
+    def __init__(self, para_dict=None, knolling_para=None, lstm_dic=None):
+        super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
 
     def planning(self, order, conn, real_height, sim_height):
         def get_start_end():  # generating all trajectories of all items in normal condition
@@ -21,10 +21,10 @@ class knolling_main(Arm_env):
             roll = 0
             pitch = 0
             if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
-                manipulator_before, new_xyz_list, error = self.get_obs(self.general_parameters['obs_order'])
+                manipulator_before, new_xyz_list, error = self.get_obs(self.para_dict['obs_order'])
                 return error
             else:
-                manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'])
+                manipulator_before, new_xyz_list = self.get_obs(self.para_dict['obs_order'])
 
             # sequence pos_before, ori_before, pos_after, ori_after
             start_end = np.concatenate((manipulator_before, self.manipulator_after), axis=1)
@@ -32,275 +32,275 @@ class knolling_main(Arm_env):
 
             return start_end, new_xyz_list
 
-        def move(cur_pos, cur_ori, tar_pos, tar_ori):
-
-            # add the offset manually
-            if self.general_parameters['real_operate'] == True:
-                # # automatically add z and x bias
-                d = np.array([0, 0.3])
-                d_y = np.array((0, 0.17, 0.21, 0.30))
-                d_y = d
-                z_bias = np.array([-0.003, 0.005])
-                x_bias = np.array([-0.004, 0.000])# yolo error is +2mm along x axis!
-                y_bias = np.array([0.001, 0.005])
-                # z_parameters = np.polyfit(d, z_bias, 3)
-                z_parameters = np.polyfit(d, z_bias, 1)
-                x_parameters = np.polyfit(d, x_bias, 1)
-                y_parameters = np.polyfit(d_y, y_bias, 1)
-                new_z_formula = np.poly1d(z_parameters)
-                new_x_formula = np.poly1d(x_parameters)
-                new_y_formula = np.poly1d(y_parameters)
-
-                distance = tar_pos[0]
-                distance_y = tar_pos[0]
-                tar_pos[2] = tar_pos[2] + new_z_formula(distance)
-                print('this is z add', new_z_formula(distance))
-                tar_pos[0] = tar_pos[0] + new_x_formula(distance)
-                print('this is x add', new_x_formula(distance))
-                if tar_pos[1] > 0:
-                    tar_pos[1] += (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] + 0.01)), 0, 1) + 0.0015) # 0.003 is manual!
-                else:
-                    tar_pos[1] -= (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1) - 0.0015) # 0.003 is manual!
-                print('this is tar pos after manual', tar_pos)
-
-            if tar_ori[2] > 3.1416 / 2:
-                tar_ori[2] = tar_ori[2] - np.pi
-                print('tar ori is too large')
-            elif tar_ori[2] < -3.1416 / 2:
-                tar_ori[2] = tar_ori[2] + np.pi
-                print('tar ori is too small')
-            # print('this is tar ori', tar_ori)
-
-            #################### use feedback control ###################
-            if abs(cur_pos[0] - tar_pos[0]) < 0.001 and abs(cur_pos[1] - tar_pos[1]) < 0.001:
-                # vertical, choose a small slice
-                move_slice = 0.004
-            else:
-                # horizontal, choose a large slice
-                if self.general_parameters['real_operate'] == True:
-                    move_slice = 0.008
-                else:
-                    move_slice = 0.004
-
-            # ###### zzz set time sleep ######
-            # if cur_pos[2] - tar_pos[2] > 0.02:
-            #     print(cur_pos)
-            #     print(tar_pos)
-            #     print('this is time sleep')
-            #     time.sleep(1)
-
-            if self.general_parameters['real_operate'] == True:
-                tar_pos = tar_pos + np.array([0, 0, real_height])
-                target_pos = np.copy(tar_pos)
-                target_ori = np.copy(tar_ori)
-                # target_pos[2] = Cartesian_offset_nn(np.array([tar_pos])).reshape(-1, )[2] # remove nn offset temporary
-
-                if np.abs(target_pos[2] - cur_pos[2]) > 0.01 \
-                        and np.abs(target_pos[0] - cur_pos[0]) < 0.01 \
-                        and np.abs(target_pos[1] - cur_pos[1]) < 0.01:
-                    mark_ratio = 0.8
-                    seg_time = 0
-                else:
-                    mark_ratio = 0.99
-                    seg_time = 0
-
-                while True:
-                    plot_cmd = []
-                    # plot_real = []
-                    sim_xyz = []
-                    sim_ori = []
-                    real_xyz = []
-
-                    # divide the whole trajectory into several segment
-                    seg_time += 1
-                    seg_pos = mark_ratio * (target_pos - cur_pos) + cur_pos
-                    seg_ori = mark_ratio * (target_ori - cur_ori) + cur_ori
-                    distance = np.linalg.norm(seg_pos - cur_pos)
-                    num_step = np.ceil(distance / move_slice)
-                    step_pos = (seg_pos - cur_pos) / num_step
-                    step_ori = (seg_ori - cur_ori) / num_step
-
-                    while True:
-                        tar_pos = cur_pos + step_pos
-                        tar_ori = cur_ori + step_ori
-                        sim_xyz.append(tar_pos)
-                        sim_ori.append(tar_ori)
-                        # print(tar_ori)
-
-                        ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
-                                                                     maxNumIterations=200,
-                                                                     targetOrientation=p.getQuaternionFromEuler(
-                                                                         tar_ori))
-
-                        for motor_index in range(self.num_motor):
-                            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                    targetPosition=ik_angles_sim[motor_index], maxVelocity=25)
-                        for i in range(30):
-                            p.stepSimulation()
-
-                        angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
-                        plot_cmd.append(angle_sim)
-
-                        break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
-                            seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
-                                     abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
-                            seg_ori[1] - tar_ori[1]) < 0.001 and abs(seg_ori[2] - tar_ori[2]) < 0.001
-                        if break_flag:
-                            break
-
-                        # update cur_pos and cur_ori in several step of each segment
-                        cur_pos = tar_pos
-                        cur_ori = tar_ori
-
-                    sim_xyz = np.asarray(sim_xyz)
-
-                    plot_step = np.arange(num_step)
-                    plot_cmd = np.asarray(plot_cmd)
-                    # print('this is the shape of cmd', plot_cmd.shape)
-                    # print('this is the shape of xyz', sim_xyz.shape)
-                    # print('this is the motor pos sent', plot_cmd[-1])
-                    conn.sendall(plot_cmd.tobytes())
-                    # print('waiting the manipulator')
-                    angles_real = conn.recv(8192)
-                    # print('received')
-                    angles_real = np.frombuffer(angles_real, dtype=np.float32)
-                    angles_real = angles_real.reshape(-1, 6)
-
-                    if seg_time > 0:
-                        seg_flag = False
-                        print('segment fail, try to tune!')
-                        ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
-                                                                     maxNumIterations=200,
-                                                                     targetOrientation=p.getQuaternionFromEuler(
-                                                                         target_ori))
-
-                        for motor_index in range(self.num_motor):
-                            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                    targetPosition=ik_angles_sim[motor_index], maxVelocity=7.5)
-                        for i in range(30):
-                            p.stepSimulation()
-
-                        angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
-                        final_cmd = np.append(angle_sim, 0).reshape(1, -1)
-                        final_cmd = np.asarray(final_cmd, dtype=np.float32)
-                        conn.sendall(final_cmd.tobytes())
-
-                        # get the pos after tune!
-                        final_angles_real = conn.recv(4096)
-                        # print('received')
-                        final_angles_real = np.frombuffer(final_angles_real, dtype=np.float32).reshape(-1, 6)
-                        print('this is final after moving', final_angles_real)
-
-                        ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(final_angles_real)), dtype=np.float32)
-                        for motor_index in range(self.num_motor):
-                            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                    targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-                        for i in range(30):
-                            p.stepSimulation()
-                        real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
-                        cur_pos = real_xyz[-1]
-                        # print(real_xyz)
-                        break
-                    else:
-                        print('this is the shape of angles real', angles_real.shape)
-                        for i in range(len(angles_real)):
-                            ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(angles_real[i])), dtype=np.float32)
-                            for motor_index in range(self.num_motor):
-                                p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                        targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-                            for i in range(30):
-                                p.stepSimulation()
-                            real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
-                        cur_pos = real_xyz[-1]
-                        break
-
-            else:
-                tar_pos = tar_pos + np.array([0, 0, sim_height])
-                target_pos = np.copy(tar_pos)
-                target_ori = np.copy(tar_ori)
-
-                distance = np.linalg.norm(tar_pos - cur_pos)
-                num_step = np.ceil(distance / move_slice)
-                step_pos = (target_pos - cur_pos) / num_step
-                step_ori = (target_ori - cur_ori) / num_step
-
-                print('this is sim tar pos', tar_pos)
-                while True:
-                    tar_pos = cur_pos + step_pos
-                    tar_ori = cur_ori + step_ori
-                    ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
-                                                              maxNumIterations=200,
-                                                              targetOrientation=p.getQuaternionFromEuler(tar_ori))
-                    for motor_index in range(self.num_motor):
-                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                targetPosition=ik_angles0[motor_index], maxVelocity=100,
-                                                force=self.dynamic_parameters['move_force'])
-                    for i in range(6):
-                        p.stepSimulation()
-                        if self.general_parameters['is_render'] == True:
-                            time.sleep(1 / 120)
-                    if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
-                            target_pos[2] - tar_pos[2]) < 0.001 and \
-                            abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
-                        target_ori[2] - tar_ori[2]) < 0.001:
-                        break
-                    cur_pos = tar_pos
-                    cur_ori = tar_ori
-
-            return cur_pos
-
-        def gripper(gap, obj_width):
-            obj_width += 0.010
-            if self.general_parameters['real_operate'] == True:
-                obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
-                motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
-                formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
-                motor_pos = np.poly1d(formula_parameters)
-            else:
-                close_open_gap = 0.053
-                obj_width_range = np.array([0.022, 0.057])
-                motor_pos_range = np.array([0.022, 0.010]) # 0.0273
-                formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 1)
-                motor_pos = np.poly1d(formula_parameters)
-
-            if self.general_parameters['real_operate'] == True:
-                if gap > 0.0265:  # close
-                    pos_real = np.asarray([[gap, 1600]], dtype=np.float32)
-                elif gap <= 0.0265:  # open
-                    pos_real = np.asarray([[gap, motor_pos(obj_width)]], dtype=np.float32)
-                print('gripper', pos_real)
-                conn.sendall(pos_real.tobytes())
-                # print(f'this is the cmd pos {pos_real}')
-                p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=gap, force=10)
-                p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=gap, force=10)
-
-                real_pos = conn.recv(4096)
-                # test_real_pos = np.frombuffer(real_pos, dtype=np.float32)
-                real_pos = np.frombuffer(real_pos, dtype=np.float32)
-                # print('this is test float from buffer', test_real_pos)
-
-            else:
-                if gap > 0.0265: # close
-                    p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                            targetPosition=motor_pos(obj_width) + close_open_gap,
-                                            force=self.dynamic_parameters['gripper_force'])
-                    p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                            targetPosition=motor_pos(obj_width) + close_open_gap,
-                                            force=self.dynamic_parameters['gripper_force'])
-                else: # open
-                    p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
-                                            targetPosition=motor_pos(obj_width),
-                                            force=self.dynamic_parameters['gripper_force'])
-                    p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
-                                            targetPosition=motor_pos(obj_width),
-                                            force=self.dynamic_parameters['gripper_force'])
-            for i in range(self.dynamic_parameters['gripper_sim_step']):
-                p.stepSimulation()
-                if self.general_parameters['is_render'] == True:
-                    time.sleep(1 / 24)
+        # def move(cur_pos, cur_ori, tar_pos, tar_ori):
+        #
+        #     # add the offset manually
+        #     if self.para_dict['real_operate'] == True:
+        #         # # automatically add z and x bias
+        #         d = np.array([0, 0.3])
+        #         d_y = np.array((0, 0.17, 0.21, 0.30))
+        #         d_y = d
+        #         z_bias = np.array([-0.003, 0.005])
+        #         x_bias = np.array([-0.004, 0.000])# yolo error is +2mm along x axis!
+        #         y_bias = np.array([0.001, 0.005])
+        #         # z_parameters = np.polyfit(d, z_bias, 3)
+        #         z_parameters = np.polyfit(d, z_bias, 1)
+        #         x_parameters = np.polyfit(d, x_bias, 1)
+        #         y_parameters = np.polyfit(d_y, y_bias, 1)
+        #         new_z_formula = np.poly1d(z_parameters)
+        #         new_x_formula = np.poly1d(x_parameters)
+        #         new_y_formula = np.poly1d(y_parameters)
+        #
+        #         distance = tar_pos[0]
+        #         distance_y = tar_pos[0]
+        #         tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+        #         print('this is z add', new_z_formula(distance))
+        #         tar_pos[0] = tar_pos[0] + new_x_formula(distance)
+        #         print('this is x add', new_x_formula(distance))
+        #         if tar_pos[1] > 0:
+        #             tar_pos[1] += (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] + 0.01)), 0, 1) + 0.0015) # 0.003 is manual!
+        #         else:
+        #             tar_pos[1] -= (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1) - 0.0015) # 0.003 is manual!
+        #         print('this is tar pos after manual', tar_pos)
+        #
+        #     if tar_ori[2] > 3.1416 / 2:
+        #         tar_ori[2] = tar_ori[2] - np.pi
+        #         print('tar ori is too large')
+        #     elif tar_ori[2] < -3.1416 / 2:
+        #         tar_ori[2] = tar_ori[2] + np.pi
+        #         print('tar ori is too small')
+        #     # print('this is tar ori', tar_ori)
+        #
+        #     #################### use feedback control ###################
+        #     if abs(cur_pos[0] - tar_pos[0]) < 0.001 and abs(cur_pos[1] - tar_pos[1]) < 0.001:
+        #         # vertical, choose a small slice
+        #         move_slice = 0.004
+        #     else:
+        #         # horizontal, choose a large slice
+        #         if self.para_dict['real_operate'] == True:
+        #             move_slice = 0.008
+        #         else:
+        #             move_slice = 0.004
+        #
+        #     # ###### zzz set time sleep ######
+        #     # if cur_pos[2] - tar_pos[2] > 0.02:
+        #     #     print(cur_pos)
+        #     #     print(tar_pos)
+        #     #     print('this is time sleep')
+        #     #     time.sleep(1)
+        #
+        #     if self.para_dict['real_operate'] == True:
+        #         tar_pos = tar_pos + np.array([0, 0, real_height])
+        #         target_pos = np.copy(tar_pos)
+        #         target_ori = np.copy(tar_ori)
+        #         # target_pos[2] = Cartesian_offset_nn(np.array([tar_pos])).reshape(-1, )[2] # remove nn offset temporary
+        #
+        #         if np.abs(target_pos[2] - cur_pos[2]) > 0.01 \
+        #                 and np.abs(target_pos[0] - cur_pos[0]) < 0.01 \
+        #                 and np.abs(target_pos[1] - cur_pos[1]) < 0.01:
+        #             mark_ratio = 0.8
+        #             seg_time = 0
+        #         else:
+        #             mark_ratio = 0.99
+        #             seg_time = 0
+        #
+        #         while True:
+        #             plot_cmd = []
+        #             # plot_real = []
+        #             sim_xyz = []
+        #             sim_ori = []
+        #             real_xyz = []
+        #
+        #             # divide the whole trajectory into several segment
+        #             seg_time += 1
+        #             seg_pos = mark_ratio * (target_pos - cur_pos) + cur_pos
+        #             seg_ori = mark_ratio * (target_ori - cur_ori) + cur_ori
+        #             distance = np.linalg.norm(seg_pos - cur_pos)
+        #             num_step = np.ceil(distance / move_slice)
+        #             step_pos = (seg_pos - cur_pos) / num_step
+        #             step_ori = (seg_ori - cur_ori) / num_step
+        #
+        #             while True:
+        #                 tar_pos = cur_pos + step_pos
+        #                 tar_ori = cur_ori + step_ori
+        #                 sim_xyz.append(tar_pos)
+        #                 sim_ori.append(tar_ori)
+        #                 # print(tar_ori)
+        #
+        #                 ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
+        #                                                              maxNumIterations=200,
+        #                                                              targetOrientation=p.getQuaternionFromEuler(
+        #                                                                  tar_ori))
+        #
+        #                 for motor_index in range(self.num_motor):
+        #                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+        #                                             targetPosition=ik_angles_sim[motor_index], maxVelocity=25)
+        #                 for i in range(30):
+        #                     p.stepSimulation()
+        #
+        #                 angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+        #                 plot_cmd.append(angle_sim)
+        #
+        #                 break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
+        #                     seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
+        #                              abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
+        #                     seg_ori[1] - tar_ori[1]) < 0.001 and abs(seg_ori[2] - tar_ori[2]) < 0.001
+        #                 if break_flag:
+        #                     break
+        #
+        #                 # update cur_pos and cur_ori in several step of each segment
+        #                 cur_pos = tar_pos
+        #                 cur_ori = tar_ori
+        #
+        #             sim_xyz = np.asarray(sim_xyz)
+        #
+        #             plot_step = np.arange(num_step)
+        #             plot_cmd = np.asarray(plot_cmd)
+        #             # print('this is the shape of cmd', plot_cmd.shape)
+        #             # print('this is the shape of xyz', sim_xyz.shape)
+        #             # print('this is the motor pos sent', plot_cmd[-1])
+        #             conn.sendall(plot_cmd.tobytes())
+        #             # print('waiting the manipulator')
+        #             angles_real = conn.recv(8192)
+        #             # print('received')
+        #             angles_real = np.frombuffer(angles_real, dtype=np.float32)
+        #             angles_real = angles_real.reshape(-1, 6)
+        #
+        #             if seg_time > 0:
+        #                 seg_flag = False
+        #                 print('segment fail, try to tune!')
+        #                 ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
+        #                                                              maxNumIterations=200,
+        #                                                              targetOrientation=p.getQuaternionFromEuler(
+        #                                                                  target_ori))
+        #
+        #                 for motor_index in range(self.num_motor):
+        #                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+        #                                             targetPosition=ik_angles_sim[motor_index], maxVelocity=7.5)
+        #                 for i in range(30):
+        #                     p.stepSimulation()
+        #
+        #                 angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+        #                 final_cmd = np.append(angle_sim, 0).reshape(1, -1)
+        #                 final_cmd = np.asarray(final_cmd, dtype=np.float32)
+        #                 conn.sendall(final_cmd.tobytes())
+        #
+        #                 # get the pos after tune!
+        #                 final_angles_real = conn.recv(4096)
+        #                 # print('received')
+        #                 final_angles_real = np.frombuffer(final_angles_real, dtype=np.float32).reshape(-1, 6)
+        #                 print('this is final after moving', final_angles_real)
+        #
+        #                 ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(final_angles_real)), dtype=np.float32)
+        #                 for motor_index in range(self.num_motor):
+        #                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+        #                                             targetPosition=ik_angles_real[motor_index], maxVelocity=25)
+        #                 for i in range(30):
+        #                     p.stepSimulation()
+        #                 real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+        #                 cur_pos = real_xyz[-1]
+        #                 # print(real_xyz)
+        #                 break
+        #             else:
+        #                 print('this is the shape of angles real', angles_real.shape)
+        #                 for i in range(len(angles_real)):
+        #                     ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(angles_real[i])), dtype=np.float32)
+        #                     for motor_index in range(self.num_motor):
+        #                         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+        #                                                 targetPosition=ik_angles_real[motor_index], maxVelocity=25)
+        #                     for i in range(30):
+        #                         p.stepSimulation()
+        #                     real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+        #                 cur_pos = real_xyz[-1]
+        #                 break
+        #
+        #     else:
+        #         tar_pos = tar_pos + np.array([0, 0, sim_height])
+        #         target_pos = np.copy(tar_pos)
+        #         target_ori = np.copy(tar_ori)
+        #
+        #         distance = np.linalg.norm(tar_pos - cur_pos)
+        #         num_step = np.ceil(distance / move_slice)
+        #         step_pos = (target_pos - cur_pos) / num_step
+        #         step_ori = (target_ori - cur_ori) / num_step
+        #
+        #         print('this is sim tar pos', tar_pos)
+        #         while True:
+        #             tar_pos = cur_pos + step_pos
+        #             tar_ori = cur_ori + step_ori
+        #             ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
+        #                                                       maxNumIterations=200,
+        #                                                       targetOrientation=p.getQuaternionFromEuler(tar_ori))
+        #             for motor_index in range(5):
+        #                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+        #                                         targetPosition=ik_angles0[motor_index], maxVelocity=100,
+        #                                         force=self.dynamic_parameters['move_force'])
+        #             for i in range(6):
+        #                 p.stepSimulation()
+        #                 if self.para_dict['is_render'] == True:
+        #                     time.sleep(1 / 120)
+        #             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
+        #                     target_pos[2] - tar_pos[2]) < 0.001 and \
+        #                     abs(target_ori[0] - tar_ori[0]) < 0.001 and abs(target_ori[1] - tar_ori[1]) < 0.001 and abs(
+        #                 target_ori[2] - tar_ori[2]) < 0.001:
+        #                 break
+        #             cur_pos = tar_pos
+        #             cur_ori = tar_ori
+        #
+        #     return cur_pos
+        #
+        # def gripper(gap, obj_width):
+        #     obj_width += 0.010
+        #     if self.para_dict['real_operate'] == True:
+        #         obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
+        #         motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
+        #         formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
+        #         motor_pos = np.poly1d(formula_parameters)
+        #     else:
+        #         close_open_gap = 0.053
+        #         obj_width_range = np.array([0.022, 0.057])
+        #         motor_pos_range = np.array([0.022, 0.010]) # 0.0273
+        #         formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 1)
+        #         motor_pos = np.poly1d(formula_parameters)
+        #
+        #     if self.para_dict['real_operate'] == True:
+        #         if gap > 0.0265:  # close
+        #             pos_real = np.asarray([[gap, 1600]], dtype=np.float32)
+        #         elif gap <= 0.0265:  # open
+        #             pos_real = np.asarray([[gap, motor_pos(obj_width)]], dtype=np.float32)
+        #         print('gripper', pos_real)
+        #         conn.sendall(pos_real.tobytes())
+        #         # print(f'this is the cmd pos {pos_real}')
+        #         p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=gap, force=10)
+        #         p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=gap, force=10)
+        #
+        #         real_pos = conn.recv(4096)
+        #         # test_real_pos = np.frombuffer(real_pos, dtype=np.float32)
+        #         real_pos = np.frombuffer(real_pos, dtype=np.float32)
+        #         # print('this is test float from buffer', test_real_pos)
+        #
+        #     else:
+        #         if gap > 0.0265: # close
+        #             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
+        #                                     targetPosition=motor_pos(obj_width) + close_open_gap,
+        #                                     force=self.dynamic_parameters['gripper_force'])
+        #             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
+        #                                     targetPosition=motor_pos(obj_width) + close_open_gap,
+        #                                     force=self.dynamic_parameters['gripper_force'])
+        #         else: # open
+        #             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
+        #                                     targetPosition=motor_pos(obj_width),
+        #                                     force=self.dynamic_parameters['gripper_force'])
+        #             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
+        #                                     targetPosition=motor_pos(obj_width),
+        #                                     force=self.dynamic_parameters['gripper_force'])
+        #     for i in range(self.dynamic_parameters['gripper_sim_step']):
+        #         p.stepSimulation()
+        #         if self.para_dict['is_render'] == True:
+        #             time.sleep(1 / 24)
 
         def clean_grasp():
-            if self.general_parameters['real_operate'] == False:
+            if self.para_dict['real_operate'] == False:
                 gripper_width = 0.024
                 gripper_height = 0.034
             else:
@@ -310,12 +310,13 @@ class knolling_main(Arm_env):
                                          (self.y_high_obs + self.y_low_obs) / 2])
             offset_low = np.array([0, 0, 0.005])
             offset_high = np.array([0, 0, 0.035])
-            reset_ori = self.general_parameters['reset_ori']
+            reset_ori = self.para_dict['reset_ori']
             offset_rectangle = np.array([0, 0, 0])
+            self.calculate_gripper()
 
             while True:
-                manipulator_before, self.lwh_list, pred_conf = self.knolling_env.get_obs(self.general_parameters['obs_order'])
-                move_list, knolling_flag = self.grasp_lstm.pred(manipulator_before, self.lwh_list, pred_conf)
+                manipulator_before, self.lwh_list, pred_conf = self.get_obs()
+                move_list, knolling_flag = self.grasp_model.pred(manipulator_before, self.lwh_list, pred_conf)
 
                 if knolling_flag == True:
                     break
@@ -335,34 +336,62 @@ class knolling_main(Arm_env):
                         move_start = np.array([barricade_pos[0], barricade_pos[1] - np.max(self.lwh_list) / 2 - gripper_width, barricade_pos[2]])
                         move_end = np.array([barricade_pos[0], barricade_pos[1] + np.max(self.lwh_list) / 2, barricade_pos[2]])
 
-                    trajectory_pos_list.append([0.03159, 0])
-                    trajectory_pos_list.append(move_start + offset_high)
-                    trajectory_pos_list.append(move_start + offset_low)
-                    trajectory_pos_list.append(move_end + offset_low)
-                    trajectory_pos_list.append(move_end + offset_high)
+                    trajectory_pos_list = [self.para_dict['reset_pos'],
+                                          [1, 0],
+                                          move_start + offset_high,
+                                          move_start + offset_low,
+                                          move_end + offset_low,
+                                          move_end + offset_high]
+                    trajectory_ori_list = [self.para_dict['reset_ori'],
+                                           self.para_dict['reset_ori'] + offset_rectangle,
+                                           self.para_dict['reset_ori'] + offset_rectangle,
+                                           self.para_dict['reset_ori'] + offset_rectangle,
+                                           self.para_dict['reset_ori'] + offset_rectangle]
 
-                    trajectory_ori_list.append(reset_ori)
-                    trajectory_ori_list.append(reset_ori + offset_rectangle)
-                    trajectory_ori_list.append(reset_ori + offset_rectangle)
-                    trajectory_ori_list.append(reset_ori + offset_rectangle)
-                    trajectory_ori_list.append(reset_ori + offset_rectangle)
-
-                trajectory_pos_list.append(self.general_parameters['reset_pos'])
-                trajectory_ori_list.append(reset_ori)
+                trajectory_pos_list.append(self.para_dict['reset_pos'])
+                trajectory_ori_list.append(self.para_dict['reset_ori'])
 
                 last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
                 last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+                left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+                right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+
+                # for j in range(len(trajectory_pos_list)):
+                #     if len(trajectory_pos_list[j]) == 3:
+                #         last_pos = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+                #         last_ori = np.copy(trajectory_ori_list[j])
+                #     elif len(trajectory_pos_list[j]) == 2:
+                #         self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+
+                success_grasp_flag = True
                 for j in range(len(trajectory_pos_list)):
                     if len(trajectory_pos_list[j]) == 3:
-                        last_pos = move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+                        if j == 2:
+                            last_pos, left_pos, right_pos, _ = self.move(last_pos, last_ori, trajectory_pos_list[j],
+                                                                         trajectory_ori_list[j], index=j)
+                        elif j == 3:
+                            ####################### Detect whether the gripper is disturbed by other objects during moving the gripper ####################
+                            last_pos, _, _, success_grasp_flag = self.move(last_pos, last_ori, trajectory_pos_list[j],
+                                                                           trajectory_ori_list[j],
+                                                                           origin_left_pos=left_pos,
+                                                                           origin_right_pos=right_pos, index=j)
+                            if success_grasp_flag == False:
+                                break
+                            ####################### Detect whether the gripper is disturbed by other objects during moving the gripper ####################
+                        else:  # 0, 4, 5, 6
+                            last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j],
+                                                          trajectory_ori_list[j], index=j)
                         last_ori = np.copy(trajectory_ori_list[j])
                     elif len(trajectory_pos_list[j]) == 2:
-                        gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+                        ####################### Dtect whether the gripper is disturbed by other objects during closing the gripper ####################
+                        success_grasp_flag = self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1],
+                                                          left_pos, right_pos, index=j)
+                        ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
 
             return knolling_flag
         def clean_desk():
 
-            if self.general_parameters['real_operate'] == False:
+            if self.para_dict['real_operate'] == False:
                 gripper_width = 0.024
                 gripper_height = 0.034
             else:
@@ -371,7 +400,7 @@ class knolling_main(Arm_env):
             restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
             barricade_pos = []
             barricade_index = []
-            manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'])
+            manipulator_before, new_xyz_list = self.get_obs(self.para_dict['obs_order'])
             print('this is test obs xyz', new_xyz_list)
 
             x_high = np.max(self.manipulator_after[:, 0])
@@ -484,7 +513,7 @@ class knolling_main(Arm_env):
                 break_flag = False
                 barricade_pos = []
                 barricade_index = []
-                manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'])
+                manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order'])
 
                 for i in range(len(manipulator_before)):
                     restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
@@ -524,7 +553,7 @@ class knolling_main(Arm_env):
 
         def clean_item(manipulator_before, new_xyz_list):
 
-            if self.general_parameters['real_operate'] == False:
+            if self.para_dict['real_operate'] == False:
                 gripper_width = 0.024
                 gripper_height = 0.034
             else:
@@ -703,7 +732,7 @@ class knolling_main(Arm_env):
                 # crowded_pos = []
                 # crowded_ori = []
                 # crowded_index = []
-                # manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order')
+                # manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order')
                 # for i in range(len(manipulator_before)):
                 #     for j in range(len(manipulator_before)):
                 #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
@@ -730,7 +759,7 @@ class knolling_main(Arm_env):
 
         def knolling():
 
-            if self.general_parameters['obs_order'] == 'sim_image_obj_evaluate':
+            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
                 env_loss = get_start_end()
                 return env_loss
             else:
@@ -798,12 +827,12 @@ class knolling_main(Arm_env):
 
         def check_accuracy_sim(): # need improvement
 
-            manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'], check='after') # the sequence along 2,3,4
+            manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order'], check='after') # the sequence along 2,3,4
             img_after = self.knolling_env.get_obs('images')
-            cv2.imwrite(self.general_parameters['img_save_path'] + 'images_%s_after.png' % self.evaluations, img_after)
+            cv2.imwrite(self.para_dict['img_save_path'] + 'images_%s_after.png' % self.evaluations, img_after)
 
         def check_accuracy_real():
-            manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.general_parameters['obs_order'])
+            manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order'])
             manipulator_knolling = manipulator_before[:, :2]
             xyz_knolling = new_xyz_list
             # don't change the order of xyz in sim!!!!!!!!!!!!!
@@ -862,13 +891,13 @@ class knolling_main(Arm_env):
             # manipulator_before_desk, new_xyz_list_desk = clean_desk()
             # clean_item(manipulator_before_desk, new_xyz_list_desk)
         elif order == 3:
-            if self.general_parameters['obs_order'] == 'sim_image_obj_evaluate':
+            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
                 error = knolling()
                 return error
             else:
                 knolling()
         elif order == 4:
-            if self.general_parameters['real_operate'] == True:
+            if self.para_dict['real_operate'] == True:
                 check_accuracy_real()
             else:
                 check_accuracy_sim()
@@ -882,10 +911,10 @@ class knolling_main(Arm_env):
         self.boxes_id_recover = np.copy(self.boxes_index)
         self.manual_knolling() # generate the knolling after data based on manual or the model
 
-        # if self.general_parameters['real_operate'] == True:
-        #     cv2.imwrite(self.general_parameters['img_save_path'] + '602_real_tar.png', image_trim)
+        # if self.para_dict['real_operate'] == True:
+        #     cv2.imwrite(self.para_dict['img_save_path'] + '602_real_tar.png', image_trim)
         # else:
-        #     cv2.imwrite(self.general_parameters['img_save_path'] + 'images_%s_tar.png' % self.evaluations, image_trim)
+        #     cv2.imwrite(self.para_dict['img_save_path'] + 'images_%s_tar.png' % self.evaluations, image_trim)
 
         if self.para_dict['real_operate'] == True:
 
@@ -952,13 +981,13 @@ class knolling_main(Arm_env):
 if __name__ == '__main__':
 
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -975,13 +1004,23 @@ if __name__ == '__main__':
     # 'dataset_path': '../../../knolling_dataset/grasp_dataset_725/',
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
-                        'gap_block': 0.015, 'random_offset': False,
-                        'area_num': 2, 'ratio_num': 1,
-                        'order_flag': 'confidence',
-                        'item_odd_prevent': True,
-                        'block_odd_prevent': True,
-                        'upper_left_max': True,
-                        'forced_rotate_box': False}
+                     'gap_block': 0.015, 'random_offset': False,
+                     'area_num': 2, 'ratio_num': 1,
+                     'order_flag': 'confidence',
+                     'item_odd_prevent': True,
+                     'block_odd_prevent': True,
+                     'upper_left_max': True,
+                     'forced_rotate_box': False}
+
+    lstm_dict = {'input_size': 6,
+                 'hidden_size': 32,
+                 'num_layers': 8,
+                 'output_size': 2,
+                 'hidden_node_1': 32, 'hidden_node_2': 8,
+                 'batch_size': 1,
+                 'device': 'cuda:0',
+                 'set_dropout': 0.1,
+                 'grasp_model_path': './Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt',}
 
     main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para)
 
