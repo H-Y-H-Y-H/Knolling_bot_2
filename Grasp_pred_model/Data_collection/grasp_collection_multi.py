@@ -4,6 +4,7 @@ import pybullet_data as pd
 import numpy as np
 import random
 import os
+from function import *
 
 class Grasp_env(Arm_env):
 
@@ -54,9 +55,15 @@ class Grasp_env(Arm_env):
             new_lwh_list = np.delete(new_lwh_list, cut_index, axis=0)
         ############### Delete some results based on the number of the groundtruth ##############
 
+        ############## Genarete the results of LSTM model #############
         if self.para_dict['use_lstm_model'] == True:
-            crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+            order = change_sequence(manipulator_before)
+            manipulator_before_input = manipulator_before[order]
+            new_lwh_list_input = new_lwh_list[order]
+            pred_conf_input = pred_conf[order]
+            crowded_index, prediction = self.grasp_model.pred(manipulator_before_input, new_lwh_list_input, pred_conf_input)
             print('this is crowded_index', crowded_index)
+        ############## Genarete the results of LSTM model #############
 
         exist_success_num = 0
         state_id = p.saveState()
@@ -227,8 +234,8 @@ class Grasp_env(Arm_env):
 
         if self.para_dict['use_lstm_model'] == True:
             print('this is prediction', prediction)
-            ground_truth = grasp_flag.reshape(-1, )
-            print('ground truth grasp flag', grasp_flag.reshape(-1, ))
+            ground_truth = grasp_flag.reshape(-1, )[order]
+            print('ground truth grasp flag', ground_truth)
 
             for i in range(len(prediction)):
                 if prediction[i] == 1 and ground_truth[i] == 1:
@@ -259,10 +266,10 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 180000, 'end_num':200000, 'thread': 9,
+    para_dict = {'start_num': 00, 'end_num':50, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': False,
+                 'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
@@ -274,11 +281,11 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_729/',
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_729_test/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
-                 'use_knolling_model': False, 'use_lstm_model': False}
+                 'use_knolling_model': False, 'use_lstm_model': True}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -289,12 +296,12 @@ if __name__ == '__main__':
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
                  'threshold': 0.5,
-                 'grasp_model_path': '../results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt', }
+                 'grasp_model_path': '../results/LSTM_727_3_heavy_multi_dropout0/best_model.pt', }
 
     startnum = para_dict['start_num']
 
     data_root = para_dict['dataset_path']
-    with open('../../../knolling_dataset/grasp_dataset_729_readme.txt', "w") as f:
+    with open('../../../knolling_dataset/grasp_dataset_729_test_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')

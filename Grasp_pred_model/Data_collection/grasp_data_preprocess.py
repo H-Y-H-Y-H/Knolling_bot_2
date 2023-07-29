@@ -270,11 +270,11 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_728_multi_dispersed/origin_labels/'
-    target_data_path = '../../../knolling_dataset/grasp_dataset_728_multi_dispersed/labels_1/'
+    data_path = '../../../knolling_dataset/grasp_dataset_729_test/origin_labels/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_729_test/labels_1/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 250000
+    data_num = 200
     start_index = 0
     target_start_index = 0
     dropout_prob = 0
