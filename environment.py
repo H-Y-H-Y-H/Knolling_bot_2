@@ -19,6 +19,9 @@ class Arm_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None):
 
+        self.para_dict = para_dict
+        self.knolling_para = knolling_para
+
         self.kImageSize = {'width': 480, 'height': 480}
         self.endnum = para_dict['end_num']
         self.init_pos_range = para_dict['init_pos_range']
@@ -30,10 +33,11 @@ class Arm_env():
         self.save_img_flag = para_dict['save_img_flag']
         self.yolo_model = Yolo_predict(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
-        self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
-        self.para_dict = para_dict
-        self.knolling_para = knolling_para
-        self.lstm_dict = lstm_dict
+        if self.para_dict['data_collection'] == True:
+            pass
+        else:
+            self.lstm_dict = lstm_dict
+            self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27

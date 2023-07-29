@@ -17,6 +17,7 @@ class Grasp_model():
                                   batch_size=self.lstm_dict['batch_size'], device=self.lstm_dict['device'], criterion=nn.CrossEntropyLoss(),
                                   set_dropout=self.lstm_dict['set_dropout'])
         self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path']))
+        self.softmax = nn.Softmax(dim=2)
 
     def pred(self, manipulator_before, lwh_list, conf_list):
 
@@ -30,24 +31,16 @@ class Grasp_model():
 
         with torch.no_grad():
             # print('eval')
-            box_data_batch = box_data_batch.to(device, dtype=torch.float32)
-            grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
+            input_data = input_data.to(self.para_dict['device'], dtype=torch.float32)
+            # box_data_batch = box_data_batch.to(device, dtype=torch.float32)
+            # grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
 
-            box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
-            out = model.forward(box_data_pack)
-            if para_dict['use_mse'] == True:
-                loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
-                valid_loss.append(loss.item())
-            else:
-                # loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch)
-                loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
-                valid_loss.append(loss.item())
-                not_one_result_per_img, tar_true, tar_false, TP, TN, FP, FN, \
-                yolo_dominated_TP, yolo_dominated_TN, yolo_dominated_FP, yolo_dominated_FN, \
-                grasp_dominated_TP, grasp_dominated_TN, grasp_dominated_FP, grasp_dominated_FN = model.detect_accuracy(
-                    predict=out, target=grasp_data_batch, box_conf=box_data_batch,
-                    model_threshold=model_threshold[i])
+            # box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
+            out = self.model.forward(input_data, deploy_flag=True)
+            output = self.softmax(out).cpu().detach().numpy().squeeze()
 
-        move_list = np.arange(int(num_item / 2), num_item)
+        pred_N = np.where(output[:, 1] < self.lstm_dict['threshold'])[0]
+        # move_list = np.arange(int(num_item / 2), num_item)
+        move_list = pred_N
 
         return move_list, knolling_flag

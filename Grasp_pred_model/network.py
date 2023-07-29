@@ -51,14 +51,17 @@ class LSTMRegressor(nn.Module):
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=2)
 
-    def forward(self, input_data):
+    def forward(self, input_data, deploy_flag=False):
 
         # Initialize hidden state and cell state with zeros
         h0 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, self.hidden_dim).to(self.device, dtype=torch.float32)
         c0 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, self.hidden_dim).to(self.device, dtype=torch.float32)
 
         output, (hn, cn) = self.lstm(input_data, (h0.detach(), c0.detach()))
-        unpacked_out, out_length = pad_packed_sequence(output, batch_first=True)
+        if deploy_flag == True:
+            unpacked_out = output
+        else:
+            unpacked_out, out_length = pad_packed_sequence(output, batch_first=True)
         # print(unpacked_out.shape)
         # Index hidden state of last time step
         # out = self.relu(self.linear(unpacked_out))
