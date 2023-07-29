@@ -21,7 +21,6 @@ class Grasp_model():
 
     def pred(self, manipulator_before, lwh_list, conf_list):
 
-        knolling_flag = False
         num_item = len(conf_list)
         input_data = np.concatenate((manipulator_before[:, :2],
                                      lwh_list[:, :2],
@@ -39,8 +38,11 @@ class Grasp_model():
             out = self.model.forward(input_data, deploy_flag=True)
             output = self.softmax(out).cpu().detach().numpy().squeeze()
 
+        if len(output.shape) == 1:
+            output = output.reshape(1, 2)
+        prediction = np.where(output[:, 1] < self.lstm_dict['threshold'], 0, 1)
         pred_N = np.where(output[:, 1] < self.lstm_dict['threshold'])[0]
         # move_list = np.arange(int(num_item / 2), num_item)
         move_list = pred_N
 
-        return move_list, knolling_flag
+        return move_list, prediction

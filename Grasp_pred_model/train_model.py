@@ -150,11 +150,11 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'decive': 'cuda:0',
-             'num_img': 420000,
+             'num_img': 50000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': '../Grasp_pred_model/results/LSTM_727_3_heavy_multi_dropout0/',
-             'data_path': '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_1/',
+             'model_path': '../Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5_tuning2/',
+             'data_path': '../../knolling_dataset/grasp_dataset_728_multi_dispersed/labels_1/',
              'learning_rate': 0.0001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
@@ -165,12 +165,12 @@ para_dict = {'decive': 'cuda:0',
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '727_3_distance_multi_dropout0',
+             'run_name': '727_2_distance_multi_dropout0.5_tuning2',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
              'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False,
-             'fine-tuning': False,
+             'fine-tuning': True,
              'hidden_node_1': 32, 'hidden_node_2': 8}
 
 if __name__ == '__main__':

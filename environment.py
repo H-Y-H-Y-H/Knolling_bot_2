@@ -33,11 +33,11 @@ class Arm_env():
         self.save_img_flag = para_dict['save_img_flag']
         self.yolo_model = Yolo_predict(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
-        if self.para_dict['data_collection'] == True:
-            pass
-        else:
+        if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
+        else:
+            pass
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -753,7 +753,7 @@ class Arm_env():
             img = np.copy(my_im)
             return img, top_height
 
-        if self.para_dict['obs_order'] == 'data_collection' or self.para_dict['obs_order'] == 'sim_image_obj':
+        if self.para_dict['data_collection'] == True or self.para_dict['obs_order'] == 'sim_image_obj':
             self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
             if len(self.boxes_index) == 0:
                 return np.array([]), np.array([]), np.array([])
@@ -833,11 +833,11 @@ if __name__ == '__main__':
 
     para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [3 * np.pi / 16, np.pi / 4]],
                  'max_box_num': 2, 'min_box_num': 2,
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,

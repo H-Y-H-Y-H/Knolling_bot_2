@@ -154,6 +154,9 @@ class Grasp_env(Arm_env):
                 print('this is len of self.obj', len(self.boxes_index))
                 del self.boxes_index[gt_index_grasp]
                 self.lwh_list = np.delete(self.lwh_list, gt_index_grasp, axis=0)
+                for _ in range(int(100)):
+                    # time.sleep(1/96)
+                    p.stepSimulation()
 
                 ##################### after every grasp, check pos and ori of every box which are out of the field ####################
                 forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
@@ -181,6 +184,9 @@ class Grasp_env(Arm_env):
                     p.removeBody(self.boxes_index[idx])
                     self.boxes_index.pop(idx)
                     self.lwh_list = np.delete(self.lwh_list, idx, axis=0)
+                for _ in range(int(100)):
+                    # time.sleep(1/96)
+                    p.stepSimulation()
                 ##################### after every grasp, check pos and ori of every box which are out of the field ####################                break
                 break
             else:

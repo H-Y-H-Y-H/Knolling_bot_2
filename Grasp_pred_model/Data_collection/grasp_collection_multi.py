@@ -7,19 +7,28 @@ import os
 
 class Grasp_env(Arm_env):
 
-    def __init__(self, para_dict=None):
+    def __init__(self, para_dict=None, lstm_dict=None):
 
-        super(Grasp_env, self).__init__(para_dict=para_dict)
+        super(Grasp_env, self).__init__(para_dict=para_dict, lstm_dict=lstm_dict)
+
+        self.test_TP = 0
+        self.test_TN = 0
+        self.test_FP = 0
+        self.test_FN = 0
 
     def try_grasp(self, data_root=None, img_index_start=None):
 
         if self.img_per_epoch + img_index_start >= self.endnum:
+            print('this is TP', self.test_TP)
+            print('this is TN', self.test_TN)
+            print('this is FP', self.test_FP)
+            print('this is FN', self.test_FN)
             print('END!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             quit()
 
         ############################## Get the information of boxes #################################
         print('this is img_index start while grasping', img_index_start)
-        manipulator_before, pred_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
+        manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
 
         if len(manipulator_before) <= 1 or len(self.gt_pos_ori) == 1:
             print('no pile in the environment, try to reset!')
@@ -30,7 +39,7 @@ class Grasp_env(Arm_env):
         pos_ori_after = np.concatenate((self.para_dict['reset_pos'], np.zeros(3)), axis=0).reshape(-1, 6)
         manipulator_after = np.repeat(pos_ori_after, len(manipulator_before), axis=0)
         start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
-        grasp_width = np.min(pred_lwh_list[:, :2], axis=1)
+        grasp_width = np.min(new_lwh_list[:, :2], axis=1)
         ############################## Generate the pos and ori of the destination ##########################
 
         ############### Delete some results based on the number of the groundtruth ##############
@@ -41,7 +50,13 @@ class Grasp_env(Arm_env):
             cut_index = np.arange(len(box_pos_before), len(start_end))
             start_end = np.delete(start_end, cut_index, axis=0)
             pred_conf = np.delete(pred_conf, cut_index)
+            manipulator_before = np.delete(manipulator_before, cut_index, axis=0)
+            new_lwh_list = np.delete(new_lwh_list, cut_index, axis=0)
         ############### Delete some results based on the number of the groundtruth ##############
+
+        if self.para_dict['use_lstm_model'] == True:
+            crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+            print('this is crowded_index', crowded_index)
 
         exist_success_num = 0
         state_id = p.saveState()
@@ -140,11 +155,24 @@ class Grasp_env(Arm_env):
                 gt_index_grasp = box_index[~np.isin(box_index, np.asarray(exist_success_index))][0]
                 exist_success_index.append(gt_index_grasp)
                 exist_success_num += 1
-            box_data.append(np.concatenate((manipulator_before[i, :3], pred_lwh_list[i, :3], manipulator_before[i, 3:])))
+            box_data.append(np.concatenate((manipulator_before[i, :3], new_lwh_list[i, :3], manipulator_before[i, 3:])))
             ########################### Find which box is moved ############################
 
             p.restoreState(state_id)
             # print('restore the previous env and try another one')
+
+        ######################### Back to the reset pos in any cases ##########################
+        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
+                                                  maxNumIterations=200,
+                                                  targetOrientation=p.getQuaternionFromEuler(
+                                                      self.para_dict['reset_ori']))
+        for motor_index in range(5):
+            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                    targetPosition=ik_angles0[motor_index], maxVelocity=20)
+        for _ in range(int(30)):
+            # time.sleep(1/480)
+            p.stepSimulation()
+        ######################### Back to the reset pos in any cases ##########################
 
         if exist_success_num > 0:
             # print('exist success boxes, we should remove this box and try the rest boxes!')
@@ -152,13 +180,16 @@ class Grasp_env(Arm_env):
             # ############################# Align the data of rest boxes #############################
             # for m in range(1, len(start_end) - rest_len + 1):
             #     grasp_flag.append(0)
-            #     box_data.append(np.concatenate((manipulator_before[i + m, :3], pred_lwh_list[i + m, :3], manipulator_before[i + m, 3:])))
+            #     box_data.append(np.concatenate((manipulator_before[i + m, :3], new_lwh_list[i + m, :3], manipulator_before[i + m, 3:])))
             # ############################# Align the data of rest boxes #############################
 
             random_index = np.random.choice(np.asarray(exist_success_index))
             p.removeBody(self.boxes_index[random_index])
             del self.boxes_index[random_index]
             self.lwh_list = np.delete(self.lwh_list, random_index, axis=0)
+            for _ in range(int(50)):
+                # time.sleep(1/96)
+                p.stepSimulation()
 
             ##################### after every grasp, check pos and ori of every box which are out of the field ####################
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
@@ -185,11 +216,30 @@ class Grasp_env(Arm_env):
                 p.removeBody(self.boxes_index[idx])
                 self.boxes_index.pop(idx)
                 self.lwh_list = np.delete(self.lwh_list, idx, axis=0)
+            for _ in range(int(50)):
+                # time.sleep(1/96)
+                p.stepSimulation()
             ##################### after every grasp, check pos and ori of every box which are out of the field ####################
 
         box_data = np.asarray(box_data)
         grasp_flag = np.asarray(grasp_flag).reshape(-1, 1)
         yolo_label = np.concatenate((grasp_flag, box_data, pred_conf.reshape(-1, 1)), axis=1)
+
+        if self.para_dict['use_lstm_model'] == True:
+            print('this is prediction', prediction)
+            ground_truth = grasp_flag.reshape(-1, )
+            print('ground truth grasp flag', grasp_flag.reshape(-1, ))
+
+            for i in range(len(prediction)):
+                if prediction[i] == 1 and ground_truth[i] == 1:
+                    self.test_TP += 1
+                if prediction[i] == 0 and ground_truth[i] == 1:
+                    self.test_TN += 1
+                if prediction[i] == 1 and ground_truth[i] == 0:
+                    self.test_FP += 1
+                if prediction[i] == 0 and ground_truth[i] == 0:
+                    self.test_FN += 1
+
 
         if np.all(grasp_flag == 0):
             np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
@@ -209,11 +259,11 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 225000, 'end_num': 250000, 'thread': 9,
+    para_dict = {'start_num': 180000, 'end_num':200000, 'thread': 9,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
-                 'init_pos_range': [[0.10, 0.25], [-0.13, 0.13], [0.01, 0.02]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
                  'is_render': False,
@@ -224,22 +274,34 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_728_multi_dispersed/',
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_729/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'data_collection', 'use_knolling_model': False, 'data_collection': True}
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
+                 'use_knolling_model': False, 'use_lstm_model': False}
+
+    lstm_dict = {'input_size': 6,
+                 'hidden_size': 32,
+                 'num_layers': 8,
+                 'output_size': 2,
+                 'hidden_node_1': 32, 'hidden_node_2': 8,
+                 'batch_size': 1,
+                 'device': 'cuda:0',
+                 'set_dropout': 0.1,
+                 'threshold': 0.5,
+                 'grasp_model_path': '../results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt', }
 
     startnum = para_dict['start_num']
 
     data_root = para_dict['dataset_path']
-    with open('../../../knolling_dataset/grasp_dataset_726_laptop_multi_readme.txt', "w") as f:
+    with open('../../../knolling_dataset/grasp_dataset_729_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
 
     os.makedirs(data_root, exist_ok=True)
 
-    env = Grasp_env(para_dict=para_dict)
+    env = Grasp_env(para_dict=para_dict, lstm_dict=lstm_dict)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
 
@@ -249,3 +311,4 @@ if __name__ == '__main__':
         env.reset(epoch=exist_img_num)
         img_per_epoch = env.try_grasp(data_root=data_root, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch
+
