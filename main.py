@@ -980,6 +980,7 @@ class knolling_main(Arm_env):
 
 if __name__ == '__main__':
 
+    np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
@@ -987,7 +988,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -1020,7 +1021,7 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'grasp_model_path': './Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt',}
+                 'grasp_model_path': './Grasp_pred_model/models/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt',}
 
     main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para)
 

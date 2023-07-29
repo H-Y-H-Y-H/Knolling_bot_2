@@ -2,6 +2,8 @@ import numpy as np
 from Grasp_pred_model.network import LSTMRegressor
 import torch.nn as nn
 import torch
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
+
 
 class Grasp_model():
 
@@ -24,6 +26,7 @@ class Grasp_model():
                                      lwh_list[:, :2],
                                      manipulator_before[:, -1].reshape(-1, 1),
                                      conf_list.reshape(-1, 1)), axis=1)
+        input_data = torch.unsqueeze(torch.from_numpy(input_data), 0)
 
         with torch.no_grad():
             # print('eval')
