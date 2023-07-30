@@ -266,7 +266,7 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 280000, 'end_num': 300000, 'thread': 14,
+    para_dict = {'start_num': 99759, 'end_num': 100000, 'thread': 4,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
