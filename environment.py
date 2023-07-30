@@ -276,41 +276,40 @@ class Arm_env():
                     # time.sleep(1/96)
                     p.stepSimulation()
 
-                self.pos_before = []
-                self.ori_before = []
-                check_delete_index = []
-                for i in range(len(self.boxes_index)):
-                    cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                    cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                    self.pos_before.append(cur_pos)
-                    self.ori_before.append(cur_ori)
-                    roll_flag = False
-                    pitch_flag = False
-                    for j in range(len(forbid_range)):
-                        if np.abs(cur_ori[0] - forbid_range[j]) < 0.01:
-                            roll_flag = True
-                        if np.abs(cur_ori[1] - forbid_range[j]) < 0.01:
-                            pitch_flag = True
-                    if roll_flag == True and pitch_flag == True and (
-                            np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
-                            cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-                        1] > self.y_high_obs or \
-                            cur_pos[1] < self.y_low_obs:
-                        check_delete_index.append(i)
-                        # print('this is cur ori on check:', cur_ori)
-                self.pos_before = np.asarray(self.pos_before)
-                self.ori_before = np.asarray(self.ori_before)
-                if len(check_delete_index) == 0:
+                if len(delete_index) == 0:
                     break
 
-            if self.para_dict['data_collection'] == False:
-                self.lwh_list, self.pos_before, self.ori_before, self.all_index, self.transform_flag, self.boxes_index = self.boxes_sort.judge(
-                    self.lwh_list, self.pos_before, self.ori_before, self.boxes_index)
+                # self.pos_before = []
+                # self.ori_before = []
+                # check_delete_index = []
+                # for i in range(len(self.boxes_index)):
+                #     cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                #     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                #     self.pos_before.append(cur_pos)
+                #     self.ori_before.append(cur_ori)
+                #     roll_flag = False
+                #     pitch_flag = False
+                #     for j in range(len(forbid_range)):
+                #         if np.abs(cur_ori[0] - forbid_range[j]) < 0.01:
+                #             roll_flag = True
+                #         if np.abs(cur_ori[1] - forbid_range[j]) < 0.01:
+                #             pitch_flag = True
+                #     if roll_flag == True and pitch_flag == True and (
+                #             np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
+                #             cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
+                #         1] > self.y_high_obs or \
+                #             cur_pos[1] < self.y_low_obs:
+                #         check_delete_index.append(i)
+                #         # print('this is cur ori on check:', cur_ori)
+                # self.pos_before = np.asarray(self.pos_before)
+                # self.ori_before = np.asarray(self.ori_before)
+                # if len(check_delete_index) == 0:
+                #     break
 
         self.img_per_epoch = 0
         # return img_per_epoch_result
 
-    def manual_knolling(self):  # this is main function!!!!!!!!!
+    def manual_knolling(self, pos_before, ori_before, lwh_list):  # this is main function!!!!!!!!!
 
         if self.para_dict['use_knolling_model'] == True:
             ######################## knolling demo ###############################
@@ -347,26 +346,29 @@ class Arm_env():
             # determine the center of the tidy configuration
             if len(self.lwh_list) <= 2:
                 print('the number of item is too low, no need to knolling!')
-            calculate_reorder = configuration_zzz(self.lwh_list, self.all_index, self.transform_flag, self.knolling_para)
-            self.pos_after, self.ori_after = calculate_reorder.calculate_block()
+            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, self.boxes_index = self.boxes_sort.judge(
+                lwh_list, pos_before, ori_before)
+
+            calculate_reorder = configuration_zzz(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
+            pos_after_classify, ori_after_classify = calculate_reorder.calculate_block()
             # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
             # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!
             # the order of pos after and ori after is based on lwh list!!!!!!!!!!!!!!
 
             ################## change order based on distance between boxes and upper left corner ##################
-            order = change_sequence(self.pos_before)
-            self.pos_before = self.pos_before[order]
-            self.ori_before = self.ori_before[order]
-            self.lwh_list = self.lwh_list[order]
-            self.pos_after = self.pos_after[order]
-            self.ori_after = self.ori_after[order]
-            self.boxes_index = self.boxes_index[order]
+            order = change_sequence(pos_before_classify)
+            pos_before_classify = pos_before_classify[order]
+            ori_before_classify = ori_before_classify[order]
+            lwh_list_classify = lwh_list_classify[order]
+            pos_after_classify = pos_after_classify[order]
+            ori_after_classify = ori_after_classify[order]
+            # boxes_index_classify = boxes_index_classify[order]
             ################## change order based on distance between boxes and upper left corner ##################
 
-            x_low = np.min(self.pos_after, axis=0)[0]
-            x_high = np.max(self.pos_after, axis=0)[0]
-            y_low = np.min(self.pos_after, axis=0)[1]
-            y_high = np.max(self.pos_after, axis=0)[1]
+            x_low = np.min(pos_after_classify, axis=0)[0]
+            x_high = np.max(pos_after_classify, axis=0)[0]
+            y_low = np.min(pos_after_classify, axis=0)[1]
+            y_high = np.max(pos_after_classify, axis=0)[1]
             center = np.array([(x_low + x_high) / 2, (y_low + y_high) / 2, 0])
             x_length = abs(x_high - x_low)
             y_length = abs(y_high - y_low)
@@ -376,24 +378,21 @@ class Arm_env():
                                               random.uniform(self.y_low_obs + y_length / 2, self.y_high_obs - y_length / 2), 0.0])
             else:
                 pass
-            self.pos_after += np.array([0, 0, 0.006])
-            self.pos_after = self.pos_after + self.knolling_para['total_offset']
+            pos_after_classify += np.array([0, 0, 0.006])
+            pos_after_classify = pos_after_classify + self.knolling_para['total_offset']
 
             ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
-            items_ori_list_arm = np.copy(self.ori_after)
-            for i in range(len(self.lwh_list)):
-                if self.lwh_list[i, 0] <= self.lwh_list[i, 1]:
-                    self.ori_after[i, 2] += np.pi / 2
+            items_ori_list_arm = np.copy(ori_after_classify)
+            for i in range(len(lwh_list_classify)):
+                if lwh_list_classify[i, 0] <= lwh_list_classify[i, 1]:
+                    ori_after_classify[i, 2] += np.pi / 2
             ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
 
-            self.manipulator_after = np.concatenate((self.pos_after, self.ori_after), axis=1)
-            print('this is manipulator after\n', self.manipulator_after)
+            manipulator_before = np.concatenate((pos_before_classify, ori_before_classify), axis=1)
+            manipulator_after = np.concatenate((pos_after_classify, ori_after_classify), axis=1)
+            print('this is manipulator after\n', manipulator_after)
 
-        # if the urdf is lego, all ori after knolling should be 0, not pi / 2
-        self.ori_after[:, 2] = 0
-        data_after = np.concatenate((self.pos_after[:, :2], self.lwh_list[:, :2], self.ori_after[:, 2].reshape(-1, 1)), axis=1)
-        # np.savetxt('./real_world_data_demo/cfg_4_519/labels_after/label_8_%d.txt' % self.evaluations, data_after, fmt='%.03f')
-
+        return manipulator_before, manipulator_after, lwh_list_classify
 
     def try_grasp(self, img_index_start=None):
         # print('this is img_index start while grasping', img_index_start)

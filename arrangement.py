@@ -87,7 +87,7 @@ class Sort_objects():
         # the sequence of them are based on area and ratio!
         return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
 
-    def judge(self, item_xyz, pos_before, ori_before, boxes_index):
+    def judge(self, item_xyz, pos_before, ori_before):
         # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
 
         category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
@@ -125,7 +125,7 @@ class Sort_objects():
                                 new_item_xyz.append(item_xyz[m])
                                 new_pos_before.append(pos_before[m])
                                 new_ori_before.append(ori_before[m])
-                                new_boxes_index.append(boxes_index[m])
+                                # new_boxes_index.append(boxes_index[m])
                                 index += 1
                                 rest_index = np.delete(rest_index, np.where(rest_index == m))
                 if len(kind_index) != 0:

@@ -37,6 +37,8 @@ class Yolo_predict():
 
     def __init__(self, para_dict):
 
+        self.mm2px = 530 / 0.34
+        self.px2mm = 0.34 / 530
         self.para_dict = para_dict
 
     def find_keypoints(self, xpos, ypos, l, w, ori, mm2px):
@@ -102,7 +104,6 @@ class Yolo_predict():
         ############### zzz plot parameters ###############
         zzz_lw = 1
         tf = 1 # font thickness
-        mm2px = 530 / 0.34
         # x_mm_center = scaled_xylw[1] * 0.3
         # y_mm_center = scaled_xylw[0] * 0.4 - 0.2
         # x_px_center = x_mm_center * mm2px + 6
@@ -115,8 +116,8 @@ class Yolo_predict():
         z_mm_center = 0.006
 
         # this is the knolling sequence, not opencv!!!!
-        keypoints_x = ((keypoints[:, 1] * 480 - 6) / mm2px).reshape(-1, 1)
-        keypoints_y = ((keypoints[:, 0] * 640 - 320) / mm2px).reshape(-1, 1)
+        keypoints_x = ((keypoints[:, 1] * 480 - 6) / self.mm2px).reshape(-1, 1)
+        keypoints_y = ((keypoints[:, 0] * 640 - 320) / self.mm2px).reshape(-1, 1)
         keypoints_mm = np.concatenate((keypoints_x, keypoints_y), axis=1)
         keypoints_center = np.average(keypoints_mm, axis=0)
 
@@ -160,10 +161,10 @@ class Yolo_predict():
 
         rot_z = [[np.cos(my_ori_plot), -np.sin(my_ori_plot)],
                  [np.sin(my_ori_plot), np.cos(my_ori_plot)]]
-        corn1 = (np.dot(rot_z, c1)) * mm2px
-        corn2 = (np.dot(rot_z, c2)) * mm2px
-        corn3 = (np.dot(rot_z, c3)) * mm2px
-        corn4 = (np.dot(rot_z, c4)) * mm2px
+        corn1 = (np.dot(rot_z, c1)) * self.mm2px
+        corn2 = (np.dot(rot_z, c2)) * self.mm2px
+        corn3 = (np.dot(rot_z, c3)) * self.mm2px
+        corn4 = (np.dot(rot_z, c4)) * self.mm2px
 
         corn1 = [corn1[0] + x_px_center, corn1[1] + y_px_center]
         corn2 = [corn2[0] + x_px_center, corn2[1] + y_px_center]
@@ -184,8 +185,8 @@ class Yolo_predict():
         im = cv2.line(im, (int(corn2[1]), int(corn2[0])), (int(corn4[1]), int(corn4[0])), color, 1)
         im = cv2.line(im, (int(corn4[1]), int(corn4[0])), (int(corn3[1]), int(corn3[0])), color, 1)
         im = cv2.line(im, (int(corn3[1]), int(corn3[0])), (int(corn1[1]), int(corn1[0])), color, 1)
-        plot_x = np.copy((scaled_xylw[1] * 480 - 6) / mm2px)
-        plot_y = np.copy((scaled_xylw[0] * 640 - 320) / mm2px)
+        plot_x = np.copy((scaled_xylw[1] * 480 - 6) / self.mm2px)
+        plot_y = np.copy((scaled_xylw[0] * 640 - 320) / self.mm2px)
         plot_l = np.copy(length)
         plot_w = np.copy(width)
         label1 = 'cls: %d, conf: %.5f' % (cls, conf)
@@ -313,7 +314,7 @@ class Yolo_predict():
                                                         cls=0, conf=1,
                                                         use_xylw=use_xylw, truth_flag=True)
 
-
+        self.img_output = origin_img
         if self.para_dict['save_img_flag'] == True:
             # cv2.namedWindow('zzz', 0)
             # cv2.resizeWindow('zzz', 1280, 960)
@@ -325,3 +326,27 @@ class Yolo_predict():
         pred_result = np.asarray(pred_result)
 
         return pred_result, pred_conf
+
+    def plot_grasp(self, manipulator_before, prediction):
+
+        x_px_center = manipulator_before[:, 0] * self.mm2px + 6
+        y_px_center = manipulator_before[:, 1] * self.mm2px + 320
+        zzz_lw = 1
+        tf = 1
+        img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (0)
+        for i in range(len(manipulator_before)):
+            if prediction[i] == 0:
+                label = 'False'
+            else:
+                label = 'True'
+            self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
+                             0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
+
+        if self.para_dict['save_img_flag'] == True:
+            cv2.namedWindow('zzz', 0)
+            cv2.resizeWindow('zzz', 1280, 960)
+            cv2.imshow('zzz', self.img_output)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            img_path_output = img_path + '_pred_grasp.png'
+            cv2.imwrite(img_path_output, self.img_output)
