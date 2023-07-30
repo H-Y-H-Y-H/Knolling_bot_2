@@ -27,20 +27,20 @@ if __name__ == '__main__':
 
         model_threshold_start = 0.5
         model_threshold_end = 1
-        check_point = 5
-        valid_num = 40
+        check_point = 50
+        valid_num = 10000
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 200
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_727_3_heavy_multi_dropout0/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_729_test/labels_1/'
+        para_dict['num_img'] = 296000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
-        para_dict['batch_size'] = 32
-        test_file_para = '727_3_TPFN_'
+        para_dict['batch_size'] = 64
+        test_file_para = '727_2_TPFN_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
@@ -199,10 +199,10 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_test.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels2.png')
         plt.show()
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_test.txt", "w") as f:
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels2.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
