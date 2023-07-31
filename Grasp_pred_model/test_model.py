@@ -31,16 +31,16 @@ if __name__ == '__main__':
         valid_num = 10000
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
-        para_dict['num_img'] = 296000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
+        para_dict['num_img'] = 300000
+        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_730_2_heavy_dropout0/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_730/labels_1/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '727_2_TPFN_'
+        test_file_para = '730_2_TPFN_'
         total_error = []
         # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
