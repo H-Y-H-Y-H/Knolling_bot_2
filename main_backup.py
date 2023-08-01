@@ -16,21 +16,23 @@ class knolling_main(Arm_env):
         super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
 
     def planning(self, order, conn, real_height, sim_height):
-        def get_start_end(manipulator_before, new_lwh_list, pred_conf, crowded_index):  # generating all trajectories of all items in normal condition
+        def get_start_end():  # generating all trajectories of all items in normal condition
+            arm_z = 0
+            roll = 0
+            pitch = 0
             if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
                 manipulator_before, new_lwh_list, error = self.get_obs()
                 return error
             else:
-                pass
-                # manipulator_before, new_lwh_list, pred_conf = self.get_obs()
+                manipulator_before, new_lwh_list, pred_conf = self.get_obs()
             # sequence pos_before, ori_before, pos_after, ori_after
             pos_before = manipulator_before[:, :3]
             ori_before = manipulator_before[:, 3:6]
-            manipulator_before, manipulator_after, lwh_list, new_crowded_index = self.manual_knolling(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list, crowded_index=crowded_index)
+            manipulator_before, manipulator_after, lwh_list = self.manual_knolling(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list)
             start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
             print('get start and end')
 
-            return start_end, lwh_list, new_crowded_index
+            return start_end, lwh_list
 
         def move(cur_pos, cur_ori, tar_pos, tar_ori, index=None, task=None):
 
@@ -339,7 +341,7 @@ class knolling_main(Arm_env):
             restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
             gripper_box_gap = 0.006
 
-            while len(crowded_index) == len(manipulator_before): # only if all boxes can't be grasp the arm will clean the desk
+            while len(crowded_index) > 0:
 
                 crowded_pos = manipulator_before[crowded_index, :3]
                 crowded_ori = manipulator_before[crowded_index, 3:6]
@@ -483,7 +485,6 @@ class knolling_main(Arm_env):
                     p.removeUserDebugItem(i)
                 ######################### remove the debug lines after moving ######################
 
-                ################### Check the results to determine whether to clean again #####################
                 manipulator_before, new_lwh_list, pred_conf = self.get_obs()
                 order = change_sequence(manipulator_before)
                 manipulator_before = manipulator_before[order]
@@ -491,14 +492,10 @@ class knolling_main(Arm_env):
                 pred_conf = pred_conf[order]
                 crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
                 self.yolo_model.plot_grasp(manipulator_before, prediction)
-                ################### Check the results to determine whether to clean again #####################
-
             else:
                 print('nothing around the item')
                 pass
-
-            return knolling(manipulator_before=manipulator_before, new_lwh_list=new_lwh_list,
-                            pred_conf=pred_conf, crowded_index=crowded_index)
+            print('separating end')
 
         def clean_desk():
 
@@ -844,13 +841,13 @@ class knolling_main(Arm_env):
                 pass
             print('separating end')
 
-        def knolling(manipulator_before, new_lwh_list, pred_conf, crowded_index):
+        def knolling():
 
             if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
                 env_loss = get_start_end()
                 return env_loss
             else:
-                start_end, new_xyz_list_knolling = get_start_end(manipulator_before, new_lwh_list, pred_conf, crowded_index)
+                start_end, new_xyz_list_knolling = get_start_end()
 
             offset_low = np.array([0, 0, 0.0])
             offset_low_place = np.array([0, 0, 0.0])
@@ -1069,7 +1066,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,

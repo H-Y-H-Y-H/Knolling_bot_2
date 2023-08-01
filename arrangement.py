@@ -87,7 +87,7 @@ class Sort_objects():
         # the sequence of them are based on area and ratio!
         return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
 
-    def judge(self, item_xyz, pos_before, ori_before):
+    def judge(self, item_xyz, pos_before, ori_before, crowded_index):
         # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
 
         category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
@@ -106,7 +106,7 @@ class Sort_objects():
         transform_flag = []
         new_pos_before = []
         new_ori_before = []
-        new_boxes_index = []
+        new_crowded_index = []
         rest_index = np.arange(len(item_xyz))
         index = 0
 
@@ -125,7 +125,7 @@ class Sort_objects():
                                 new_item_xyz.append(item_xyz[m])
                                 new_pos_before.append(pos_before[m])
                                 new_ori_before.append(ori_before[m])
-                                # new_boxes_index.append(boxes_index[m])
+                                new_crowded_index.append(crowded_index[m])
                                 index += 1
                                 rest_index = np.delete(rest_index, np.where(rest_index == m))
                 if len(kind_index) != 0:
@@ -135,7 +135,7 @@ class Sort_objects():
         new_pos_before = np.asarray(new_pos_before).reshape(-1, 3)
         new_ori_before = np.asarray(new_ori_before).reshape(-1, 3)
         transform_flag = np.asarray(transform_flag)
-        new_boxes_index = np.asarray(new_boxes_index)
+        new_crowded_index = np.asarray(new_crowded_index)
         if len(rest_index) != 0:
             # we should implement the rest of boxes!
             rest_xyz = item_xyz[rest_index]
@@ -143,7 +143,7 @@ class Sort_objects():
             all_index.append(list(np.arange(index, len(item_xyz))))
             transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
 
-        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_boxes_index
+        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_crowded_index
 
 class configuration_zzz():
 

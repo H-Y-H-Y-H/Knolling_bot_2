@@ -309,7 +309,7 @@ class Arm_env():
         self.img_per_epoch = 0
         # return img_per_epoch_result
 
-    def manual_knolling(self, pos_before, ori_before, lwh_list, crowded_index):  # this is main function!!!!!!!!!
+    def manual_knolling(self, pos_before, ori_before, lwh_list):  # this is main function!!!!!!!!!
 
         if self.para_dict['use_knolling_model'] == True:
             ######################## knolling demo ###############################
@@ -346,8 +346,8 @@ class Arm_env():
             # determine the center of the tidy configuration
             if len(self.lwh_list) <= 2:
                 print('the number of item is too low, no need to knolling!')
-            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, crowded_index_classify = self.boxes_sort.judge(
-                lwh_list, pos_before, ori_before, crowded_index)
+            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, self.boxes_index = self.boxes_sort.judge(
+                lwh_list, pos_before, ori_before)
 
             calculate_reorder = configuration_zzz(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
             pos_after_classify, ori_after_classify = calculate_reorder.calculate_block()
@@ -362,7 +362,7 @@ class Arm_env():
             lwh_list_classify = lwh_list_classify[order]
             pos_after_classify = pos_after_classify[order]
             ori_after_classify = ori_after_classify[order]
-            crowded_index_classify = crowded_index_classify[order]
+            # boxes_index_classify = boxes_index_classify[order]
             ################## change order based on distance between boxes and upper left corner ##################
 
             x_low = np.min(pos_after_classify, axis=0)[0]
@@ -392,7 +392,7 @@ class Arm_env():
             manipulator_after = np.concatenate((pos_after_classify, ori_after_classify), axis=1)
             print('this is manipulator after\n', manipulator_after)
 
-        return manipulator_before, manipulator_after, lwh_list_classify, crowded_index_classify
+        return manipulator_before, manipulator_after, lwh_list_classify
 
     def try_grasp(self, img_index_start=None):
         # print('this is img_index start while grasping', img_index_start)
