@@ -12,7 +12,7 @@ import shutil
 
 class knolling_main(Arm_env):
 
-    def __init__(self, para_dict=None, knolling_para=None, lstm_dic=None):
+    def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None):
         super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
 
     def planning(self, order, conn, real_height, sim_height):
@@ -1103,7 +1103,7 @@ if __name__ == '__main__':
                  'threshold': 0.5,
                  'grasp_model_path': './Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt',}
 
-    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para)
+    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
 
     evaluation = 1
     for evaluation in range(para_dict['evaluations']):
