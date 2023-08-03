@@ -456,7 +456,7 @@ class calibration_main(Arm_env):
                 with open(file=self.para_dict['dataset_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_motor)
             if self.generate_dict['use_tuning'] == True:
-                return cur_pos # return cur pos to let the manipualtor remember the improved pos
+                return target_pos # return cur pos to let the manipualtor remember the improved pos
             else:
                 return tar_pos
 
@@ -498,7 +498,7 @@ class calibration_main(Arm_env):
                 plt.figure(figsize=(14, 8))
 
             rest_pos = np.array([0, 0, 0.05])
-            rest_ori = np.array([0, 1.57, 0])
+            rest_ori = np.array([0, np.pi / 2, 0])
             offset_low = np.array([0, 0, 0.002])
             offset_high = np.array([0, 0, 0.035])
 
@@ -512,10 +512,10 @@ class calibration_main(Arm_env):
                 #                                 [0.01, 0.032],
                 #                                 [0.01, 0.040],
                 #                                 [0.01, 0.048]])
-                trajectory_pos_list = np.array([[0.04, 0.13, 0.01],
-                                                [0.24, 0.13, 0.01],
-                                                [0.24, -0.13, 0.01],
-                                                [0.04, -0.13, 0.01]])
+                trajectory_pos_list = np.array([[0.00, 0.13, 0.02],
+                                                [0.25, 0.13, 0.02],
+                                                [0.25, -0.13, 0.02],
+                                                [0.00, -0.13, 0.02]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -526,7 +526,7 @@ class calibration_main(Arm_env):
                         last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                         # if trajectory_pos_list[j][2] < 0.02:
                         #     time.sleep(2)
-                        # time.sleep(2)
+                        time.sleep(5)
                         last_ori = np.copy(rest_ori)
 
                     elif len(trajectory_pos_list[j]) == 2:
@@ -586,7 +586,7 @@ class calibration_main(Arm_env):
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -604,7 +604,7 @@ class calibration_main(Arm_env):
             ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=reset_pos,
                                                      maxNumIterations=300,
                                                      targetOrientation=p.getQuaternionFromEuler(
-                                                         [0, 1.57, 0]))
+                                                         [0, np.pi / 2, 0]))
             reset_real = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles[0:5])), dtype=np.float32)
             print('this is the reset motor pos', reset_real)
             conn.sendall(reset_real.tobytes())
@@ -669,7 +669,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../knolling_dataset/nn_data_801/',
+                 'dataset_path': '../../knolling_dataset/nn_data_802/',
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,
