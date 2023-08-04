@@ -270,13 +270,18 @@ class calibration_main(Arm_env):
                 cmd_xyz.append(tar_pos)
                 sim_ori.append(tar_ori)
 
+                ik_test = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=cur_pos,
+                                                          maxNumIterations=500,
+                                                          targetOrientation=p.getQuaternionFromEuler(tar_ori))
+                angle_test = np.asarray(real_cmd2tarpos(rad2cmd(ik_test[0:5])), dtype=np.float32)
+
                 ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
-                                                          maxNumIterations=200,
+                                                          maxNumIterations=500,
                                                           targetOrientation=p.getQuaternionFromEuler(tar_ori))
 
                 for motor_index in range(5):
                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
+                                            targetPosition=ik_angles_sim[motor_index], maxVelocity=100, force = 10)
                 for i in range(30):
                     p.stepSimulation()
 
@@ -299,6 +304,8 @@ class calibration_main(Arm_env):
             cmd_motor = np.asarray(cmd_motor)
             print('this is the shape of cmd', cmd_motor.shape)
             print('this is the shape of xyz', cmd_xyz.shape)
+            tar_motor = np.copy(cmd_motor)
+            tar_xyz = np.copy(cmd_xyz)
             # print('this is the motor pos sent', cmd_motor[-1])
             conn.sendall(cmd_motor.tobytes())
             real_motor = conn.recv(4096)
@@ -311,7 +318,7 @@ class calibration_main(Arm_env):
                 ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
                 for motor_index in range(5):
                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_real[motor_index], maxVelocity=25, force=100)
+                                            targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
                 for i in range(30):
                     p.stepSimulation()
                 real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
@@ -339,7 +346,7 @@ class calibration_main(Arm_env):
                 seg_flag = False
                 print('segment fail, try to tune!')
                 ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
-                                                             maxNumIterations=200,
+                                                             maxNumIterations=500,
                                                              targetOrientation=p.getQuaternionFromEuler(
                                                                  target_ori))
 
@@ -350,7 +357,7 @@ class calibration_main(Arm_env):
                     p.stepSimulation()
 
                 angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
-                cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
+                # cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
                 final_cmd = np.append(angle_sim, 0).reshape(1, -1)
                 final_cmd = np.asarray(final_cmd, dtype=np.float32)
                 print(final_cmd.shape)
@@ -358,23 +365,39 @@ class calibration_main(Arm_env):
                 conn.sendall(final_cmd.tobytes())
 
                 # get the pos after tune!
-                final_angles_real = conn.recv(4096)
+                tuning_data = conn.recv(4096)
                 # print('received')
-                final_angles_real = np.frombuffer(final_angles_real, dtype=np.float32).reshape(-1, 6)
-                print('this is the shape of final angles real', final_angles_real.shape)
+                tuning_data = np.frombuffer(tuning_data, dtype=np.float32).reshape(-1, 12)
+                print('this is the shape of final angles real', tuning_data.shape)
+                real_motor_tuning = tuning_data[:, 6:]
+                cmd_motor_tuning = tuning_data[:, :6]
+                tar_motor_tuning = np.repeat(final_cmd[:, :6], len(cmd_motor_tuning), axis=0)
+                tar_xyz_tuning = np.repeat(target_pos.reshape(1, -1), len(cmd_motor_tuning), axis=0)
 
-                for i in range(len(final_angles_real)):
-                    ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(final_angles_real[i])), dtype=np.float32)
+                for i in range(len(real_motor_tuning)):
+                    ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor_tuning[i])), dtype=np.float32)
                     for motor_index in range(5):
                         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-                    for i in range(30):
+                                                targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
+                    for j in range(100):
                         p.stepSimulation()
                     real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
 
-                cmd_xyz = np.append(cmd_xyz, target_pos).reshape(-1, 3)
+                    if i == len(real_motor_tuning) - 1:
+                        print('here')
+                    ik_angles_cmd = np.asarray(cmd2rad(real_tarpos2cmd(cmd_motor_tuning[i])), dtype=np.float32)
+                    for motor_index in range(5):
+                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                                targetPosition=ik_angles_cmd[motor_index], maxVelocity=100, force=100)
+                    for j in range(100):
+                        p.stepSimulation()
 
-                real_motor = np.append(real_motor, final_angles_real).reshape(-1, 6)
+                    cmd_xyz = np.append(cmd_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+                # real_motor = np.append(real_motor, tuning_data).reshape(-1, 6)
+                tar_motor = np.concatenate((tar_motor, tar_motor_tuning), axis=0)
+                tar_xyz = np.concatenate((tar_xyz, tar_xyz_tuning), axis=0)
+                real_motor = np.concatenate((real_motor, real_motor_tuning), axis=0)
+                cmd_motor = np.concatenate((cmd_motor, cmd_motor_tuning), axis=0)
 
                 cur_pos = real_xyz[-1]
                 print('this is cur pos after pid', cur_pos)
@@ -451,12 +474,17 @@ class calibration_main(Arm_env):
                     np.savetxt(f, cmd_xyz)
                 with open(file=self.para_dict['dataset_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_xyz)
+                with open(file=self.para_dict['dataset_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                    np.savetxt(f, tar_xyz)
                 with open(file=self.para_dict['dataset_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_motor)
                 with open(file=self.para_dict['dataset_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_motor)
+                with open(file=self.para_dict['dataset_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
+                    np.savetxt(f, tar_motor)
             if self.generate_dict['use_tuning'] == True:
-                return target_pos # return cur pos to let the manipualtor remember the improved pos
+                print('this is cmd zzz\n', cmd_xyz[-1])
+                return cmd_xyz[-1] # return cur pos to let the manipualtor remember the improved pos
             else:
                 return tar_pos
 
@@ -512,10 +540,8 @@ class calibration_main(Arm_env):
                 #                                 [0.01, 0.032],
                 #                                 [0.01, 0.040],
                 #                                 [0.01, 0.048]])
-                trajectory_pos_list = np.array([[0.00, 0.13, 0.02],
-                                                [0.25, 0.13, 0.02],
-                                                [0.25, -0.13, 0.02],
-                                                [0.00, -0.13, 0.02]])
+                trajectory_pos_list = np.array([[0.25, 0.13, 0.03],
+                                                [0.25, -0.13, 0.03]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -526,7 +552,7 @@ class calibration_main(Arm_env):
                         last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                         # if trajectory_pos_list[j][2] < 0.02:
                         #     time.sleep(2)
-                        time.sleep(5)
+                        # time.sleep(5)
                         last_ori = np.copy(rest_ori)
 
                     elif len(trajectory_pos_list[j]) == 2:
@@ -576,9 +602,13 @@ class calibration_main(Arm_env):
                 f.truncate(0)
             with open(file=self.para_dict['dataset_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                 f.truncate(0)
+            with open(file=self.para_dict['dataset_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                f.truncate(0)
             with open(file=self.para_dict['dataset_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
                 f.truncate(0)
             with open(file=self.para_dict['dataset_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
+                f.truncate(0)
+            with open(file=self.para_dict['dataset_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
                 f.truncate(0)
 
         if self.para_dict['real_operate'] == True:

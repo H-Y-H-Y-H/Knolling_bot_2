@@ -9,6 +9,7 @@ if show == 'xyz':
 
     cmd_xyz = np.loadtxt(data_path + 'cmd_xyz_nn.txt')[:, :]
     real_xyz = np.loadtxt(data_path + 'real_xyz_nn.txt')[:, :]
+    tar_xyz = np.loadtxt(data_path + 'tar_xyz_nn.txt')[:, :]
     x = np.arange(len(cmd_xyz))
 
     print(x)
@@ -21,6 +22,7 @@ if show == 'xyz':
     plt.ylabel('Distance')
     plt.plot(x, cmd_xyz[:, 0], label='cmd')
     plt.plot(x, real_xyz[:, 0], label='real')
+    plt.plot(x, tar_xyz[:, 0], label='tar')
     plt.legend()
 
     plt.subplot(1, 3, 2)
@@ -29,6 +31,7 @@ if show == 'xyz':
     plt.ylabel('Distance')
     plt.plot(x, cmd_xyz[:, 1], label='cmd')
     plt.plot(x, real_xyz[:, 1], label='real')
+    plt.plot(x, tar_xyz[:, 1], label='tar')
     plt.legend()
 
     plt.subplot(1, 3, 3)
@@ -37,14 +40,16 @@ if show == 'xyz':
     plt.ylabel('Distance')
     plt.plot(x, cmd_xyz[:, 2], label='cmd')
     plt.plot(x, real_xyz[:, 2], label='real')
+    plt.plot(x, tar_xyz[:, 2], label='tar')
     plt.legend()
 
     plt.savefig(data_path + 'xyz_analysis.png')
     plt.show()
 
 if show == 'motor':
-    cmd_motor = np.loadtxt(data_path + 'cmd_nn.txt')[40:80, :]
-    real_motor = np.loadtxt(data_path + 'real_nn.txt')[40:80, :]
+    cmd_motor = np.loadtxt(data_path + 'cmd_nn.txt')[30:, :]
+    real_motor = np.loadtxt(data_path + 'real_nn.txt')[30:, :]
+    tar_motor = np.loadtxt(data_path + 'tar_nn.txt')[30:, :]
     x = np.arange(len(cmd_motor))
 
     print(x)
@@ -57,6 +62,7 @@ if show == 'motor':
     plt.ylabel('Distance')
     plt.plot(x, cmd_motor[:, 0], label='cmd')
     plt.plot(x, real_motor[:, 0], label='real')
+    plt.plot(x, tar_motor[:, 0], label='tar')
     plt.legend()
 
     plt.subplot(2, 3, 2)
@@ -65,6 +71,7 @@ if show == 'motor':
     plt.ylabel('Distance')
     plt.plot(x, cmd_motor[:, 1], label='cmd')
     plt.plot(x, real_motor[:, 1], label='real')
+    plt.plot(x, tar_motor[:, 1], label='tar')
     plt.legend()
 
     plt.subplot(2, 3, 3)
@@ -73,6 +80,7 @@ if show == 'motor':
     plt.ylabel('Distance')
     plt.plot(x, cmd_motor[:, 2], label='cmd')
     plt.plot(x, real_motor[:, 2], label='real')
+    plt.plot(x, tar_motor[:, 2], label='tar')
     plt.legend()
 
     plt.subplot(2, 3, 4)
@@ -81,6 +89,7 @@ if show == 'motor':
     plt.ylabel('Distance')
     plt.plot(x, cmd_motor[:, 3], label='cmd')
     plt.plot(x, real_motor[:, 3], label='real')
+    plt.plot(x, tar_motor[:, 3], label='tar')
     plt.legend()
 
     plt.subplot(2, 3, 5)
@@ -89,6 +98,7 @@ if show == 'motor':
     plt.ylabel('Distance')
     plt.plot(x, cmd_motor[:, 4], label='cmd')
     plt.plot(x, real_motor[:, 4], label='real')
+    plt.plot(x, tar_motor[:, 4], label='tar')
     plt.legend()
 
     plt.savefig(data_path + 'motor_analysis.png')
