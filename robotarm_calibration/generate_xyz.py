@@ -540,8 +540,10 @@ class calibration_main(Arm_env):
                 #                                 [0.01, 0.032],
                 #                                 [0.01, 0.040],
                 #                                 [0.01, 0.048]])
-                trajectory_pos_list = np.array([[0.25, 0.13, 0.03],
-                                                [0.25, -0.13, 0.03]])
+                trajectory_pos_list = np.array([[0.05, 0.13, 0.03],
+                                                [0.25, 0.13, 0.03],
+                                                [0.25, -0.13, 0.03],
+                                                [0.05, -0.13, 0.03]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -552,7 +554,7 @@ class calibration_main(Arm_env):
                         last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                         # if trajectory_pos_list[j][2] < 0.02:
                         #     time.sleep(2)
-                        # time.sleep(5)
+                        time.sleep(5)
                         last_ori = np.copy(rest_ori)
 
                     elif len(trajectory_pos_list[j]) == 2:
@@ -616,7 +618,7 @@ class calibration_main(Arm_env):
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -699,7 +701,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../knolling_dataset/nn_data_802/',
+                 'dataset_path': '../../knolling_dataset/nn_data_804/',
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,

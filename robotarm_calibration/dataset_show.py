@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data_path = '../../knolling_dataset/nn_data_802/'
+data_path = '../../knolling_dataset/nn_data_804/'
 
-show = 'xyz'
+show = 'motor'
 
 if show == 'xyz':
 
