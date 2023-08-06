@@ -158,41 +158,41 @@ class calibration_main(Arm_env):
 
                 pass
 
+                d = np.array([0, 0.3])
+                d_y = np.array((0, 0.17, 0.21, 0.30))
+                d_y = d
+                z_bias = np.array([-0.005, 0.01])
+                x_bias = np.array([-0.002, 0.00])  # yolo error is +2mm along x axis!
+                y_bias = np.array([0, -0.004, -0.001, 0.004])
+                y_bias = np.array([0.002, 0.006])
+                # z_parameters = np.polyfit(d, z_bias, 3)
+                z_parameters = np.polyfit(d, z_bias, 1)
+                x_parameters = np.polyfit(d, x_bias, 1)
+                y_parameters = np.polyfit(d_y, y_bias, 1)
+                new_z_formula = np.poly1d(z_parameters)
+                new_x_formula = np.poly1d(x_parameters)
+                new_y_formula = np.poly1d(y_parameters)
+
+                # # automatically add z and x bias
+                # # d = np.array([0, 0.10, 0.185, 0.225, 0.27])
                 # d = np.array([0, 0.3])
-                # d_y = np.array((0, 0.17, 0.21, 0.30))
-                # d_y = d
-                # z_bias = np.array([-0.005, 0.004])
-                # x_bias = np.array([-0.002, 0.00])  # yolo error is +2mm along x axis!
-                # y_bias = np.array([0, -0.004, -0.001, 0.004])
-                # y_bias = np.array([0.002, 0.006])
+                # d_y = np.array((0, 0.17, 0.30))
+                # z_bias = np.array([-0.003, 0.008])
+                # x_bias = np.array([-0.005, -0.001])
+                # y_bias = np.array([0, -0.004, 0.004])
+                # # y_bias = np.array([])
                 # # z_parameters = np.polyfit(d, z_bias, 3)
                 # z_parameters = np.polyfit(d, z_bias, 1)
                 # x_parameters = np.polyfit(d, x_bias, 1)
-                # y_parameters = np.polyfit(d_y, y_bias, 1)
+                # y_parameters = np.polyfit(d_y, y_bias, 4)
                 # new_z_formula = np.poly1d(z_parameters)
                 # new_x_formula = np.poly1d(x_parameters)
                 # new_y_formula = np.poly1d(y_parameters)
-                #
-                # # # automatically add z and x bias
-                # # # d = np.array([0, 0.10, 0.185, 0.225, 0.27])
-                # # d = np.array([0, 0.3])
-                # # d_y = np.array((0, 0.17, 0.30))
-                # # z_bias = np.array([-0.003, 0.008])
-                # # x_bias = np.array([-0.005, -0.001])
-                # # y_bias = np.array([0, -0.004, 0.004])
-                # # # y_bias = np.array([])
-                # # # z_parameters = np.polyfit(d, z_bias, 3)
-                # # z_parameters = np.polyfit(d, z_bias, 1)
-                # # x_parameters = np.polyfit(d, x_bias, 1)
-                # # y_parameters = np.polyfit(d_y, y_bias, 4)
-                # # new_z_formula = np.poly1d(z_parameters)
-                # # new_x_formula = np.poly1d(x_parameters)
-                # # new_y_formula = np.poly1d(y_parameters)
-                #
-                # distance = tar_pos[0]
-                # distance_y = tar_pos[0]
-                # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
-                # print('this is z', new_z_formula(distance))
+
+                distance = tar_pos[0]
+                distance_y = tar_pos[0]
+                tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+                print('this is z', new_z_formula(distance))
                 # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
                 # print('this is x', new_x_formula(distance))
                 # if tar_pos[1] > 0:
@@ -200,22 +200,22 @@ class calibration_main(Arm_env):
                 # else:
                 #     tar_pos[1] -= new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1)
                 # print('this is tar pos after manual', tar_pos)
-                #
-                # # distance = tar_pos[0]
-                # # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
-                # # print('this is z', new_z_formula(distance))
-                # # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
-                # # print('this is x', new_x_formula(distance))
-                # # # distance_y = np.linalg.norm(tar_pos[:2])
-                # # if tar_pos[1] > 0:
-                # #     distance_y = np.linalg.norm(tar_pos[:2])
-                # #     print('this is y', new_y_formula(distance_y))
-                # #     tar_pos[1] += new_y_formula(distance_y)
-                # # else:
-                # #     distance_y = np.linalg.norm(tar_pos[:2])
-                # #     print('this is y', new_y_formula(distance_y))
-                # #     tar_pos[1] -= new_y_formula(distance_y)
-                # # print('this is tar pos after manual', tar_pos)
+
+                # distance = tar_pos[0]
+                # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+                # print('this is z', new_z_formula(distance))
+                # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
+                # print('this is x', new_x_formula(distance))
+                # # distance_y = np.linalg.norm(tar_pos[:2])
+                # if tar_pos[1] > 0:
+                #     distance_y = np.linalg.norm(tar_pos[:2])
+                #     print('this is y', new_y_formula(distance_y))
+                #     tar_pos[1] += new_y_formula(distance_y)
+                # else:
+                #     distance_y = np.linalg.norm(tar_pos[:2])
+                #     print('this is y', new_y_formula(distance_y))
+                #     tar_pos[1] -= new_y_formula(distance_y)
+                # print('this is tar pos after manual', tar_pos)
 
 
             if abs(cur_pos[0] - tar_pos[0]) < 0.001 and abs(cur_pos[1] - tar_pos[1]) < 0.001:
@@ -225,7 +225,8 @@ class calibration_main(Arm_env):
                 # horizontal, choose a large slice
                 move_slice = 0.008
 
-            tar_pos = tar_pos + np.array([0, 0, real_height])
+            # tar_pos = tar_pos + np.array([0, 0, real_height])
+            tar_pos = tar_pos + np.array([0, 0, 0.01])
             target_pos = np.copy(tar_pos)
             target_ori = np.copy(tar_ori)
 
@@ -233,7 +234,7 @@ class calibration_main(Arm_env):
             print('this is tar pos', target_pos)
             print('this is cur pos', cur_pos)
             if np.abs(target_pos[2] - cur_pos[2]) > 0.01 \
-                    and np.abs(target_pos[0] - cur_pos[0]) < 0.01\
+                    and np.abs(target_pos[0] - cur_pos[0]) < 0.01 \
                     and np.abs(target_pos[1] - cur_pos[1]) < 0.01:
                 print('we dont need feedback control')
                 mark_ratio = 0.8
@@ -241,7 +242,7 @@ class calibration_main(Arm_env):
                 seg_time = 0
             else:
                 if self.generate_dict['use_tuning'] == True:
-                    mark_ratio = 0.99
+                    mark_ratio = 0.97
                     seg_time = 0
                 else:
                     mark_ratio = 1
@@ -270,38 +271,20 @@ class calibration_main(Arm_env):
                 cmd_xyz.append(tar_pos)
                 sim_ori.append(tar_ori)
 
-                ik_test = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=cur_pos,
-                                                          maxNumIterations=500,
-                                                          targetOrientation=p.getQuaternionFromEuler(tar_ori))
-                angle_test = np.asarray(real_cmd2tarpos(rad2cmd(ik_test[0:5])), dtype=np.float32)
-
-                ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
-                                                          maxNumIterations=500,
-                                                          targetOrientation=p.getQuaternionFromEuler(tar_ori))
-
-                for motor_index in range(5):
-                    p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_sim[motor_index], maxVelocity=100, force = 10)
-                for i in range(30):
-                    p.stepSimulation()
-
-                angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
-                cmd_motor.append(angle_sim)
-
                 break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
                     seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
                              abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
                     seg_ori[1] - tar_ori[1]) < 0.001 and abs(seg_ori[2] - tar_ori[2]) < 0.001
                 if break_flag:
                     break
-
                 cur_pos = tar_pos
                 cur_ori = tar_ori
 
             cmd_xyz = np.asarray(cmd_xyz)
-
+            sim_ori = np.asarray(sim_ori)
+            cmd_motor = np.asarray(inverse_kinematic(cmd_xyz, sim_ori), dtype=np.float32)
             plot_step = np.arange(num_step)
-            cmd_motor = np.asarray(cmd_motor)
+
             print('this is the shape of cmd', cmd_motor.shape)
             print('this is the shape of xyz', cmd_xyz.shape)
             tar_motor = np.copy(cmd_motor)
@@ -324,39 +307,21 @@ class calibration_main(Arm_env):
                 real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
             cur_pos = real_xyz[-1]
 
-            # ik_angles_real = []
-            # for i in range(len(real_motor)):
-            #     ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
-            #     for motor_index in range(self.num_motor):
-            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-            #                                 targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-            #     for i in range(40):
-            #         p.stepSimulation()
-            #     real_xyz.append(p.getLinkState(self.arm_id, 9)[0])
-            # real_xyz = np.asarray(real_xyz)
-            #
-            # # update cur_pos based on real pos of the arm
-            # cur_pos = real_xyz[-1]
-            # if abs(seg_pos[0] - cur_pos[0]) < 0.001 and abs(seg_pos[1] - cur_pos[1]) < 0.001 and abs(
-            #         seg_pos[2] - cur_pos[2]) < 0.001:
-            #     seg_flag = True
-            #     break
-            # print('this is seg_time', seg_time)
             if seg_time > 0:
                 seg_flag = False
                 print('segment fail, try to tune!')
-                ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
-                                                             maxNumIterations=500,
-                                                             targetOrientation=p.getQuaternionFromEuler(
-                                                                 target_ori))
-
-                for motor_index in range(5):
-                    p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
-                for i in range(30):
-                    p.stepSimulation()
-
-                angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+                # ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
+                #                                              maxNumIterations=500,
+                #                                              targetOrientation=p.getQuaternionFromEuler(
+                #                                                  target_ori))
+                # for motor_index in range(5):
+                #     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                #                             targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
+                # for i in range(30):
+                #     p.stepSimulation()
+                #
+                # angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+                angle_sim = np.asarray(inverse_kinematic(np.copy(target_pos), np.copy(target_ori)), dtype=np.float32)
                 # cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
                 final_cmd = np.append(angle_sim, 0).reshape(1, -1)
                 final_cmd = np.asarray(final_cmd, dtype=np.float32)
@@ -403,6 +368,167 @@ class calibration_main(Arm_env):
                 print('this is cur pos after pid', cur_pos)
             else:
                 pass
+
+            # tar_pos = tar_pos + np.array([0, 0, real_height])
+            # target_pos = np.copy(tar_pos)
+            # target_ori = np.copy(tar_ori)
+            #
+            # vertical_flag = False
+            # print('this is tar pos', target_pos)
+            # print('this is cur pos', cur_pos)
+            # if np.abs(target_pos[2] - cur_pos[2]) > 0.01 \
+            #         and np.abs(target_pos[0] - cur_pos[0]) < 0.01\
+            #         and np.abs(target_pos[1] - cur_pos[1]) < 0.01:
+            #     print('we dont need feedback control')
+            #     mark_ratio = 0.8
+            #     vertical_flag = True
+            #     seg_time = 0
+            # else:
+            #     if self.generate_dict['use_tuning'] == True:
+            #         mark_ratio = 0.97
+            #         seg_time = 0
+            #     else:
+            #         mark_ratio = 1
+            #         seg_time = -10
+            #
+            # cmd_motor = []
+            # # plot_real = []
+            # cmd_xyz = []
+            # sim_ori = []
+            # real_xyz = []
+            #
+            # # divide the whole trajectory into several segment
+            # seg_time += 1
+            # seg_pos = mark_ratio * (target_pos - cur_pos) + cur_pos
+            # seg_ori = mark_ratio * (target_ori - cur_ori) + cur_ori
+            # distance = np.linalg.norm(seg_pos - cur_pos)
+            # num_step = np.ceil(distance / move_slice)
+            # step_pos = (seg_pos - cur_pos) / num_step
+            # step_ori = (seg_ori - cur_ori) / num_step
+            # print('this is seg pos', seg_pos)
+            #
+            # while True:
+            #     tar_pos = cur_pos + step_pos
+            #     # print(tar_pos)
+            #     tar_ori = cur_ori + step_ori
+            #     cmd_xyz.append(tar_pos)
+            #     sim_ori.append(tar_ori)
+            #
+            #     ik_test = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=cur_pos,
+            #                                               maxNumIterations=500,
+            #                                               targetOrientation=p.getQuaternionFromEuler(tar_ori))
+            #     angle_test = np.asarray(real_cmd2tarpos(rad2cmd(ik_test[0:5])), dtype=np.float32)
+            #
+            #     ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
+            #                                               maxNumIterations=500,
+            #                                               targetOrientation=p.getQuaternionFromEuler(tar_ori))
+            #
+            #     for motor_index in range(5):
+            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                 targetPosition=ik_angles_sim[motor_index], maxVelocity=100, force = 10)
+            #     for i in range(30):
+            #         p.stepSimulation()
+            #
+            #     angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+            #     cmd_motor.append(angle_sim)
+            #
+            #     break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
+            #         seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
+            #                  abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
+            #         seg_ori[1] - tar_ori[1]) < 0.001 and abs(seg_ori[2] - tar_ori[2]) < 0.001
+            #     if break_flag:
+            #         break
+            #
+            #     cur_pos = tar_pos
+            #     cur_ori = tar_ori
+            #
+            # cmd_xyz = np.asarray(cmd_xyz)
+            #
+            # plot_step = np.arange(num_step)
+            # cmd_motor = np.asarray(cmd_motor)
+            # print('this is the shape of cmd', cmd_motor.shape)
+            # print('this is the shape of xyz', cmd_xyz.shape)
+            # tar_motor = np.copy(cmd_motor)
+            # tar_xyz = np.copy(cmd_xyz)
+            # # print('this is the motor pos sent', cmd_motor[-1])
+            # conn.sendall(cmd_motor.tobytes())
+            # real_motor = conn.recv(4096)
+            # # print('received')
+            # real_motor = np.frombuffer(real_motor, dtype=np.float32)
+            # real_motor = real_motor.reshape(-1, 6)
+            #
+            # print('this is the shape of angles real', real_motor.shape)
+            # for i in range(len(real_motor)):
+            #     ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
+            #     for motor_index in range(5):
+            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                 targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
+            #     for i in range(30):
+            #         p.stepSimulation()
+            #     real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+            # cur_pos = real_xyz[-1]
+            #
+            # if seg_time > 0:
+            #     seg_flag = False
+            #     print('segment fail, try to tune!')
+            #     ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
+            #                                                  maxNumIterations=500,
+            #                                                  targetOrientation=p.getQuaternionFromEuler(
+            #                                                      target_ori))
+            #
+            #     for motor_index in range(5):
+            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                 targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
+            #     for i in range(30):
+            #         p.stepSimulation()
+            #
+            #     angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+            #     # cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
+            #     final_cmd = np.append(angle_sim, 0).reshape(1, -1)
+            #     final_cmd = np.asarray(final_cmd, dtype=np.float32)
+            #     print(final_cmd.shape)
+            #     print(final_cmd)
+            #     conn.sendall(final_cmd.tobytes())
+            #
+            #     # get the pos after tune!
+            #     tuning_data = conn.recv(4096)
+            #     # print('received')
+            #     tuning_data = np.frombuffer(tuning_data, dtype=np.float32).reshape(-1, 12)
+            #     print('this is the shape of final angles real', tuning_data.shape)
+            #     real_motor_tuning = tuning_data[:, 6:]
+            #     cmd_motor_tuning = tuning_data[:, :6]
+            #     tar_motor_tuning = np.repeat(final_cmd[:, :6], len(cmd_motor_tuning), axis=0)
+            #     tar_xyz_tuning = np.repeat(target_pos.reshape(1, -1), len(cmd_motor_tuning), axis=0)
+            #
+            #     for i in range(len(real_motor_tuning)):
+            #         ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor_tuning[i])), dtype=np.float32)
+            #         for motor_index in range(5):
+            #             p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                     targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
+            #         for j in range(100):
+            #             p.stepSimulation()
+            #         real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+            #
+            #         if i == len(real_motor_tuning) - 1:
+            #             print('here')
+            #         ik_angles_cmd = np.asarray(cmd2rad(real_tarpos2cmd(cmd_motor_tuning[i])), dtype=np.float32)
+            #         for motor_index in range(5):
+            #             p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                     targetPosition=ik_angles_cmd[motor_index], maxVelocity=100, force=100)
+            #         for j in range(100):
+            #             p.stepSimulation()
+            #
+            #         cmd_xyz = np.append(cmd_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+            #     # real_motor = np.append(real_motor, tuning_data).reshape(-1, 6)
+            #     tar_motor = np.concatenate((tar_motor, tar_motor_tuning), axis=0)
+            #     tar_xyz = np.concatenate((tar_xyz, tar_xyz_tuning), axis=0)
+            #     real_motor = np.concatenate((real_motor, real_motor_tuning), axis=0)
+            #     cmd_motor = np.concatenate((cmd_motor, cmd_motor_tuning), axis=0)
+            #
+            #     cur_pos = real_xyz[-1]
+            #     print('this is cur pos after pid', cur_pos)
+            # else:
+            #     pass
 
             if self.generate_dict['real_time_flag'] == True:
 
@@ -484,7 +610,7 @@ class calibration_main(Arm_env):
                     np.savetxt(f, tar_motor)
             if self.generate_dict['use_tuning'] == True:
                 print('this is cmd zzz\n', cmd_xyz[-1])
-                return cmd_xyz[-1] # return cur pos to let the manipualtor remember the improved pos
+                return target_pos # return cur pos to let the manipualtor remember the improved pos
             else:
                 return tar_pos
 
@@ -540,10 +666,10 @@ class calibration_main(Arm_env):
                 #                                 [0.01, 0.032],
                 #                                 [0.01, 0.040],
                 #                                 [0.01, 0.048]])
-                trajectory_pos_list = np.array([[0.05, 0.13, 0.03],
-                                                [0.25, 0.13, 0.03],
-                                                [0.25, -0.13, 0.03],
-                                                [0.05, -0.13, 0.03]])
+                trajectory_pos_list = np.array([[0.00, 0.14, 0.03],
+                                                [0.25, 0.14, 0.03],
+                                                [0.25, -0.14, 0.03],
+                                                [0.00, -0.14, 0.03]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -552,9 +678,12 @@ class calibration_main(Arm_env):
 
                     if len(trajectory_pos_list[j]) == 3:
                         last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
-                        # if trajectory_pos_list[j][2] < 0.02:
-                        #     time.sleep(2)
-                        time.sleep(5)
+                        if trajectory_pos_list[j, 2] > 0.01:
+                            # time.sleep(5)
+                            pass
+                        else:
+                            pass
+                            # time.sleep(3)
                         last_ori = np.copy(rest_ori)
 
                     elif len(trajectory_pos_list[j]) == 2:
@@ -701,7 +830,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../knolling_dataset/nn_data_804/',
+                 'dataset_path': '../../knolling_dataset/nn_data_805/',
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,

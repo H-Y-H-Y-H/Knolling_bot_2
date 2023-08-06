@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data_path = '../../knolling_dataset/nn_data_804/'
+data_path = '../../knolling_dataset/nn_data_805/'
 
-show = 'motor'
+show = 'xyz'
 
 if show == 'xyz':
 
@@ -47,9 +47,9 @@ if show == 'xyz':
     plt.show()
 
 if show == 'motor':
-    cmd_motor = np.loadtxt(data_path + 'cmd_nn.txt')[30:, :]
-    real_motor = np.loadtxt(data_path + 'real_nn.txt')[30:, :]
-    tar_motor = np.loadtxt(data_path + 'tar_nn.txt')[30:, :]
+    cmd_motor = np.loadtxt(data_path + 'cmd_nn.txt')[:, :]
+    real_motor = np.loadtxt(data_path + 'real_nn.txt')[:, :]
+    tar_motor = np.loadtxt(data_path + 'tar_nn.txt')[:, :]
     x = np.arange(len(cmd_motor))
 
     print(x)
