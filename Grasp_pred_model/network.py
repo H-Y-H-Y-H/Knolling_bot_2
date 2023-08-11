@@ -110,6 +110,22 @@ class LSTMRegressor(nn.Module):
         pred = predict.cpu().detach().numpy()
         pred_soft = self.softmax(predict).cpu().detach().numpy()
 
+        # calculate the loss mean and std
+        model_output = pred_soft.reshape(-1, 2) # don't use the softmax value!!!!!!!!!
+        model_label = tar.reshape(-1, 1)
+
+        index = np.where(model_label > -1)[0]
+        model_label = model_label[index]
+        model_output = model_output[index]
+        temp = np.zeros((len(model_output), 2))
+        flag_1_index = np.where(model_output[:, 1] > model_threshold)[0]
+        flag_0_index = np.where(model_output[:, 0] > model_threshold)[0]
+        temp[flag_1_index, 1] = 1
+        temp[flag_0_index, 0] = 0
+        model_output = torch.from_numpy(temp)
+        model_label = torch.from_numpy(model_label).view(-1, )
+        loss = self.criterion(model_output, model_label.long())
+
         for i in range(pred_soft.shape[0]): # every image
             pred_1_index = np.where(pred_soft[i, :, 1] > model_threshold)[0]
             if len(pred_1_index) > 1:
@@ -128,24 +144,6 @@ class LSTMRegressor(nn.Module):
                 if tar[i, j, 0] == -100:
                     continue
                 else:
-
-                    # if tar[i, j, 0] == 1:
-                    #     self.tar_true += 1
-                    #     if criterion:
-                    #         self.TP += 1
-                    #         if j == yolo_dominated_index:
-                    #             self.yolo_dominated_TP += 1
-                    #         else:
-                    #             self.grasp_dominated_TP += 1
-                    #     else:
-                    #         self.TN += 1
-                    # if tar[i, j, 0] == 0:
-                    #     self.tar_false += 1
-                    #     if criterion:
-                    #         self.FP += 1
-                    #     else:
-                    #         self.FN += 1
-
                     if tar[i, j, 0] == 1:
                         self.tar_true += 1
                         if criterion:
@@ -181,7 +179,7 @@ class LSTMRegressor(nn.Module):
 
         return self.not_one_result_per_img, self.tar_true, self.tar_false, self.TP, self.TN, self.FP, self.FN, \
                self.yolo_dominated_TP, self.yolo_dominated_TN, self.yolo_dominated_FP, self.yolo_dominated_FN, \
-               self.grasp_dominated_TP, self.grasp_dominated_TN, self.grasp_dominated_FP, self.grasp_dominated_FN,
+               self.grasp_dominated_TP, self.grasp_dominated_TN, self.grasp_dominated_FP, self.grasp_dominated_FN, loss
 
     # f.write(f'total_img: {int(num_img - num_img * ratio)}\n')
     # f.write(f'model_path: {para_dict["model_path"]}\n')

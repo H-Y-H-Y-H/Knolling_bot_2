@@ -3,7 +3,7 @@ import numpy as np
 
 data_path = '../../knolling_dataset/nn_data_805/'
 
-show = 'xyz'
+show = 'motor'
 
 if show == 'xyz':
 
@@ -78,9 +78,9 @@ if show == 'motor':
     plt.title("Motor 3")
     plt.grid(True)
     plt.ylabel('Distance')
-    plt.plot(x, cmd_motor[:, 2], label='cmd')
-    plt.plot(x, real_motor[:, 2], label='real')
-    plt.plot(x, tar_motor[:, 2], label='tar')
+    plt.plot(x, cmd_motor[:, 1], label='cmd')
+    plt.plot(x, real_motor[:, 1], label='real')
+    plt.plot(x, tar_motor[:, 1], label='tar')
     plt.legend()
 
     plt.subplot(2, 3, 4)
@@ -99,6 +99,15 @@ if show == 'motor':
     plt.plot(x, cmd_motor[:, 4], label='cmd')
     plt.plot(x, real_motor[:, 4], label='real')
     plt.plot(x, tar_motor[:, 4], label='tar')
+    plt.legend()
+
+    plt.subplot(2, 3, 6)
+    plt.title("Motor 6")
+    plt.grid(True)
+    plt.ylabel('Distance')
+    plt.plot(x, cmd_motor[:, 5], label='cmd')
+    plt.plot(x, real_motor[:, 5], label='real')
+    plt.plot(x, tar_motor[:, 5], label='tar')
     plt.legend()
 
     plt.savefig(data_path + 'motor_analysis.png')

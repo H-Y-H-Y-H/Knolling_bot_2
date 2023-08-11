@@ -161,7 +161,7 @@ class calibration_main(Arm_env):
                 d = np.array([0, 0.3])
                 d_y = np.array((0, 0.17, 0.21, 0.30))
                 d_y = d
-                z_bias = np.array([-0.005, 0.01])
+                z_bias = np.array([-0.000, 0.015])
                 x_bias = np.array([-0.002, 0.00])  # yolo error is +2mm along x axis!
                 y_bias = np.array([0, -0.004, -0.001, 0.004])
                 y_bias = np.array([0.002, 0.006])
@@ -172,7 +172,7 @@ class calibration_main(Arm_env):
                 new_z_formula = np.poly1d(z_parameters)
                 new_x_formula = np.poly1d(x_parameters)
                 new_y_formula = np.poly1d(y_parameters)
-
+                #
                 # # automatically add z and x bias
                 # # d = np.array([0, 0.10, 0.185, 0.225, 0.27])
                 # d = np.array([0, 0.3])
@@ -188,11 +188,10 @@ class calibration_main(Arm_env):
                 # new_z_formula = np.poly1d(z_parameters)
                 # new_x_formula = np.poly1d(x_parameters)
                 # new_y_formula = np.poly1d(y_parameters)
-
-                distance = tar_pos[0]
-                distance_y = tar_pos[0]
-                tar_pos[2] = tar_pos[2] + new_z_formula(distance)
-                print('this is z', new_z_formula(distance))
+                #
+                # distance = tar_pos[0]
+                # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+                # print('this is z', new_z_formula(distance))
                 # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
                 # print('this is x', new_x_formula(distance))
                 # if tar_pos[1] > 0:
@@ -200,7 +199,7 @@ class calibration_main(Arm_env):
                 # else:
                 #     tar_pos[1] -= new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1)
                 # print('this is tar pos after manual', tar_pos)
-
+                #
                 # distance = tar_pos[0]
                 # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
                 # print('this is z', new_z_formula(distance))
@@ -225,8 +224,8 @@ class calibration_main(Arm_env):
                 # horizontal, choose a large slice
                 move_slice = 0.008
 
-            # tar_pos = tar_pos + np.array([0, 0, real_height])
-            tar_pos = tar_pos + np.array([0, 0, 0.01])
+            tar_pos = tar_pos + np.array([0, 0, real_height])
+            # tar_pos = tar_pos + np.array([0, 0, 0.01])
             target_pos = np.copy(tar_pos)
             target_ori = np.copy(tar_ori)
 
@@ -242,14 +241,13 @@ class calibration_main(Arm_env):
                 seg_time = 0
             else:
                 if self.generate_dict['use_tuning'] == True:
-                    mark_ratio = 0.97
+                    mark_ratio = 0.99
                     seg_time = 0
                 else:
                     mark_ratio = 1
                     seg_time = -10
 
             cmd_motor = []
-            # plot_real = []
             cmd_xyz = []
             sim_ori = []
             real_xyz = []
@@ -271,6 +269,21 @@ class calibration_main(Arm_env):
                 cmd_xyz.append(tar_pos)
                 sim_ori.append(tar_ori)
 
+                if self.generate_dict['ik_flag'] == 'manual':
+                    pass
+                else:
+                    ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=tar_pos,
+                                                             maxNumIterations=500,
+                                                             targetOrientation=p.getQuaternionFromEuler(tar_ori))
+                    for motor_index in range(5):
+                       p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                               targetPosition=ik_angles_sim[motor_index], maxVelocity=100, force = 10)
+                    for i in range(30):
+                       p.stepSimulation()
+
+                    angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+                    cmd_motor.append(angle_sim)
+
                 break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
                     seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
                              abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
@@ -282,8 +295,10 @@ class calibration_main(Arm_env):
 
             cmd_xyz = np.asarray(cmd_xyz)
             sim_ori = np.asarray(sim_ori)
-            cmd_motor = np.asarray(inverse_kinematic(cmd_xyz, sim_ori), dtype=np.float32)
-            plot_step = np.arange(num_step)
+            if self.generate_dict['ik_flag'] == 'manual':
+                cmd_motor = np.asarray(inverse_kinematic(np.copy(cmd_xyz), np.copy(sim_ori)), dtype=np.float32)
+            else:
+                cmd_motor = np.asarray(cmd_motor)
 
             print('this is the shape of cmd', cmd_motor.shape)
             print('this is the shape of xyz', cmd_xyz.shape)
@@ -297,31 +312,38 @@ class calibration_main(Arm_env):
             real_motor = real_motor.reshape(-1, 6)
 
             print('this is the shape of angles real', real_motor.shape)
-            for i in range(len(real_motor)):
-                ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
-                for motor_index in range(5):
-                    p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
-                for i in range(30):
-                    p.stepSimulation()
-                real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+            if self.generate_dict['ik_flag'] == 'manual':
+                real_xyz, _ = forward_kinematic(real_motor)
+            else:
+                for i in range(len(real_motor)):
+                    ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
+                    for motor_index in range(5):
+                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                                targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
+                    for i in range(30):
+                        p.stepSimulation()
+                    real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+
             cur_pos = real_xyz[-1]
 
             if seg_time > 0:
                 seg_flag = False
                 print('segment fail, try to tune!')
-                # ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
-                #                                              maxNumIterations=500,
-                #                                              targetOrientation=p.getQuaternionFromEuler(
-                #                                                  target_ori))
-                # for motor_index in range(5):
-                #     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                #                             targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
-                # for i in range(30):
-                #     p.stepSimulation()
-                #
-                # angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
-                angle_sim = np.asarray(inverse_kinematic(np.copy(target_pos), np.copy(target_ori)), dtype=np.float32)
+                if self.generate_dict['ik_flag'] == 'manual':
+                    angle_sim = np.asarray(inverse_kinematic(np.copy(target_pos), np.copy(target_ori)), dtype=np.float32)
+                else:
+                    ik_angles_sim = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_pos,
+                                                                 maxNumIterations=500,
+                                                                 targetOrientation=p.getQuaternionFromEuler(
+                                                                     target_ori))
+                    for motor_index in range(5):
+                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                                targetPosition=ik_angles_sim[motor_index], maxVelocity=2.5)
+                    for i in range(30):
+                        p.stepSimulation()
+
+                    angle_sim = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles_sim[0:5])), dtype=np.float32)
+
                 # cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
                 final_cmd = np.append(angle_sim, 0).reshape(1, -1)
                 final_cmd = np.asarray(final_cmd, dtype=np.float32)
@@ -339,25 +361,33 @@ class calibration_main(Arm_env):
                 tar_motor_tuning = np.repeat(final_cmd[:, :6], len(cmd_motor_tuning), axis=0)
                 tar_xyz_tuning = np.repeat(target_pos.reshape(1, -1), len(cmd_motor_tuning), axis=0)
 
-                for i in range(len(real_motor_tuning)):
-                    ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor_tuning[i])), dtype=np.float32)
-                    for motor_index in range(5):
-                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
-                    for j in range(100):
-                        p.stepSimulation()
-                    real_xyz = np.append(real_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+                if self.generate_dict['ik_flag'] == 'manual':
+                    real_xyz_tuning, _ = forward_kinematic(real_motor_tuning)
+                    cmd_xyz_tuning, _ = forward_kinematic(cmd_motor_tuning)
+                else:
+                    real_xyz_tuning = []
+                    cmd_xyz_tuning = []
+                    for i in range(len(real_motor_tuning)):
+                        ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor_tuning[i])), dtype=np.float32)
+                        for motor_index in range(5):
+                            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                                    targetPosition=ik_angles_real[motor_index], maxVelocity=100, force=100)
+                        for j in range(100):
+                            p.stepSimulation()
+                        real_xyz_tuning = np.append(real_xyz_tuning, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
 
-                    if i == len(real_motor_tuning) - 1:
-                        print('here')
-                    ik_angles_cmd = np.asarray(cmd2rad(real_tarpos2cmd(cmd_motor_tuning[i])), dtype=np.float32)
-                    for motor_index in range(5):
-                        p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                                targetPosition=ik_angles_cmd[motor_index], maxVelocity=100, force=100)
-                    for j in range(100):
-                        p.stepSimulation()
+                        ik_angles_cmd = np.asarray(cmd2rad(real_tarpos2cmd(cmd_motor_tuning[i])), dtype=np.float32)
+                        for motor_index in range(5):
+                            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                                    targetPosition=ik_angles_cmd[motor_index], maxVelocity=100, force=100)
+                        for j in range(100):
+                            p.stepSimulation()
 
-                    cmd_xyz = np.append(cmd_xyz, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+                        cmd_xyz_tuning = np.append(cmd_xyz_tuning, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+
+                real_xyz = np.concatenate((real_xyz, real_xyz_tuning), axis=0)
+                cmd_xyz = np.concatenate((cmd_xyz, cmd_xyz_tuning), axis=0)
+
                 # real_motor = np.append(real_motor, tuning_data).reshape(-1, 6)
                 tar_motor = np.concatenate((tar_motor, tar_motor_tuning), axis=0)
                 tar_xyz = np.concatenate((tar_xyz, tar_xyz_tuning), axis=0)
@@ -609,8 +639,11 @@ class calibration_main(Arm_env):
                 with open(file=self.para_dict['dataset_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, tar_motor)
             if self.generate_dict['use_tuning'] == True:
+                # cmd_xyz[-1, 0] -= origin_offset
+                # cmd_xyz[-1, 2] -= 0.02
+                # target_pos[2] += 0.02
                 print('this is cmd zzz\n', cmd_xyz[-1])
-                return target_pos # return cur pos to let the manipualtor remember the improved pos
+                return cmd_xyz[-1] # return cur pos to let the manipualtor remember the improved pos
             else:
                 return tar_pos
 
@@ -666,10 +699,10 @@ class calibration_main(Arm_env):
                 #                                 [0.01, 0.032],
                 #                                 [0.01, 0.040],
                 #                                 [0.01, 0.048]])
-                trajectory_pos_list = np.array([[0.00, 0.14, 0.03],
-                                                [0.25, 0.14, 0.03],
-                                                [0.25, -0.14, 0.03],
-                                                [0.00, -0.14, 0.03]])
+                trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
+                                                [0.25, 0.14, 0.04],
+                                                [0.25, -0.14, 0.04],
+                                                [0.00, -0.14, 0.04]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -679,11 +712,11 @@ class calibration_main(Arm_env):
                     if len(trajectory_pos_list[j]) == 3:
                         last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                         if trajectory_pos_list[j, 2] > 0.01:
-                            # time.sleep(5)
+                            # time.sleep(4)
                             pass
                         else:
                             pass
-                            # time.sleep(3)
+                            # time.sleep(2)
                         last_ori = np.copy(rest_ori)
 
                     elif len(trajectory_pos_list[j]) == 2:
@@ -747,7 +780,7 @@ class calibration_main(Arm_env):
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -757,41 +790,48 @@ class calibration_main(Arm_env):
             conn, addr = s.accept()
             print(conn)
             print(f"Connected by {addr}")
-            table_surface_height = 0.032
+            table_surface_height = 0.003
             sim_table_surface_height = 0
             num_motor = 5
             # ! reset the pos in both real and sim
             reset_pos = np.array([0.015, 0, 0.1])
-            ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=reset_pos,
-                                                     maxNumIterations=300,
-                                                     targetOrientation=p.getQuaternionFromEuler(
-                                                         [0, np.pi / 2, 0]))
-            reset_real = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles[0:5])), dtype=np.float32)
-            print('this is the reset motor pos', reset_real)
-            conn.sendall(reset_real.tobytes())
+            reset_ori = np.array([0, np.pi / 2, 0])
+            if self.generate_dict['ik_flag'] == 'manual':
+                cmd_motor = np.asarray(inverse_kinematic(np.copy(reset_pos), np.copy(reset_ori)), dtype=np.float32)
+                print('this is the reset motor pos', cmd_motor)
+            else:
+                ik_angles = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=reset_pos,
+                                                         maxNumIterations=300,
+                                                         targetOrientation=p.getQuaternionFromEuler(
+                                                             reset_pos))
+                cmd_motor = np.asarray(real_cmd2tarpos(rad2cmd(ik_angles[0:5])), dtype=np.float32)
+                print('this is the reset motor pos', cmd_motor)
+            conn.sendall(cmd_motor.tobytes())
 
             real_motor = conn.recv(4096)
             # print('received')
             real_motor = np.frombuffer(real_motor, dtype=np.float32)
             real_motor = real_motor.reshape(-1, 6)
 
-            real_xyz_init = []
-            print('this is the shape of angles real', real_motor.shape)
-            for i in range(len(real_motor)):
-                ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
-                for motor_index in range(5):
-                    p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-                for i in range(30):
-                    p.stepSimulation()
-                real_xyz_init = np.append(real_xyz_init, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+            real_xyz, _ = forward_kinematic(real_motor)
 
-            for i in range(num_motor):
-                p.setJointMotorControl2(self.arm_id, i, p.POSITION_CONTROL, targetPosition=ik_angles[i],
-                                        maxVelocity=3)
+            # real_xyz_init = []
+            # print('this is the shape of angles real', real_motor.shape)
+            # for i in range(len(real_motor)):
+            #     ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
+            #     for motor_index in range(5):
+            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+            #                                 targetPosition=ik_angles_real[motor_index], maxVelocity=25)
+            #     for i in range(30):
+            #         p.stepSimulation()
+            #     real_xyz_init = np.append(real_xyz_init, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
+
+            # for i in range(num_motor):
+            #     p.setJointMotorControl2(self.arm_id, i, p.POSITION_CONTROL, targetPosition=ik_angles[i],
+            #                             maxVelocity=3)
             self.plt_cmd_xyz = reset_pos.reshape(-1, 3)
-            self.plt_real_xyz = real_xyz_init
-            self.plt_cmd_motor = reset_real.reshape(-1, 6)
+            self.plt_real_xyz = real_xyz
+            self.plt_cmd_motor = cmd_motor.reshape(-1, 6)
             self.plt_real_motor = real_motor
             for _ in range(200):
                 p.stepSimulation()
@@ -837,7 +877,8 @@ if __name__ == '__main__':
                  'use_knolling_model': False, 'use_lstm_model': False}
 
     generate_dict = {'real_time_flag': False, 'erase_flag': True, 'collect_num': 50, 'max_plot_num': 500,
-                     'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True}
+                     'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True,
+                     'ik_flag': 'manual'}
 
 
     env = calibration_main(para_dict=para_dict, generate_dict=generate_dict)

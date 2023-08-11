@@ -4,6 +4,8 @@ import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
 
 def change_sequence(pos_before):
 
@@ -185,6 +187,8 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
 
 def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_start, threshold_end, valid_num, check_point = 20):
 
+    criterion = nn.CrossEntropyLoss()
+
     valid_start_index = int(total_num * ratio)
     data = np.loadtxt(path + '%012d.txt' % valid_start_index)
     for i in tqdm(range(valid_start_index + 1, valid_num + valid_start_index)):
@@ -199,6 +203,7 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     yolo_pred_accuracy = []
     max_precision = -np.inf
     max_accuracy = -np.inf
+    total_loss = []
     for i in range(len(yolo_threshold)):
         yolo_pred_P = np.where((data[:, -1] >= yolo_threshold[i]))[0]
         yolo_pred_N = np.where((data[:, -1] < yolo_threshold[i]))[0]
@@ -231,6 +236,14 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
             max_accuracy_threshold = yolo_threshold[i]
             max_accuracy = accuracy
 
+        # calculate the loss mean and std
+        yolo_output = np.zeros((len(data), 2))
+        yolo_output[yolo_pred_P, 1] = 1
+        yolo_output[yolo_pred_N, 0] = 1
+        yolo_output = torch.from_numpy(yolo_output)
+        yolo_label = torch.from_numpy(data[:, 0])
+        total_loss.append(criterion(yolo_output, yolo_label.long()))
+
         print('this is yolo pred P', len(yolo_pred_P))
         print('this is yolo pred N', len(yolo_pred_N))
         print('this is yolo pred TP', yolo_pred_TP)
@@ -241,6 +254,9 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     yolo_pred_recall = np.asarray(yolo_pred_recall)
     yolo_pred_precision = np.asarray(yolo_pred_precision)
     yolo_pred_accuracy = np.asarray(yolo_pred_accuracy)
+    yolo_loss = np.asarray(total_loss)
+    yolo_loss_mean = np.mean(yolo_loss)
+    yolo_loss_std = np.std(yolo_loss)
 
     print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
     print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
@@ -254,6 +270,7 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     plt.savefig(analysis_path + 'yolo_pred_analysis.png')
     plt.show()
 
+    np.savetxt(analysis_path + 'yolo_loss.txt', yolo_loss)
 
     with open(analysis_path + "yolo_pred_anlysis.txt", "w") as f:
         f.write('----------- Dataset -----------\n')
@@ -265,6 +282,11 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         f.write(f'threshold: {max_accuracy_threshold}, max accuracy: {max_accuracy}\n')
         f.write(f'threshold: {max_precision_threshold}, max precision: {max_precision}\n')
         f.write('----------- Dataset -----------\n')
+
+        f.write('----------- Statistics -----------\n')
+        f.write(f'yolo_loss_mean: {yolo_loss_mean}\n')
+        f.write(f'yolo_loss_std: {yolo_loss_std}\n')
+        f.write('----------- Statistics -----------\n')
 
 if __name__ == '__main__':
 
@@ -291,7 +313,7 @@ if __name__ == '__main__':
     # num = 100000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_730/labels_1/'
-    analysis_path = '../results/LSTM_730_2_heavy_dropout0/'
+    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
+    analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
     valid_num = 10000
-    yolo_accuracy_analysis(path=data_path, total_num=300000, ratio=0.8, threshold_start=0.6, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
