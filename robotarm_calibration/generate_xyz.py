@@ -17,31 +17,6 @@ from tqdm import tqdm
 
 torch.manual_seed(42)
 
-class Net(nn.Module):
-    def __init__(self):
-        super(Net, self).__init__()
-        # First fully connected layer
-        self.fc1 = nn.Linear(3, 12)
-        self.fc2 = nn.Linear(12, 32)
-        self.fc3 = nn.Linear(32, 64)
-        self.fc4 = nn.Linear(64, 32)
-        self.fc5 = nn.Linear(32, 12)
-        self.fc6 = nn.Linear(12, 3)
-
-    def forward(self, x):
-        # define forward pass
-        x = self.fc1(x)
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-        x = F.relu(self.fc5(x))
-        x = self.fc6(x)
-        return x
-
-    def loss(self, pred, target):
-        value = (pred - target) ** 2
-        return torch.mean(value)
-
 class calibration_main(Arm_env):
 
     def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None, generate_dict=None):
@@ -115,37 +90,6 @@ class calibration_main(Arm_env):
         self.img_per_epoch = 0
 
     def planning(self, order, conn, real_height, sim_height, evaluation):
-
-        def Cartesian_offset_nn(xyz_input):
-
-            # input:(n, 3), output: (n, 3)
-
-            input_sc = [[-0.01, -0.201, -0.01],
-                        [0.30, 0.201, 0.0601]]
-            output_sc = [[-0.01, -0.201, -0.01],
-                         [0.30, 0.201, 0.0601]]
-            input_sc = np.load('nn_data_xyz/all_distance_free_new/real_scale.npy')
-            output_sc = np.load('nn_data_xyz/all_distance_free_new/cmd_scale.npy')
-
-            scaler_output = MinMaxScaler()
-            scaler_input = MinMaxScaler()
-            scaler_output.fit(output_sc)
-            scaler_input.fit(input_sc)
-
-            model = Net().to(device)
-            model.load_state_dict(torch.load("model_pt_xyz/all_distance_free_new.pt"))
-            # print(model)
-            model.eval()
-            with torch.no_grad():
-                xyz_input_scaled = scaler_input.transform(xyz_input).astype(np.float32)
-                xyz_input_scaled = torch.from_numpy(xyz_input_scaled)
-                xyz_input_scaled = xyz_input_scaled.to(device)
-                pred_xyz = model.forward(xyz_input_scaled)
-                # print(pred_angle)
-                pred_xyz = pred_xyz.cpu().data.numpy()
-                xyz_output = scaler_output.inverse_transform(pred_xyz)
-
-            return xyz_output
 
         def move(cur_pos, cur_ori, tar_pos, tar_ori):
 

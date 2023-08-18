@@ -187,7 +187,8 @@ class Arm_env():
             box_path = self.para_dict['dataset_path']
         os.makedirs(box_path, exist_ok=True)
         temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
-
+        temp_box = URDF.load('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/plane_zzz.urdf')
+        temp_box.links[0].visuals[0].geometry.mesh.filename = '/home/zhizhuo/Creative_Machines_Lab/OpensCAD_generate/cube_18_45_12.stl'
         for i in range(self.num_boxes):
             temp_box.links[0].inertial.mass = self.para_dict['box_mass']
             temp_box.links[0].collisions[0].origin[2, 3] = 0

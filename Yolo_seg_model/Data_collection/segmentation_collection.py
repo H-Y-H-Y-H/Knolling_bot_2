@@ -6,11 +6,11 @@ import random
 import os
 from function import *
 
-class Grasp_env(Arm_env):
+class Yolo_seg_env(Arm_env):
 
     def __init__(self, para_dict=None, lstm_dict=None):
 
-        super(Grasp_env, self).__init__(para_dict=para_dict, lstm_dict=lstm_dict)
+        super(Yolo_seg_env, self).__init__(para_dict=para_dict, lstm_dict=lstm_dict)
 
         self.test_TP = 0
         self.test_TN = 0
@@ -272,11 +272,11 @@ if __name__ == '__main__':
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 4,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -288,7 +288,7 @@ if __name__ == '__main__':
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': False, 'use_lstm_model': False}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -311,7 +311,7 @@ if __name__ == '__main__':
 
     os.makedirs(data_root, exist_ok=True)
 
-    env = Grasp_env(para_dict=para_dict, lstm_dict=lstm_dict)
+    env = Yolo_seg_env(para_dict=para_dict, lstm_dict=lstm_dict)
     os.makedirs(data_root + 'origin_images/', exist_ok=True)
     os.makedirs(data_root + 'origin_labels/', exist_ok=True)
 

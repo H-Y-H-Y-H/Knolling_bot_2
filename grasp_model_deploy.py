@@ -45,4 +45,4 @@ class Grasp_model():
         # move_list = np.arange(int(num_item / 2), num_item)
         move_list = pred_N
 
-        return move_list, prediction
+        return move_list, prediction, output

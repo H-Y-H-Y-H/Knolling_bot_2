@@ -4,6 +4,7 @@ from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 import numpy as np
 import torch
 import cv2
+from function import *
 
 class PosePredictor(DetectionPredictor):
 
@@ -244,7 +245,6 @@ class Yolo_predict():
         model = self.para_dict['yolo_model_path']
         # model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
         # model = 'C:/Users/24356/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
-        # img = adjust_img(img)
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
@@ -275,20 +275,22 @@ class Yolo_predict():
             pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
             pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
-        # ######## order based on distance to draw it on the image!!!
-        # mm2px = 530 / 0.34
-        # x_px_center = pred_xylws[:, 1] * 480
-        # y_px_center = pred_xylws[:, 0] * 640
-        # mm_center = np.concatenate(
-        #     (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
-        # pred_order = change_sequence(mm_center)
 
-        # pred = pred[pred_order]
-        # pred_xylws = pred_xylws[pred_order]
-        # pred_keypoints = pred_keypoints[pred_order]
-        # pred_cls = pred_cls[pred_order]
-        # pred_conf = pred_conf[pred_order]
-        # print('this is the pred order', pred_order)
+        ######## order based on distance to draw it on the image!!!
+        if self.para_dict['data_collection'] == False:
+            mm2px = 530 / 0.34
+            x_px_center = pred_xylws[:, 1] * 480
+            y_px_center = pred_xylws[:, 0] * 640
+            mm_center = np.concatenate(
+                (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
+            pred_order = change_sequence(mm_center)
+
+            pred = pred[pred_order]
+            pred_xylws = pred_xylws[pred_order]
+            pred_keypoints = pred_keypoints[pred_order]
+            pred_cls = pred_cls[pred_order]
+            pred_conf = pred_conf[pred_order]
+            print('this is the pred order', pred_order)
 
         for j in range(len(pred_xylws)):
 
@@ -316,18 +318,18 @@ class Yolo_predict():
 
         self.img_output = origin_img
         if self.para_dict['save_img_flag'] == True:
-            # cv2.namedWindow('zzz', 0)
-            # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', origin_img)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
+            cv2.namedWindow('zzz', 0)
+            cv2.resizeWindow('zzz', 1280, 960)
+            cv2.imshow('zzz', origin_img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
             img_path_output = img_path + '_pred.png'
             cv2.imwrite(img_path_output, origin_img)
         pred_result = np.asarray(pred_result)
 
         return pred_result, pred_conf
 
-    def plot_grasp(self, manipulator_before, prediction):
+    def plot_grasp(self, manipulator_before, prediction, model_output):
 
         x_px_center = manipulator_before[:, 0] * self.mm2px + 6
         y_px_center = manipulator_before[:, 1] * self.mm2px + 320
@@ -336,9 +338,9 @@ class Yolo_predict():
         img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (0)
         for i in range(len(manipulator_before)):
             if prediction[i] == 0:
-                label = 'False'
+                label = 'False %.03f' % model_output[i, 1]
             else:
-                label = 'True'
+                label = 'True %.03f' % model_output[i, 1]
             self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 

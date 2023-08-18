@@ -332,8 +332,8 @@ class knolling_main(Arm_env):
             manipulator_before = manipulator_before[order]
             new_lwh_list = new_lwh_list[order]
             pred_conf = pred_conf[order]
-            crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-            self.yolo_model.plot_grasp(manipulator_before, prediction)
+            crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+            self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
             ############ Predict the probability of grasp, remember to change the sequence of input #############
 
             restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
@@ -489,8 +489,8 @@ class knolling_main(Arm_env):
                 manipulator_before = manipulator_before[order]
                 new_lwh_list = new_lwh_list[order]
                 pred_conf = pred_conf[order]
-                crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-                self.yolo_model.plot_grasp(manipulator_before, prediction)
+                crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+                self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
                 ################### Check the results to determine whether to clean again #####################
 
             else:
@@ -1069,7 +1069,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
