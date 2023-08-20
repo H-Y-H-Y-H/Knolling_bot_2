@@ -94,7 +94,6 @@ class Arm_env():
     def reset(self, epoch=None, manipulator_after=None, lwh_after=None):
 
         p.resetSimulation()
-
         if random.uniform(0, 1) > 0.5:
             p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
                                        shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
@@ -178,10 +177,11 @@ class Arm_env():
                 rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
-                self.lwh_list, self.pos_before, self.ori_before, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
-                # these data has defined in function change_config, we don't need to define them twice!!!
-                sim_pos = np.copy(self.pos_before)
-                sim_pos[:, :2] += 0.006
+                # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
+                manipulator_init, lwh_list_init, _ = self.get_obs()
+                rdm_pos = manipulator_init[:, :3]
+                rdm_ori = manipulator_init[:, 3:]
+                self.lwh_list = lwh_list_init
         else:
             self.lwh_list = np.copy(lwh_after)
             rdm_pos = np.copy(manipulator_after[:, :3])
@@ -223,10 +223,8 @@ class Arm_env():
                     p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
         else:
             for i in range(self.num_boxes):
-                self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i),
-                                                   basePosition=self.pos_before[i],
-                                                   baseOrientation=p.getQuaternionFromEuler(self.ori_before[i]),
-                                                   useFixedBase=False,
+                self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
+                                                   baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
                                                    flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
                 r = np.random.uniform(0, 0.9)
                 g = np.random.uniform(0, 0.9)
@@ -291,12 +289,6 @@ class Arm_env():
                     break
 
         self.img_per_epoch = 0
-
-        if manipulator_after is None:
-            self.state_id = p.saveState()
-        else:
-            pass
-            p.restoreState(self.state_id)
         # return img_per_epoch_result
 
     def manual_knolling(self, pos_before, ori_before, lwh_list, crowded_index):  # this is main function!!!!!!!!!
@@ -723,16 +715,17 @@ class Arm_env():
             img = np.copy(my_im)
             return img, top_height
         if look_flag == True:
-            img, _ = get_images()
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow('zzz', img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-            img_path = self.para_dict['dataset_path'] + 'origin_images/%012d_tar.png' % (epoch)
-            cv2.imwrite(img_path, img)
+            if self.para_dict['real_operate'] == False:
+                img, _ = get_images()
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_tar.png' % (epoch)
+                cv2.imwrite(img_path, img)
         else:
-            if self.para_dict['data_collection'] == True or self.para_dict['obs_order'] == 'sim_image_obj':
+            if self.para_dict['data_collection'] == True or self.para_dict['real_operate'] == False:
                 self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
                 if len(self.boxes_index) == 0:
                     return np.array([]), np.array([]), np.array([])
@@ -750,8 +743,8 @@ class Arm_env():
                 self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
 
                 img, _ = get_images()
-                os.makedirs(self.para_dict['dataset_path'] + 'origin_images/', exist_ok=True)
-                img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (epoch)
+                os.makedirs(self.para_dict['dataset_path'] + 'sim_images/', exist_ok=True)
+                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch)
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
@@ -767,43 +760,30 @@ class Arm_env():
 
                 return manipulator_before, new_lwh_list, pred_conf
 
-            if self.para_dict['obs_order'] == 'real_image_obj':
-                # # temp useless because of knolling demo
-                # img_path = 'Test_images/image_real'
-                # # structure: x,y,length,width,yaw
-                # results = yolov8_predict(img_path=img_path, real_flag=self.general_parameters['real_operate, target=None)
+            if self.para_dict['real_operate'] == True:
+
+                # ################ this only be used while testing ###############
+                # manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
+                # manipulator_before = np.asarray(manipulator_before)
+                # new_xyz_list = self.lwh_list
+                # print('this is manipulator before after the detection \n', manipulator_before)
+
+                os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+                img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch)
+
+                ################### the results of object detection has changed the order!!!! ####################
+                # structure of results: x, y, z, length, width, ori
+                results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, real_flag=True)
+                if len(results) == 0:
+                    return np.array([]), np.array([]), np.array([])
                 # print('this is the result of yolo-pose\n', results)
-                #
-                # z = 0
-                # roll = 0
-                # pitch = 0
-                # index = []
-                # print('this is self.xyz\n', self.xyz_list)
-                # for i in range(len(self.xyz_list)):
-                #     for j in range(len(results)):
-                #         if (np.abs(self.xyz_list[i, 0] - results[j, 2]) <= 0.002 and np.abs(
-                #                 self.xyz_list[i, 1] - results[j, 3]) <= 0.002) or \
-                #                 (np.abs(self.xyz_list[i, 1] - results[j, 2]) <= 0.002 and np.abs(
-                #                     self.xyz_list[i, 0] - results[j, 3]) <= 0.002):
-                #             if j not in index:
-                #                 print(f"find first xyz{i} in second xyz{j}")
-                #                 index.append(j)
-                #                 break
-                #             else:
-                #                 pass
-                #
-                # manipulator_before = []
-                # for i in index:
-                #     manipulator_before.append([results[i][0], results[i][1], z, roll, pitch, results[i][4]])
-                # # for i in range(len(self.xyz_list)):
-                # #     manipulator_before.append([self.pos_before[i][0], self.pos_before[i][1], z, roll, pitch, self.ori_before[i][2]])
+                ################### the results of object detection has changed the order!!!! ####################
 
-                manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
-                manipulator_before = np.asarray(manipulator_before)
-                new_xyz_list = self.lwh_list
-                print('this is manipulator before after the detection \n', manipulator_before)
+                manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+                new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
+                # print('this is manipulator before after the detection \n', manipulator_before)
 
-                return manipulator_before, new_xyz_list
+                return manipulator_before, new_lwh_list, pred_conf
 
 if __name__ == '__main__':
 

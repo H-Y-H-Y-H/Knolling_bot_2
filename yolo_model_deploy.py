@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import cv2
 from function import *
+import pyrealsense2 as rs
 
 class PosePredictor(DetectionPredictor):
 
@@ -240,90 +241,197 @@ class Yolo_predict():
 
         return im, result
 
-    def yolov8_predict(self, cfg=DEFAULT_CFG, use_python=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
+    def yolov8_predict(self, cfg=DEFAULT_CFG, real_flag=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
-        model = self.para_dict['yolo_model_path']
+        if real_flag == True:
+            model = self.para_dict['yolo_model_path']
+            pipeline = rs.pipeline()
+            config = rs.config()
 
-        cv2.imwrite(img_path + '.png', img)
-        img_path_input = img_path + '.png'
-        args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-        use_python = True
-        if use_python:
-            from ultralytics import YOLO
-            images = YOLO(model)(**args)
+            # Get device product line for setting a supporting resolution
+            pipeline_wrapper = rs.pipeline_wrapper(pipeline)
+            pipeline_profile = config.resolve(pipeline_wrapper)
+            device = pipeline_profile.get_device()
+            device_product_line = str(device.get_info(rs.camera_info.product_line))
+
+            found_rgb = False
+            for s in device.sensors:
+                if s.get_info(rs.camera_info.name) == 'RGB Camera':
+                    found_rgb = True
+                    break
+            if not found_rgb:
+                print("The demo requires Depth camera with Color sensor")
+                exit(0)
+
+            # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+            config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+            # config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 6)
+            # Start streaming
+            pipeline.start(config)
+
+            mean_floor = (160, 160, 160)
+            origin_point = np.array([0, -0.20])
+
+            total_pred_result = []
+            while True:
+                # Wait for a coherent pair of frames: depth and color
+                frames = pipeline.wait_for_frames()
+                color_frame = frames.get_color_frame()
+                color_image = np.asanyarray(color_frame.get_data())
+                color_colormap_dim = color_image.shape
+                resized_color_image = color_image
+
+                cv2.imwrite(img_path + '.png', resized_color_image)
+                img_path_input = img_path + '.png'
+                args = dict(model=model, source=img_path_input, conf=0.3, iou=0.8)
+                use_python = True
+                if use_python:
+                    from ultralytics import YOLO
+                    images = YOLO(model)(**args)
+                else:
+                    predictor = PosePredictor(overrides=args)
+                    predictor.predict_cli()
+
+                origin_img = cv2.imread(img_path_input)
+                use_xylw = False  # use lw or keypoints to export length and width
+                one_img = images[0]
+
+                pred_result = []
+                pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
+                if len(pred_xylws) == 0:
+                    continue
+                pred_keypoints = one_img.keypoints.cpu().detach().numpy()
+                pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                pred_cls = one_img.boxes.cls.cpu().detach().numpy()
+                pred_conf = one_img.boxes.conf.cpu().detach().numpy()
+                pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
+
+                ######## order based on distance to draw it on the image!!!
+                mm2px = 530 / 0.34
+                x_px_center = pred_xylws[:, 1] * 480
+                y_px_center = pred_xylws[:, 0] * 640
+                mm_center = np.concatenate((((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
+                pred_order = change_sequence(mm_center)
+                pred = pred[pred_order]
+                pred_xylws = pred_xylws[pred_order]
+                pred_conf = pred_conf[pred_order]
+                pred_keypoints = pred_keypoints[pred_order]
+                ######## order based on distance to draw it on the image!!!
+
+                for j in range(len(pred_xylws)):
+                    pred_keypoint = pred_keypoints[j].reshape(-1, 3)
+                    pred_xylw = pred_xylws[j]
+
+                    origin_img, result = self.plot_and_transform(im=origin_img, box=pred_xylw, label='0:, predic', color=(0, 0, 0),
+                                                            txt_color=(255, 255, 255), index=j, cls=pred_cls[j], conf=pred_conf[j],
+                                                            scaled_xylw=pred_xylw, keypoints=pred_keypoint, use_xylw=use_xylw,
+                                                            truth_flag=False)
+                    pred_result.append(result)
+
+                pred_result = np.asarray(pred_result)
+                ############ fill the rest of result with zeros if the number of result is less than 10 #############
+                if len(pred_result) < boxes_num:
+                    pred_result = np.concatenate((pred_result, np.zeros((int(boxes_num - len(pred_result)), pred_result.shape[1]))), axis=0)
+                print('this is result\n', pred_result)
+                ############ fill the rest of result with zeros if the number of result is less than 10 #############
+                total_pred_result.append(pred_result)
+
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', origin_img)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    cv2.destroyAllWindows()
+                    img_path_output = img_path + '_pred.png'
+                    cv2.imwrite(img_path_output, origin_img)
+                    break
+            total_pred_result = np.asarray(total_pred_result)
+            # pred_result = np.concatenate((np.mean(total_pred_result, axis=0), np.max(total_pred_result[:, :, 2:4], axis=0),
+            #                               np.mean(total_pred_result[:, :, 4], axis=0).reshape(-1, 1)), axis=1)
+            # pred_result = np.mean(total_pred_result, axis=0)
+            # print(pred_result)
+
         else:
-            predictor = PosePredictor(overrides=args)
-            predictor.predict_cli()
+            model = self.para_dict['yolo_model_path']
 
-        origin_img = cv2.imread(img_path_input)
+            cv2.imwrite(img_path + '.png', img)
+            img_path_input = img_path + '.png'
+            args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+            use_python = True
+            if use_python:
+                from ultralytics import YOLO
+                images = YOLO(model)(**args)
+            else:
+                predictor = PosePredictor(overrides=args)
+                predictor.predict_cli()
 
-        use_xylw = False # use lw or keypoints to export length and width
+            origin_img = cv2.imread(img_path_input)
+            use_xylw = False # use lw or keypoints to export length and width
+            one_img = images[0]
 
-        one_img = images[0]
-
-        pred_result = []
-        pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
-        if len(pred_xylws) == 0:
-            return [], []
-        else:
-            pred_cls = one_img.boxes.cls.cpu().detach().numpy()
-            pred_conf = one_img.boxes.conf.cpu().detach().numpy()
-            pred_keypoints = one_img.keypoints.cpu().detach().numpy()
-            pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
-            pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
-            pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
+            pred_result = []
+            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
+            if len(pred_xylws) == 0:
+                return [], []
+            else:
+                pred_cls = one_img.boxes.cls.cpu().detach().numpy()
+                pred_conf = one_img.boxes.conf.cpu().detach().numpy()
+                pred_keypoints = one_img.keypoints.cpu().detach().numpy()
+                pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
 
-        ######## order based on distance to draw it on the image while deploying the model ########
-        if self.para_dict['data_collection'] == False:
-            mm2px = 530 / 0.34
-            x_px_center = pred_xylws[:, 1] * 480
-            y_px_center = pred_xylws[:, 0] * 640
-            mm_center = np.concatenate(
-                (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
-            pred_order = change_sequence(mm_center)
+            ######## order based on distance to draw it on the image while deploying the model ########
+            if self.para_dict['data_collection'] == False:
+                mm2px = 530 / 0.34
+                x_px_center = pred_xylws[:, 1] * 480
+                y_px_center = pred_xylws[:, 0] * 640
+                mm_center = np.concatenate(
+                    (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
+                pred_order = change_sequence(mm_center)
 
-            pred = pred[pred_order]
-            pred_xylws = pred_xylws[pred_order]
-            pred_keypoints = pred_keypoints[pred_order]
-            pred_cls = pred_cls[pred_order]
-            pred_conf = pred_conf[pred_order]
-            print('this is the pred order', pred_order)
+                pred = pred[pred_order]
+                pred_xylws = pred_xylws[pred_order]
+                pred_keypoints = pred_keypoints[pred_order]
+                pred_cls = pred_cls[pred_order]
+                pred_conf = pred_conf[pred_order]
+                print('this is the pred order', pred_order)
 
-        for j in range(len(pred_xylws)):
+            for j in range(len(pred_xylws)):
 
-            pred_keypoint = pred_keypoints[j].reshape(-1, 3)
-            pred_xylw = pred_xylws[j]
+                pred_keypoint = pred_keypoints[j].reshape(-1, 3)
+                pred_xylw = pred_xylws[j]
 
-            # print('this is pred xylw', pred_xylw)
-            origin_img, result = self.plot_and_transform(im=origin_img, box=pred_xylw, label='0:, predic', color=(0, 0, 0), txt_color=(255, 255, 255),
-                                                         index=j, scaled_xylw=pred_xylw, keypoints=pred_keypoint,
-                                                         cls=pred_cls[j], conf=pred_conf[j],
-                                                         use_xylw=use_xylw, truth_flag=False)
-            pred_result.append(result)
+                # print('this is pred xylw', pred_xylw)
+                origin_img, result = self.plot_and_transform(im=origin_img, box=pred_xylw, label='0:, predic', color=(0, 0, 0), txt_color=(255, 255, 255),
+                                                             index=j, scaled_xylw=pred_xylw, keypoints=pred_keypoint,
+                                                             cls=pred_cls[j], conf=pred_conf[j],
+                                                             use_xylw=use_xylw, truth_flag=False)
+                pred_result.append(result)
 
-        if test_pile_detection == True:
-            for j in range(len(target)):
-                tar_xylw = np.copy(target[j, 1:5])
-                tar_keypoints = np.copy((target[j, 5:]).reshape(-1, 3)[:, :2])
+            if test_pile_detection == True:
+                for j in range(len(target)):
+                    tar_xylw = np.copy(target[j, 1:5])
+                    tar_keypoints = np.copy((target[j, 5:]).reshape(-1, 3)[:, :2])
 
-                # plot target
-                print('this is tar xylw', tar_xylw)
-                origin_img, _ = self.plot_and_transform(im=origin_img, box=tar_xylw, label='0: target', color=(255, 255, 0), txt_color=(255, 255, 255),
-                                                        index=j, scaled_xylw=tar_xylw, keypoints=tar_keypoints,
-                                                        cls=0, conf=1,
-                                                        use_xylw=use_xylw, truth_flag=True)
+                    # plot target
+                    print('this is tar xylw', tar_xylw)
+                    origin_img, _ = self.plot_and_transform(im=origin_img, box=tar_xylw, label='0: target', color=(255, 255, 0), txt_color=(255, 255, 255),
+                                                            index=j, scaled_xylw=tar_xylw, keypoints=tar_keypoints,
+                                                            cls=0, conf=1,
+                                                            use_xylw=use_xylw, truth_flag=True)
 
-        self.img_output = origin_img
-        if self.para_dict['save_img_flag'] == True:
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow('zzz', origin_img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-            img_path_output = img_path + '_pred.png'
-            cv2.imwrite(img_path_output, origin_img)
-        pred_result = np.asarray(pred_result)
+            self.img_output = origin_img
+            if self.para_dict['save_img_flag'] == True:
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', origin_img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                img_path_output = img_path + '_pred.png'
+                cv2.imwrite(img_path_output, origin_img)
+            pred_result = np.asarray(pred_result)
 
         return pred_result, pred_conf
 

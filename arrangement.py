@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 class Sort_objects():
 
@@ -21,16 +22,15 @@ class Sort_objects():
         # random_range = np.concatenate((length_range, width_range, height_range), axis=1)
         # index = np.random.randint(0, self.para_dict['kind_num'], size=(self.para_dict['boxes_num'],))
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-        # xyz_list = random_range[index]
         return xyz_list
 
 
     def get_data_real(self, yolo_model, evaluations=1, check='before'):
 
-        img_path = self.para_dict['img_save_path'] + 'images_%s_%s' % (evaluations, check)
-        # img_path = './learning_data_demo/demo_8/images_before'
+        os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+        img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
         # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.para_dict['boxes_num'])
+        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True)
 
         item_pos = results[:, :3]
         item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
