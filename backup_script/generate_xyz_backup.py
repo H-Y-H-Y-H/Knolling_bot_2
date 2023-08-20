@@ -93,6 +93,138 @@ class calibration_main(Arm_env):
 
         def move(cur_pos, cur_ori, tar_pos, tar_ori):
 
+            # if tar_ori[2] > 1.58:
+            #     tar_ori[2] = tar_ori[2] - np.pi
+            # elif tar_ori[2] < -1.58:
+            #     tar_ori[2] = tar_ori[2] + np.pi
+            #
+            # if self.generate_dict['use_tuning'] == True:
+            #
+            #     pass
+            #
+            #     d = np.array([0, 0.3])
+            #     d_y = np.array((0, 0.17, 0.21, 0.30))
+            #     d_y = d
+            #     z_bias = np.array([-0.000, 0.015])
+            #     x_bias = np.array([-0.002, 0.00])  # yolo error is +2mm along x axis!
+            #     y_bias = np.array([0, -0.004, -0.001, 0.004])
+            #     y_bias = np.array([0.002, 0.006])
+            #     # z_parameters = np.polyfit(d, z_bias, 3)
+            #     z_parameters = np.polyfit(d, z_bias, 1)
+            #     x_parameters = np.polyfit(d, x_bias, 1)
+            #     y_parameters = np.polyfit(d_y, y_bias, 1)
+            #     new_z_formula = np.poly1d(z_parameters)
+            #     new_x_formula = np.poly1d(x_parameters)
+            #     new_y_formula = np.poly1d(y_parameters)
+            #     #
+            #     # # automatically add z and x bias
+            #     # # d = np.array([0, 0.10, 0.185, 0.225, 0.27])
+            #     # d = np.array([0, 0.3])
+            #     # d_y = np.array((0, 0.17, 0.30))
+            #     # z_bias = np.array([-0.003, 0.008])
+            #     # x_bias = np.array([-0.005, -0.001])
+            #     # y_bias = np.array([0, -0.004, 0.004])
+            #     # # y_bias = np.array([])
+            #     # # z_parameters = np.polyfit(d, z_bias, 3)
+            #     # z_parameters = np.polyfit(d, z_bias, 1)
+            #     # x_parameters = np.polyfit(d, x_bias, 1)
+            #     # y_parameters = np.polyfit(d_y, y_bias, 4)
+            #     # new_z_formula = np.poly1d(z_parameters)
+            #     # new_x_formula = np.poly1d(x_parameters)
+            #     # new_y_formula = np.poly1d(y_parameters)
+            #     #
+            #     # distance = tar_pos[0]
+            #     # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+            #     # print('this is z', new_z_formula(distance))
+            #     # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
+            #     # print('this is x', new_x_formula(distance))
+            #     # if tar_pos[1] > 0:
+            #     #     tar_pos[1] += new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] + 0.01)), 0, 1)
+            #     # else:
+            #     #     tar_pos[1] -= new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1)
+            #     # print('this is tar pos after manual', tar_pos)
+            #     #
+            #     # distance = tar_pos[0]
+            #     # tar_pos[2] = tar_pos[2] + new_z_formula(distance)
+            #     # print('this is z', new_z_formula(distance))
+            #     # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
+            #     # print('this is x', new_x_formula(distance))
+            #     # # distance_y = np.linalg.norm(tar_pos[:2])
+            #     # if tar_pos[1] > 0:
+            #     #     distance_y = np.linalg.norm(tar_pos[:2])
+            #     #     print('this is y', new_y_formula(distance_y))
+            #     #     tar_pos[1] += new_y_formula(distance_y)
+            #     # else:
+            #     #     distance_y = np.linalg.norm(tar_pos[:2])
+            #     #     print('this is y', new_y_formula(distance_y))
+            #     #     tar_pos[1] -= new_y_formula(distance_y)
+            #     # print('this is tar pos after manual', tar_pos)
+            #
+            #
+            # if abs(cur_pos[0] - tar_pos[0]) < 0.001 and abs(cur_pos[1] - tar_pos[1]) < 0.001:
+            #     # vertical, choose a small slice
+            #     move_slice = 0.004
+            # else:
+            #     # horizontal, choose a large slice
+            #     move_slice = 0.008
+            #
+            # tar_pos = tar_pos + np.array([0, 0, real_height])
+            # # tar_pos = tar_pos + np.array([0, 0, 0.01])
+            # target_pos = np.copy(tar_pos)
+            # target_ori = np.copy(tar_ori)
+            #
+            # vertical_flag = False
+            # print('this is tar pos', target_pos)
+            # print('this is cur pos', cur_pos)
+            # if np.abs(target_pos[2] - cur_pos[2]) > 0.01 \
+            #         and np.abs(target_pos[0] - cur_pos[0]) < 0.01 \
+            #         and np.abs(target_pos[1] - cur_pos[1]) < 0.01:
+            #     print('we dont need feedback control')
+            #     mark_ratio = 0.8
+            #     vertical_flag = True
+            #     seg_time = 0
+            # else:
+            #     if self.generate_dict['use_tuning'] == True:
+            #         mark_ratio = 0.99
+            #         seg_time = 0
+            #     else:
+            #         mark_ratio = 1
+            #         seg_time = -10
+            #
+            # cmd_motor = []
+            # cmd_xyz = []
+            # sim_ori = []
+            # real_xyz = []
+            #
+            # # divide the whole trajectory into several segment
+            # seg_time += 1
+            # seg_pos = mark_ratio * (target_pos - cur_pos) + cur_pos
+            # seg_ori = mark_ratio * (target_ori - cur_ori) + cur_ori
+            # distance = np.linalg.norm(seg_pos - cur_pos)
+            # num_step = np.ceil(distance / move_slice)
+            # step_pos = (seg_pos - cur_pos) / num_step
+            # step_ori = (seg_ori - cur_ori) / num_step
+            # print('this is seg pos', seg_pos)
+            #
+            # while True:
+            #     tar_pos = cur_pos + step_pos
+            #     # print(tar_pos)
+            #     tar_ori = cur_ori + step_ori
+            #     cmd_xyz.append(tar_pos)
+            #     sim_ori.append(tar_ori)
+            #
+            #     break_flag = abs(seg_pos[0] - tar_pos[0]) < 0.001 and abs(
+            #         seg_pos[1] - tar_pos[1]) < 0.001 and abs(seg_pos[2] - tar_pos[2]) < 0.001 and \
+            #                  abs(seg_ori[0] - tar_ori[0]) < 0.001 and abs(
+            #         seg_ori[1] - tar_ori[1]) < 0.001 and abs(seg_ori[2] - tar_ori[2]) < 0.001
+            #     if break_flag:
+            #         break
+            #     cur_pos = tar_pos
+            #     cur_ori = tar_ori
+            #
+            # cmd_xyz = np.asarray(cmd_xyz)
+            # sim_ori = np.asarray(sim_ori)
+
             real_height_offset = np.array([0, 0, real_height])
             send_data = np.concatenate((cur_pos, cur_ori, tar_pos, tar_ori, real_height_offset), axis=0).reshape(-1, 3)
             send_data = send_data.astype(np.float32)
@@ -123,6 +255,52 @@ class calibration_main(Arm_env):
             real_motor = recall_data[:, 18:24]
             tar_motor = recall_data[:, 24:30]
             error_motor = recall_data[:, 30:]
+            # print('this is the shape of angles real', real_motor.shape)
+            # if self.generate_dict['ik_flag'] == 'manual':
+            #     real_xyz, _ = forward_kinematic(real_motor)
+            # else:
+            #     pass
+            # cur_pos = real_xyz[-1]
+            #
+            # if seg_time > 0:
+            #     seg_flag = False
+            #     print('segment fail, try to tune!')
+            #     if self.generate_dict['ik_flag'] == 'manual':
+            #         angle_sim = np.asarray(inverse_kinematic(np.copy(target_pos), np.copy(target_ori)), dtype=np.float32)
+            #     else:
+            #         pass
+            #
+            #     # cmd_motor = np.append(cmd_motor, angle_sim).reshape(-1, 6)
+            #     final_cmd = np.append(angle_sim, 0).reshape(1, -1)
+            #     final_cmd = np.asarray(final_cmd, dtype=np.float32)
+            #     print(final_cmd.shape)
+            #     print(final_cmd)
+            #     conn.sendall(final_cmd.tobytes())
+            #
+            #     # get the pos after tune!
+            #     tuning_data = conn.recv(4096)
+            #     # print('received')
+            #     tuning_data = np.frombuffer(tuning_data, dtype=np.float32).reshape(-1, 12)
+            #     print('this is the shape of final angles real', tuning_data.shape)
+            #     real_motor_tuning = tuning_data[:, 6:]
+            #     cmd_motor_tuning = tuning_data[:, :6]
+            # tar_motor_tuning = np.repeat(final_cmd[:, :6], len(cmd_motor_tuning), axis=0)
+            # tar_xyz_tuning = np.repeat(target_pos.reshape(1, -1), len(cmd_motor_tuning), axis=0)
+            #
+            # if self.generate_dict['ik_flag'] == 'manual':
+            #     real_xyz_tuning, _ = forward_kinematic(real_motor_tuning)
+            #     cmd_xyz_tuning, _ = forward_kinematic(cmd_motor_tuning)
+            # else:
+            #     pass
+            #
+            # real_xyz = np.concatenate((real_xyz, real_xyz_tuning), axis=0)
+            # cmd_xyz = np.concatenate((cmd_xyz, cmd_xyz_tuning), axis=0)
+            #
+            # # real_motor = np.append(real_motor, tuning_data).reshape(-1, 6)
+            # tar_motor = np.concatenate((tar_motor, tar_motor_tuning), axis=0)
+            # tar_xyz = np.concatenate((tar_xyz, tar_xyz_tuning), axis=0)
+            # real_motor = np.concatenate((real_motor, real_motor_tuning), axis=0)
+            # cmd_motor = np.concatenate((cmd_motor, cmd_motor_tuning), axis=0)
 
             cur_pos = real_xyz[-1]
             print('this is cur pos after pid', cur_pos)
@@ -224,12 +402,6 @@ class calibration_main(Arm_env):
             else:
                 return tar_pos
 
-        def RL_dynamics(cur_pos, cur_ori, tar_pos, tar_ori):
-
-            last_pos = move(cur_pos, cur_ori, tar_pos, tar_ori)
-
-            return last_pos
-
         def gripper(gap, obj_width=None):
             obj_width += 0.006
             obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
@@ -284,34 +456,19 @@ class calibration_main(Arm_env):
                 # trajectory_pos_list = np.concatenate((pos_x.reshape(-1, 1), pos_y.reshape(-1, 1), pos_z.reshape(-1, 1)), axis=1)
                 for j in tqdm(range(len(trajectory_pos_list))):
 
-                    if self.generate_dict['use_RL_dynamics'] == True:
-                        if len(trajectory_pos_list[j]) == 3:
-                            last_pos = RL_dynamics(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
-                            if trajectory_pos_list[j, 2] > 0.01:
-                                # time.sleep(2)
-                                pass
-                            else:
-                                pass
-                                # time.sleep(2)
-                            last_ori = np.copy(rest_ori)
+                    if len(trajectory_pos_list[j]) == 3:
+                        last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
+                        if trajectory_pos_list[j, 2] > 0.01:
+                            # time.sleep(2)
+                            pass
+                        else:
+                            pass
+                            # time.sleep(2)
+                        last_ori = np.copy(rest_ori)
 
-                        elif len(trajectory_pos_list[j]) == 2:
-                            gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-                            # time.sleep(5)
-                    else:
-                        if len(trajectory_pos_list[j]) == 3:
-                            last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
-                            if trajectory_pos_list[j, 2] > 0.01:
-                                # time.sleep(2)
-                                pass
-                            else:
-                                pass
-                                # time.sleep(2)
-                            last_ori = np.copy(rest_ori)
-
-                        elif len(trajectory_pos_list[j]) == 2:
-                            gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-                            # time.sleep(5)
+                    elif len(trajectory_pos_list[j]) == 2:
+                        gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+                        # time.sleep(5)
             else:
                 times = 2
                 for j in range(times):
@@ -468,8 +625,7 @@ if __name__ == '__main__':
                  'use_knolling_model': False, 'use_lstm_model': False}
 
     generate_dict = {'real_time_flag': False, 'erase_flag': True, 'collect_num': 50, 'max_plot_num': 250,
-                     'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True,
-                     'use_RL_dynamics': True}
+                     'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True}
 
 
     env = calibration_main(para_dict=para_dict, generate_dict=generate_dict)
