@@ -18,10 +18,10 @@ class Sort_objects():
         height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
                                                   self.para_dict['box_range'][2][1],
                                                   size=(self.para_dict['boxes_num'], 1)), decimals=3)
-
+        # random_range = np.concatenate((length_range, width_range, height_range), axis=1)
+        # index = np.random.randint(0, self.para_dict['kind_num'], size=(self.para_dict['boxes_num'],))
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-        # print(xyz_list)
-
+        # xyz_list = random_range[index]
         return xyz_list
 
 

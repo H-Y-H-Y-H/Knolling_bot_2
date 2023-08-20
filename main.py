@@ -12,25 +12,14 @@ import shutil
 
 class knolling_main(Arm_env):
 
-    def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None):
-        super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
+    def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None, arrange_dict=None):
+        super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
+
+        self.success_manipulator_after = []
+        self.success_lwh = []
+        self.success_num = 0
 
     def planning(self, order, conn, real_height, sim_height):
-        def get_start_end(manipulator_before, new_lwh_list, pred_conf, crowded_index):  # generating all trajectories of all items in normal condition
-            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
-                manipulator_before, new_lwh_list, error = self.get_obs()
-                return error
-            else:
-                pass
-                # manipulator_before, new_lwh_list, pred_conf = self.get_obs()
-            # sequence pos_before, ori_before, pos_after, ori_after
-            pos_before = manipulator_before[:, :3]
-            ori_before = manipulator_before[:, 3:6]
-            manipulator_before, manipulator_after, lwh_list, new_crowded_index = self.manual_knolling(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list, crowded_index=crowded_index)
-            start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
-            print('get start and end')
-
-            return start_end, lwh_list, new_crowded_index
 
         def move(cur_pos, cur_ori, tar_pos, tar_ori, index=None, task=None):
 
@@ -335,24 +324,40 @@ class knolling_main(Arm_env):
             crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
             self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
             ############ Predict the probability of grasp, remember to change the sequence of input #############
+            tar_success = np.copy(len(manipulator_before))
 
             restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
             gripper_box_gap = 0.006
 
-            while len(crowded_index) == len(manipulator_before): # only if all boxes can't be grasp the arm will clean the desk
+            while True:
 
-                crowded_pos = manipulator_before[crowded_index, :3]
-                crowded_ori = manipulator_before[crowded_index, 3:6]
-                theta = manipulator_before[crowded_index, -1]
-                length_box = new_lwh_list[crowded_index, 0]
-                width_box = new_lwh_list[crowded_index, 1]
+                ####### knolling only if the number of boxes we can grasp is more than 2 #######
+                if len(manipulator_before) - len(crowded_index) >= 1:
+                    knolling(manipulator_before=manipulator_before, new_lwh_list=new_lwh_list, crowded_index=crowded_index)
+                    ############## exclude boxes which have been knolling ##############
+                    manipulator_before = manipulator_before[len(self.success_manipulator_after):]
+                    new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
+                    crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
+                    ############## exclude boxes which have been knolling ##############
+
+                    if len(self.success_manipulator_after) >= tar_success:
+                        self.get_obs(look_flag=True)
+                        break
+                ####### knolling only if the number of boxes we can grasp is more than 2 #######
+
+                crowded_pos = manipulator_before[:, :3]
+                crowded_ori = manipulator_before[:, 3:6]
+                theta = manipulator_before[:, -1]
+                length_box = new_lwh_list[:, 0]
+                width_box = new_lwh_list[:, 1]
 
                 trajectory_pos_list = []
                 trajectory_ori_list = []
                 for i in range(len(crowded_index)):
                     break_flag = False
                     once_flag = False
-
+                    if length_box[i] < width_box[i]:
+                        theta[i] += np.pi / 2
                     matrix = np.array([[np.cos(theta[i]), -np.sin(theta[i])],
                                        [np.sin(theta[i]), np.cos(theta[i])]])
                     target_point = np.array([[(length_box[i] + gripper_height + gripper_box_gap) / 2,
@@ -490,376 +495,404 @@ class knolling_main(Arm_env):
                 new_lwh_list = new_lwh_list[order]
                 pred_conf = pred_conf[order]
                 crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+                ############## exclude boxes which have been knolling ##############
+                manipulator_before = manipulator_before[len(self.success_manipulator_after):]
+                prediction = prediction[len(self.success_manipulator_after):]
+                new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
+                crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
+                model_output = model_output[len(self.success_manipulator_after):]
+                ############## exclude boxes which have been knolling ##############
                 self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
                 ################### Check the results to determine whether to clean again #####################
+                print('here')
 
-            else:
-                print('nothing around the item')
-                pass
+                manipulator_before = np.concatenate((self.success_manipulator_after, manipulator_before), axis=0)
+                new_lwh_list = np.concatenate((self.success_lwh, new_lwh_list), axis=0)
 
-            return knolling(manipulator_before=manipulator_before, new_lwh_list=new_lwh_list,
-                            pred_conf=pred_conf, crowded_index=crowded_index)
+            return
 
-        def clean_desk():
+        # def clean_desk():
+        #
+        #     if self.para_dict['real_operate'] == False:
+        #         gripper_width = 0.024
+        #         gripper_height = 0.034
+        #     else:
+        #         gripper_width = 0.018
+        #         gripper_height = 0.04
+        #     restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
+        #     barricade_pos = []
+        #     barricade_index = []
+        #     manipulator_before, new_xyz_list = self.get_obs(self.para_dict['obs_order'])
+        #     print('this is test obs xyz', new_xyz_list)
+        #
+        #     x_high = np.max(self.manipulator_after[:, 0])
+        #     x_low = np.min(self.manipulator_after[:, 0])
+        #     y_high = np.max(self.manipulator_after[:, 1])
+        #     y_low = np.min(self.manipulator_after[:, 1])
+        #     p.addUserDebugLine(lineFromXYZ=[x_low, y_low, 0], lineToXYZ=[x_high, y_low, 0])
+        #     p.addUserDebugLine(lineFromXYZ=[x_low, y_low, 0], lineToXYZ=[x_low, y_high, 0])
+        #     p.addUserDebugLine(lineFromXYZ=[x_high, y_high, 0], lineToXYZ=[x_high, y_low, 0])
+        #     p.addUserDebugLine(lineFromXYZ=[x_high, y_high, 0], lineToXYZ=[x_low, y_high, 0])
+        #
+        #     # for i in range(len(manipulator_before)):
+        #     #     for j in range(len(self.manipulator_after)):
+        #     #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
+        #     #         restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
+        #     #         if np.linalg.norm(self.manipulator_after[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2:
+        #     #             if i not in barricade_index:
+        #     #                 print('We need to sweep the desktop to provide an enough space')
+        #     #                 barricade_pos.append(manipulator_before[i][:3])
+        #     #                 barricade_index.append(i)
+        #     # barricade_pos = np.asarray(barricade_pos)
+        #
+        #     for i in range(len(manipulator_before)):
+        #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
+        #         if x_low - restrict_item_i < manipulator_before[i][0] < x_high + restrict_item_i \
+        #                 and y_low - restrict_item_i < manipulator_before[i][1] < y_high + restrict_item_i:
+        #             if i not in barricade_index:
+        #                 print('We need to sweep the desktop to provide an enough space')
+        #                 barricade_pos.append(manipulator_before[i][:3])
+        #                 barricade_index.append(i)
+        #     barricade_pos = np.asarray(barricade_pos)
+        #
+        #     while len(barricade_index) > 0:
+        #
+        #         # pos
+        #         offset_low = np.array([0, 0, 0.005])
+        #         offset_high = np.array([0, 0, 0.035])
+        #         # ori
+        #         rest_ori = np.array([0, 1.57, 0])
+        #         # axis and direction
+        #         if y_high - y_low > x_high - x_low:
+        #             offset_rectangle = np.array([0, 0, math.pi / 2])
+        #             axis = 'x_axis'
+        #             if (x_high + x_low) / 2 > (self.x_high_obs + self.x_low_obs) / 2:
+        #                 direction = 'negative'
+        #                 offset_horizontal = np.array([np.max(new_xyz_list) - 0.001, 0, 0])
+        #             else:
+        #                 direction = 'positive'
+        #                 offset_horizontal = np.array([-(np.max(new_xyz_list) - 0.001), 0, 0])
+        #         else:
+        #             offset_rectangle = np.array([0, 0, 0])
+        #             axis = 'y_axis'
+        #             if (y_high + y_low) / 2 > (self.y_high_obs + self.y_low_obs) / 2:
+        #                 direction = 'negative'
+        #                 offset_horizontal = np.array([0, np.max(new_xyz_list) - 0.001, 0])
+        #             else:
+        #                 direction = 'positive'
+        #                 offset_horizontal = np.array([0, -(np.max(new_xyz_list) - 0.001), 0])
+        #
+        #         trajectory_pos_list = []
+        #         trajectory_ori_list = []
+        #         print(barricade_index)
+        #         for i in range(len(barricade_index)):
+        #             diag = np.sqrt((new_xyz_list[barricade_index[i]][0]) ** 2 + (new_xyz_list[barricade_index[i]][1]) ** 2)
+        #             if axis == 'x_axis':
+        #                 if direction == 'positive':
+        #                     print('x,p')
+        #                     offset_horizontal = np.array([-(diag / 2 + gripper_height / 2), 0, 0])
+        #                     terminate = np.array([x_high, barricade_pos[i][1], barricade_pos[i][2]])
+        #                 elif direction == 'negative':
+        #                     print('x,n')
+        #                     offset_horizontal = np.array([diag / 2 + gripper_height / 2, 0, 0])
+        #                     terminate = np.array([x_low, barricade_pos[i][1], barricade_pos[i][2]])
+        #             elif axis == 'y_axis':
+        #                 if direction == 'positive':
+        #                     print('y,p')
+        #                     offset_horizontal = np.array([0, -(diag / 2 + gripper_height / 2), 0])
+        #                     terminate = np.array([barricade_pos[i][0], y_high, barricade_pos[i][2]])
+        #                 elif direction == 'negative':
+        #                     print('y,n')
+        #                     offset_horizontal = np.array([0, diag / 2 + gripper_height / 2, 0])
+        #                     terminate = np.array([barricade_pos[i][0], y_low, barricade_pos[i][2]])
+        #
+        #             trajectory_pos_list.append([0.03159, 0])
+        #             trajectory_pos_list.append(barricade_pos[i] + offset_high + offset_horizontal)
+        #             trajectory_pos_list.append(barricade_pos[i] + offset_low + offset_horizontal)
+        #             trajectory_pos_list.append(offset_low - offset_horizontal + terminate)
+        #             trajectory_pos_list.append(offset_high - offset_horizontal + terminate)
+        #
+        #             trajectory_ori_list.append(rest_ori + offset_rectangle)
+        #             trajectory_ori_list.append(rest_ori + offset_rectangle)
+        #             trajectory_ori_list.append(rest_ori + offset_rectangle)
+        #             trajectory_ori_list.append(rest_ori + offset_rectangle)
+        #             trajectory_ori_list.append(rest_ori + offset_rectangle)
+        #
+        #         # reset the manipulator to read the image
+        #         trajectory_pos_list.append([0, 0, 0.08])
+        #         trajectory_ori_list.append([0, math.pi / 2, 0])
+        #
+        #         last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+        #         last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+        #         for j in range(len(trajectory_pos_list)):
+        #
+        #             if len(trajectory_pos_list[j]) == 3:
+        #                 last_pos = move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+        #                 last_ori = np.copy(trajectory_ori_list[j])
+        #             elif len(trajectory_pos_list[j]) == 2:
+        #                 gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+        #
+        #         break_flag = False
+        #         barricade_pos = []
+        #         barricade_index = []
+        #         manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order'])
+        #
+        #         for i in range(len(manipulator_before)):
+        #             restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
+        #             if x_low - restrict_item_i < manipulator_before[i][0] < x_high + restrict_item_i \
+        #                     and y_low - restrict_item_i < manipulator_before[i][1] < y_high + restrict_item_i:
+        #                 if i not in barricade_index:
+        #                     print('We need to sweep the desktop to provide an enough space')
+        #                     barricade_pos.append(manipulator_before[i][:3])
+        #                     barricade_index.append(i)
+        #                     break_flag = True
+        #                     break
+        #         if break_flag == True:
+        #             break
+        #         barricade_pos = np.asarray(barricade_pos)
+        #
+        #         # for i in range(len(manipulator_before)):
+        #         #     for j in range(len(self.manipulator_after)):
+        #         #         # 这里会因为漏检的bug而报错！
+        #         #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
+        #         #         restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
+        #         #         if np.linalg.norm(self.manipulator_after[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2:
+        #         #             if i not in barricade_index:
+        #         #                 print('We still need to sweep the desktop to provide an enough space')
+        #         #                 barricade_pos.append(manipulator_before[i][:3])
+        #         #                 barricade_index.append(i)
+        #         #                 break_flag = True
+        #         #                 break
+        #         #     if break_flag == True:
+        #         #         break
+        #         # barricade_pos = np.asarray(barricade_pos)
+        #     else:
+        #         print('nothing to sweep')
+        #         pass
+        #     print('Sweeping desktop end')
+        #
+        #     return manipulator_before, new_xyz_list
 
-            if self.para_dict['real_operate'] == False:
-                gripper_width = 0.024
-                gripper_height = 0.034
-            else:
-                gripper_width = 0.018
-                gripper_height = 0.04
-            restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
-            barricade_pos = []
-            barricade_index = []
-            manipulator_before, new_xyz_list = self.get_obs(self.para_dict['obs_order'])
-            print('this is test obs xyz', new_xyz_list)
+        # def clean_item(manipulator_before, new_xyz_list):
+        #
+        #     if self.para_dict['real_operate'] == False:
+        #         gripper_width = 0.024
+        #         gripper_height = 0.034
+        #     else:
+        #         gripper_width = 0.018
+        #         gripper_height = 0.04
+        #
+        #     restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
+        #     gripper_lego_gap = 0.006
+        #     crowded_pos = []
+        #     crowded_ori = []
+        #     crowded_index = []
+        #
+        #     # these two variables have been defined in clean_desk function, we don't need to define them twice!!!!!
+        #
+        #     # define the cube which is crowded
+        #     for i in range(len(manipulator_before)):
+        #         for j in range(len(manipulator_before)):
+        #             restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
+        #             restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
+        #             if 0.0001 < np.linalg.norm(manipulator_before[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2 + 0.001:
+        #                 if i not in crowded_index and j not in crowded_index:
+        #                     print('We need to separate the items surrounding it to provide an enough space')
+        #                     crowded_pos.append(manipulator_before[i][:3])
+        #                     crowded_ori.append(manipulator_before[i][3:6])
+        #                     crowded_pos.append(manipulator_before[j][:3])
+        #                     crowded_ori.append(manipulator_before[j][3:6])
+        #                     crowded_index.append(i)
+        #                     crowded_index.append(j)
+        #                 if i in crowded_index and j not in crowded_index:
+        #                     print('We need to separate the items surrounding it to provide an enough space')
+        #                     crowded_pos.append(manipulator_before[j][:3])
+        #                     crowded_ori.append(manipulator_before[j][3:6])
+        #                     crowded_index.append(j)
+        #     crowded_pos = np.asarray(crowded_pos)
+        #
+        #     while len(crowded_index) > 0:
+        #         # pos
+        #         offset_low = np.array([0, 0, 0.005])
+        #         offset_high = np.array([0, 0, 0.035])
+        #         # ori
+        #         rest_ori = np.array([0, 1.57, 0])
+        #
+        #         trajectory_pos_list = []
+        #         trajectory_ori_list = []
+        #         for i in range(len(crowded_index)):
+        #             break_flag = False
+        #             once_flag = False
+        #
+        #             length_lego = new_xyz_list[crowded_index[i]][0]
+        #             width_lego = new_xyz_list[crowded_index[i]][1]
+        #             theta = manipulator_before[crowded_index[i]][5]
+        #
+        #             matrix = np.array([[np.cos(theta), -np.sin(theta)],
+        #                                [np.sin(theta), np.cos(theta)]])
+        #             target_point = np.array([[(length_lego + gripper_height + gripper_lego_gap) / 2, (width_lego + gripper_width + gripper_lego_gap) / 2],
+        #                                     [-(length_lego + gripper_height + gripper_lego_gap) / 2, (width_lego + gripper_width + gripper_lego_gap) / 2],
+        #                                     [-(length_lego + gripper_height + gripper_lego_gap) / 2, -(width_lego + gripper_width + gripper_lego_gap) / 2],
+        #                                     [(length_lego + gripper_height + gripper_lego_gap) / 2, -(width_lego + gripper_width + gripper_lego_gap) / 2]])
+        #             target_point_rotate = (matrix.dot(target_point.T)).T
+        #             print('this is target point rotate\n', target_point_rotate)
+        #             sequence_point = np.concatenate((target_point_rotate, np.zeros((4, 1))), axis=1)
+        #
+        #             t = 0
+        #             for j in range(len(sequence_point)):
+        #                 vertex_break_flag = False
+        #                 for k in range(len(manipulator_before)):
+        #                     # exclude itself
+        #                     if np.linalg.norm(crowded_pos[i] - manipulator_before[k][:3]) < 0.001:
+        #                         continue
+        #                     restrict_item_k = np.sqrt((new_xyz_list[k][0]) ** 2 + (new_xyz_list[k][1]) ** 2)
+        #                     if 0.001 < np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]) < restrict_item_k/2 + restrict_gripper_diagonal/2 + 0.001:
+        #                         print(np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]))
+        #                         p.addUserDebugPoints([sequence_point[0] + crowded_pos[i]], [[0.1, 0, 0]], pointSize=5)
+        #                         p.addUserDebugPoints([manipulator_before[k][:3]], [[0, 1, 0]], pointSize=5)
+        #                         print("this vertex doesn't work")
+        #                         vertex_break_flag = True
+        #                         break
+        #                 if vertex_break_flag == False:
+        #                     print("this vertex is ok")
+        #                     print(break_flag)
+        #                     once_flag = True
+        #                     break
+        #                 else:
+        #                     # should change the vertex and try again
+        #                     sequence_point = np.roll(sequence_point, -1, axis=0)
+        #                     print(sequence_point)
+        #                     t += 1
+        #                 if t == len(sequence_point):
+        #                     # all vertex of this cube fail, should change the cube
+        #                     break_flag = True
+        #
+        #             # problem, change another crowded cube
+        #
+        #             if break_flag == True:
+        #                 if i == len(crowded_index) - 1:
+        #                     print('cannot find any proper vertices to insert, we should unpack the heap!!!')
+        #                     x_high = np.max(self.manipulator_after[:, 0])
+        #                     x_low = np.min(self.manipulator_after[:, 0])
+        #                     y_high = np.max(self.manipulator_after[:, 1])
+        #                     y_low = np.min(self.manipulator_after[:, 1])
+        #                     crowded_x_high = np.max(crowded_pos[:, 0])
+        #                     crowded_x_low = np.min(crowded_pos[:, 0])
+        #                     crowded_y_high = np.max(crowded_pos[:, 1])
+        #                     crowded_y_low = np.min(crowded_pos[:, 1])
+        #
+        #                     trajectory_pos_list.append([0.03159, 0])
+        #                     trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_high[2]])
+        #                     trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_low[2]])
+        #                     trajectory_pos_list.append([(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2, offset_low[2]])
+        #                     trajectory_pos_list.append([(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2, offset_high[2]])
+        #                     trajectory_pos_list.append([0, 0, 0.08])
+        #
+        #                     trajectory_ori_list.append(rest_ori)
+        #                     trajectory_ori_list.append(rest_ori)
+        #                     trajectory_ori_list.append(rest_ori)
+        #                     trajectory_ori_list.append(rest_ori)
+        #                     trajectory_ori_list.append(rest_ori)
+        #                     trajectory_ori_list.append(rest_ori)
+        #                 else:
+        #                     pass
+        #             else:
+        #                 trajectory_pos_list.append([0.03159, 0])
+        #                 print('this is crowded pos', crowded_pos[i])
+        #                 print('this is sequence point', sequence_point)
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[1])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[2])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[3])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
+        #                 trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
+        #                 # reset the manipulator to read the image
+        #                 trajectory_pos_list.append([0, 0, 0.06])
+        #
+        #                 trajectory_ori_list.append(rest_ori)
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 trajectory_ori_list.append(rest_ori + crowded_ori[i])
+        #                 # reset the manipulator to read the image
+        #                 trajectory_ori_list.append([0, math.pi / 2, 0])
+        #
+        #             # only once!
+        #             if once_flag == True:
+        #                 break
+        #         last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+        #         last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+        #         trajectory_pos_list = np.asarray(trajectory_pos_list)
+        #         trajectory_ori_list = np.asarray(trajectory_ori_list)
+        #
+        #         ######################### add the debug lines for visualization ####################
+        #         line_id = []
+        #         four_points = trajectory_pos_list[2:6]
+        #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[0], lineToXYZ=four_points[1]))
+        #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[1], lineToXYZ=four_points[2]))
+        #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[2], lineToXYZ=four_points[3]))
+        #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[3], lineToXYZ=four_points[0]))
+        #         ######################### add the debug line for visualization ####################
+        #
+        #         for j in range(len(trajectory_pos_list)):
+        #             if len(trajectory_pos_list[j]) == 3:
+        #                 last_pos = move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+        #                 last_ori = np.copy(trajectory_ori_list[j])
+        #             elif len(trajectory_pos_list[j]) == 2:
+        #                 gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+        #
+        #         ######################### remove the debug lines after moving ######################
+        #         for i in line_id:
+        #             p.removeUserDebugItem(i)
+        #         ######################### remove the debug lines after moving ######################
+        #
+        #     else:
+        #         print('nothing around the item')
+        #         pass
+        #     print('separating end')
 
-            x_high = np.max(self.manipulator_after[:, 0])
-            x_low = np.min(self.manipulator_after[:, 0])
-            y_high = np.max(self.manipulator_after[:, 1])
-            y_low = np.min(self.manipulator_after[:, 1])
-            p.addUserDebugLine(lineFromXYZ=[x_low, y_low, 0], lineToXYZ=[x_high, y_low, 0])
-            p.addUserDebugLine(lineFromXYZ=[x_low, y_low, 0], lineToXYZ=[x_low, y_high, 0])
-            p.addUserDebugLine(lineFromXYZ=[x_high, y_high, 0], lineToXYZ=[x_high, y_low, 0])
-            p.addUserDebugLine(lineFromXYZ=[x_high, y_high, 0], lineToXYZ=[x_low, y_high, 0])
+        # def get_start_end(manipulator_before, new_lwh_list, pred_conf, crowded_index):  # generating all trajectories of all items in normal condition
+        #     # sequence pos_before, ori_before, pos_after, ori_after
+        #     pos_before = manipulator_before[:, :3]
+        #     ori_before = manipulator_before[:, 3:6]
+        #     manipulator_before, manipulator_after, lwh_list = self.manual_knolling(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list, crowded_index=crowded_index)
+        #     # after knolling model, manipulator before and after only contain boxes which can be grasped!
+        #     start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
+        #
+        #     print('get start and end')
+        #
+        #     return start_end, lwh_list
 
-            # for i in range(len(manipulator_before)):
-            #     for j in range(len(self.manipulator_after)):
-            #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
-            #         restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
-            #         if np.linalg.norm(self.manipulator_after[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2:
-            #             if i not in barricade_index:
-            #                 print('We need to sweep the desktop to provide an enough space')
-            #                 barricade_pos.append(manipulator_before[i][:3])
-            #                 barricade_index.append(i)
-            # barricade_pos = np.asarray(barricade_pos)
+        def knolling(manipulator_before, new_lwh_list, crowded_index):
 
-            for i in range(len(manipulator_before)):
-                restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
-                if x_low - restrict_item_i < manipulator_before[i][0] < x_high + restrict_item_i \
-                        and y_low - restrict_item_i < manipulator_before[i][1] < y_high + restrict_item_i:
-                    if i not in barricade_index:
-                        print('We need to sweep the desktop to provide an enough space')
-                        barricade_pos.append(manipulator_before[i][:3])
-                        barricade_index.append(i)
-            barricade_pos = np.asarray(barricade_pos)
+            pos_before = manipulator_before[:, :3]
+            ori_before = manipulator_before[:, 3:6]
+            manipulator_before, manipulator_after, lwh_list = self.manual_knolling(pos_before=pos_before,
+                                                                                   ori_before=ori_before,
+                                                                                   lwh_list=new_lwh_list,
+                                                                                   crowded_index=crowded_index)
+            ########### add the offset of the manipulator to avoid collision ###########
+            manipulator_after[:, 0] += 0.01
+            ########### add the offset of the manipulator to avoid collision ###########
 
-            while len(barricade_index) > 0:
-
-                # pos
-                offset_low = np.array([0, 0, 0.005])
-                offset_high = np.array([0, 0, 0.035])
-                # ori
-                rest_ori = np.array([0, 1.57, 0])
-                # axis and direction
-                if y_high - y_low > x_high - x_low:
-                    offset_rectangle = np.array([0, 0, math.pi / 2])
-                    axis = 'x_axis'
-                    if (x_high + x_low) / 2 > (self.x_high_obs + self.x_low_obs) / 2:
-                        direction = 'negative'
-                        offset_horizontal = np.array([np.max(new_xyz_list) - 0.001, 0, 0])
-                    else:
-                        direction = 'positive'
-                        offset_horizontal = np.array([-(np.max(new_xyz_list) - 0.001), 0, 0])
-                else:
-                    offset_rectangle = np.array([0, 0, 0])
-                    axis = 'y_axis'
-                    if (y_high + y_low) / 2 > (self.y_high_obs + self.y_low_obs) / 2:
-                        direction = 'negative'
-                        offset_horizontal = np.array([0, np.max(new_xyz_list) - 0.001, 0])
-                    else:
-                        direction = 'positive'
-                        offset_horizontal = np.array([0, -(np.max(new_xyz_list) - 0.001), 0])
-
-                trajectory_pos_list = []
-                trajectory_ori_list = []
-                print(barricade_index)
-                for i in range(len(barricade_index)):
-                    diag = np.sqrt((new_xyz_list[barricade_index[i]][0]) ** 2 + (new_xyz_list[barricade_index[i]][1]) ** 2)
-                    if axis == 'x_axis':
-                        if direction == 'positive':
-                            print('x,p')
-                            offset_horizontal = np.array([-(diag / 2 + gripper_height / 2), 0, 0])
-                            terminate = np.array([x_high, barricade_pos[i][1], barricade_pos[i][2]])
-                        elif direction == 'negative':
-                            print('x,n')
-                            offset_horizontal = np.array([diag / 2 + gripper_height / 2, 0, 0])
-                            terminate = np.array([x_low, barricade_pos[i][1], barricade_pos[i][2]])
-                    elif axis == 'y_axis':
-                        if direction == 'positive':
-                            print('y,p')
-                            offset_horizontal = np.array([0, -(diag / 2 + gripper_height / 2), 0])
-                            terminate = np.array([barricade_pos[i][0], y_high, barricade_pos[i][2]])
-                        elif direction == 'negative':
-                            print('y,n')
-                            offset_horizontal = np.array([0, diag / 2 + gripper_height / 2, 0])
-                            terminate = np.array([barricade_pos[i][0], y_low, barricade_pos[i][2]])
-
-                    trajectory_pos_list.append([0.03159, 0])
-                    trajectory_pos_list.append(barricade_pos[i] + offset_high + offset_horizontal)
-                    trajectory_pos_list.append(barricade_pos[i] + offset_low + offset_horizontal)
-                    trajectory_pos_list.append(offset_low - offset_horizontal + terminate)
-                    trajectory_pos_list.append(offset_high - offset_horizontal + terminate)
-
-                    trajectory_ori_list.append(rest_ori + offset_rectangle)
-                    trajectory_ori_list.append(rest_ori + offset_rectangle)
-                    trajectory_ori_list.append(rest_ori + offset_rectangle)
-                    trajectory_ori_list.append(rest_ori + offset_rectangle)
-                    trajectory_ori_list.append(rest_ori + offset_rectangle)
-
-                # reset the manipulator to read the image
-                trajectory_pos_list.append([0, 0, 0.08])
-                trajectory_ori_list.append([0, math.pi / 2, 0])
-
-                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-                for j in range(len(trajectory_pos_list)):
-
-                    if len(trajectory_pos_list[j]) == 3:
-                        last_pos = move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
-                        last_ori = np.copy(trajectory_ori_list[j])
-                    elif len(trajectory_pos_list[j]) == 2:
-                        gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-
-                break_flag = False
-                barricade_pos = []
-                barricade_index = []
-                manipulator_before, new_xyz_list = self.knolling_env.get_obs(self.para_dict['obs_order'])
-
-                for i in range(len(manipulator_before)):
-                    restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
-                    if x_low - restrict_item_i < manipulator_before[i][0] < x_high + restrict_item_i \
-                            and y_low - restrict_item_i < manipulator_before[i][1] < y_high + restrict_item_i:
-                        if i not in barricade_index:
-                            print('We need to sweep the desktop to provide an enough space')
-                            barricade_pos.append(manipulator_before[i][:3])
-                            barricade_index.append(i)
-                            break_flag = True
-                            break
-                if break_flag == True:
-                    break
-                barricade_pos = np.asarray(barricade_pos)
-
-                # for i in range(len(manipulator_before)):
-                #     for j in range(len(self.manipulator_after)):
-                #         # 这里会因为漏检的bug而报错！
-                #         restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
-                #         restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
-                #         if np.linalg.norm(self.manipulator_after[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2:
-                #             if i not in barricade_index:
-                #                 print('We still need to sweep the desktop to provide an enough space')
-                #                 barricade_pos.append(manipulator_before[i][:3])
-                #                 barricade_index.append(i)
-                #                 break_flag = True
-                #                 break
-                #     if break_flag == True:
-                #         break
-                # barricade_pos = np.asarray(barricade_pos)
-            else:
-                print('nothing to sweep')
-                pass
-            print('Sweeping desktop end')
-
-            return manipulator_before, new_xyz_list
-
-        def clean_item(manipulator_before, new_xyz_list):
-
-            if self.para_dict['real_operate'] == False:
-                gripper_width = 0.024
-                gripper_height = 0.034
-            else:
-                gripper_width = 0.018
-                gripper_height = 0.04
-
-            restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
-            gripper_lego_gap = 0.006
-            crowded_pos = []
-            crowded_ori = []
-            crowded_index = []
-
-            # these two variables have been defined in clean_desk function, we don't need to define them twice!!!!!
-
-            # define the cube which is crowded
-            for i in range(len(manipulator_before)):
-                for j in range(len(manipulator_before)):
-                    restrict_item_i = np.sqrt((new_xyz_list[i][0]) ** 2 + (new_xyz_list[i][1]) ** 2)
-                    restrict_item_j = np.sqrt((new_xyz_list[j][0]) ** 2 + (new_xyz_list[j][1]) ** 2)
-                    if 0.0001 < np.linalg.norm(manipulator_before[j][:3] - manipulator_before[i][:3]) < restrict_item_i / 2 + restrict_item_j / 2 + 0.001:
-                        if i not in crowded_index and j not in crowded_index:
-                            print('We need to separate the items surrounding it to provide an enough space')
-                            crowded_pos.append(manipulator_before[i][:3])
-                            crowded_ori.append(manipulator_before[i][3:6])
-                            crowded_pos.append(manipulator_before[j][:3])
-                            crowded_ori.append(manipulator_before[j][3:6])
-                            crowded_index.append(i)
-                            crowded_index.append(j)
-                        if i in crowded_index and j not in crowded_index:
-                            print('We need to separate the items surrounding it to provide an enough space')
-                            crowded_pos.append(manipulator_before[j][:3])
-                            crowded_ori.append(manipulator_before[j][3:6])
-                            crowded_index.append(j)
-            crowded_pos = np.asarray(crowded_pos)
-
-            while len(crowded_index) > 0:
-                # pos
-                offset_low = np.array([0, 0, 0.005])
-                offset_high = np.array([0, 0, 0.035])
-                # ori
-                rest_ori = np.array([0, 1.57, 0])
-
-                trajectory_pos_list = []
-                trajectory_ori_list = []
-                for i in range(len(crowded_index)):
-                    break_flag = False
-                    once_flag = False
-
-                    length_lego = new_xyz_list[crowded_index[i]][0]
-                    width_lego = new_xyz_list[crowded_index[i]][1]
-                    theta = manipulator_before[crowded_index[i]][5]
-
-                    matrix = np.array([[np.cos(theta), -np.sin(theta)],
-                                       [np.sin(theta), np.cos(theta)]])
-                    target_point = np.array([[(length_lego + gripper_height + gripper_lego_gap) / 2, (width_lego + gripper_width + gripper_lego_gap) / 2],
-                                            [-(length_lego + gripper_height + gripper_lego_gap) / 2, (width_lego + gripper_width + gripper_lego_gap) / 2],
-                                            [-(length_lego + gripper_height + gripper_lego_gap) / 2, -(width_lego + gripper_width + gripper_lego_gap) / 2],
-                                            [(length_lego + gripper_height + gripper_lego_gap) / 2, -(width_lego + gripper_width + gripper_lego_gap) / 2]])
-                    target_point_rotate = (matrix.dot(target_point.T)).T
-                    print('this is target point rotate\n', target_point_rotate)
-                    sequence_point = np.concatenate((target_point_rotate, np.zeros((4, 1))), axis=1)
-
-                    t = 0
-                    for j in range(len(sequence_point)):
-                        vertex_break_flag = False
-                        for k in range(len(manipulator_before)):
-                            # exclude itself
-                            if np.linalg.norm(crowded_pos[i] - manipulator_before[k][:3]) < 0.001:
-                                continue
-                            restrict_item_k = np.sqrt((new_xyz_list[k][0]) ** 2 + (new_xyz_list[k][1]) ** 2)
-                            if 0.001 < np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]) < restrict_item_k/2 + restrict_gripper_diagonal/2 + 0.001:
-                                print(np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]))
-                                p.addUserDebugPoints([sequence_point[0] + crowded_pos[i]], [[0.1, 0, 0]], pointSize=5)
-                                p.addUserDebugPoints([manipulator_before[k][:3]], [[0, 1, 0]], pointSize=5)
-                                print("this vertex doesn't work")
-                                vertex_break_flag = True
-                                break
-                        if vertex_break_flag == False:
-                            print("this vertex is ok")
-                            print(break_flag)
-                            once_flag = True
-                            break
-                        else:
-                            # should change the vertex and try again
-                            sequence_point = np.roll(sequence_point, -1, axis=0)
-                            print(sequence_point)
-                            t += 1
-                        if t == len(sequence_point):
-                            # all vertex of this cube fail, should change the cube
-                            break_flag = True
-
-                    # problem, change another crowded cube
-
-                    if break_flag == True:
-                        if i == len(crowded_index) - 1:
-                            print('cannot find any proper vertices to insert, we should unpack the heap!!!')
-                            x_high = np.max(self.manipulator_after[:, 0])
-                            x_low = np.min(self.manipulator_after[:, 0])
-                            y_high = np.max(self.manipulator_after[:, 1])
-                            y_low = np.min(self.manipulator_after[:, 1])
-                            crowded_x_high = np.max(crowded_pos[:, 0])
-                            crowded_x_low = np.min(crowded_pos[:, 0])
-                            crowded_y_high = np.max(crowded_pos[:, 1])
-                            crowded_y_low = np.min(crowded_pos[:, 1])
-
-                            trajectory_pos_list.append([0.03159, 0])
-                            trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_high[2]])
-                            trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_low[2]])
-                            trajectory_pos_list.append([(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2, offset_low[2]])
-                            trajectory_pos_list.append([(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2, offset_high[2]])
-                            trajectory_pos_list.append([0, 0, 0.08])
-
-                            trajectory_ori_list.append(rest_ori)
-                            trajectory_ori_list.append(rest_ori)
-                            trajectory_ori_list.append(rest_ori)
-                            trajectory_ori_list.append(rest_ori)
-                            trajectory_ori_list.append(rest_ori)
-                            trajectory_ori_list.append(rest_ori)
-                        else:
-                            pass
-                    else:
-                        trajectory_pos_list.append([0.03159, 0])
-                        print('this is crowded pos', crowded_pos[i])
-                        print('this is sequence point', sequence_point)
-                        trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[1])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[2])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[3])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
-                        trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
-                        # reset the manipulator to read the image
-                        trajectory_pos_list.append([0, 0, 0.06])
-
-                        trajectory_ori_list.append(rest_ori)
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        trajectory_ori_list.append(rest_ori + crowded_ori[i])
-                        # reset the manipulator to read the image
-                        trajectory_ori_list.append([0, math.pi / 2, 0])
-
-                    # only once!
-                    if once_flag == True:
-                        break
-                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-                trajectory_pos_list = np.asarray(trajectory_pos_list)
-                trajectory_ori_list = np.asarray(trajectory_ori_list)
-
-                ######################### add the debug lines for visualization ####################
-                line_id = []
-                four_points = trajectory_pos_list[2:6]
-                line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[0], lineToXYZ=four_points[1]))
-                line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[1], lineToXYZ=four_points[2]))
-                line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[2], lineToXYZ=four_points[3]))
-                line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[3], lineToXYZ=four_points[0]))
-                ######################### add the debug line for visualization ####################
-
-                for j in range(len(trajectory_pos_list)):
-                    if len(trajectory_pos_list[j]) == 3:
-                        last_pos = move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
-                        last_ori = np.copy(trajectory_ori_list[j])
-                    elif len(trajectory_pos_list[j]) == 2:
-                        gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-
-                ######################### remove the debug lines after moving ######################
-                for i in line_id:
-                    p.removeUserDebugItem(i)
-                ######################### remove the debug lines after moving ######################
-
-            else:
-                print('nothing around the item')
-                pass
-            print('separating end')
-
-        def knolling(manipulator_before, new_lwh_list, pred_conf, crowded_index):
-
-            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
-                env_loss = get_start_end()
-                return env_loss
-            else:
-                start_end, new_xyz_list_knolling = get_start_end(manipulator_before, new_lwh_list, pred_conf, crowded_index)
+            manipulator_before = manipulator_before[self.success_num:]
+            manipulator_after = manipulator_after[self.success_num:]
+            lwh_list = lwh_list[self.success_num:]
+            # after knolling model, manipulator before and after only contain boxes which can be grasped!
+            start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
+            self.success_manipulator_after = np.append(self.success_manipulator_after, manipulator_after).reshape(-1, 6)
+            self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
+            self.success_num += len(manipulator_after)
 
             offset_low = np.array([0, 0, 0.0])
             offset_low_place = np.array([0, 0, 0.0])
             offset_high = np.array([0, 0, 0.035])
-            offset_highest = np.array([0, 0, 0.05])
-
-            grasp_width = np.min(new_xyz_list_knolling[:, :2], axis=1)
+            grasp_width = np.min(lwh_list[:, :2], axis=1)
             for i in range(len(start_end)):
-
                 trajectory_pos_list = [[0, grasp_width[i]], # gripper open!
                                        offset_high + start_end[i][:3], # move directly to the above of the target
                                        offset_low + start_end[i][:3], # decline slowly
@@ -908,7 +941,6 @@ class knolling_main(Arm_env):
                                         targetPosition=ik_angles0[motor_index], maxVelocity=7)
             for i in range(30):
                 p.stepSimulation()
-                # self.images = self.get_image()
                 # time.sleep(1 / 48)
             ############### Back to the reset pos and ori ###############
 
@@ -975,12 +1007,6 @@ class knolling_main(Arm_env):
 
         if order == 1:
             clean_grasp()
-        elif order == 3:
-            if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
-                error = knolling()
-                return error
-            else:
-                knolling()
         elif order == 4:
             if self.para_dict['real_operate'] == True:
                 check_accuracy_real()
@@ -1042,12 +1068,9 @@ class knolling_main(Arm_env):
         # 1: clean_grasp, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
         self.planning(1, conn, table_surface_height, sim_table_surface_height)
         # error = self.planning(5, conn, table_surface_height, sim_table_surface_height)
-        error = self.planning(3, conn, table_surface_height, sim_table_surface_height)
+        # error = self.planning(3, conn, table_surface_height, sim_table_surface_height)
         # self.planning(4, conn, table_surface_height, sim_table_surface_height)
         #######################################################################################
-
-        if self.para_dict['obs_order'] == 'sim_image_obj_evaluate':
-            return error
 
         if self.para_dict['real_operate'] == True:
             end = np.array([0], dtype=np.float32)
@@ -1056,10 +1079,13 @@ class knolling_main(Arm_env):
         delete_path = self.para_dict['dataset_path']
         # for f in os.listdir(delete_path):
         #     os.remove(delete_path + f)
-        shutil.rmtree(delete_path)
-        os.mkdir(delete_path)
+        # shutil.rmtree(delete_path)
+        # os.mkdir(delete_path)
 
 if __name__ == '__main__':
+
+    np.random.seed(21)
+    random.seed(21)
 
     np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
@@ -1068,7 +1094,7 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(4, 6),
+                 'boxes_num': np.random.randint(5, 6),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
@@ -1081,11 +1107,12 @@ if __name__ == '__main__':
                  'urdf_path': './urdf/',
                  'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': False,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': True, 'use_lstm_model': True}
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
                      'gap_block': 0.015, 'random_offset': False,
                      'area_num': 2, 'ratio_num': 1,
+                     'kind_num': 5,
                      'order_flag': 'confidence',
                      'item_odd_prevent': True,
                      'block_odd_prevent': True,
@@ -1101,9 +1128,11 @@ if __name__ == '__main__':
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
                  'threshold': 0.5,
-                 'grasp_model_path': './Grasp_pred_model/results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt',}
+                 'grasp_model_path': './Grasp_pred_model/results/LSTM_730_2_heavy_dropout0/best_model.pt',}
 
-    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict)
+    arrange_dict = {'running_name': 'whole-cherry-11'}
+
+    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
 
     evaluation = 1
     for evaluation in range(para_dict['evaluations']):

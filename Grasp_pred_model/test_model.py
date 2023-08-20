@@ -5,7 +5,7 @@ import os
 sys.path.append('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/')
 sys.path.append('/home/ubuntu/Desktop/Knolling_bot_2/')
 # from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
-from network import LSTMRegressor
+from lstm_network import LSTMRegressor
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader

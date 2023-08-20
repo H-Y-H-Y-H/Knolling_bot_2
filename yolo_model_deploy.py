@@ -126,8 +126,6 @@ class Yolo_predict():
                      np.linalg.norm(keypoints_mm[1] - keypoints_mm[2]))
         width = min(np.linalg.norm(keypoints_mm[0] - keypoints_mm[-1]),
                     np.linalg.norm(keypoints_mm[1] - keypoints_mm[2]))
-        # length = np.linalg.norm(keypoints_mm[0] - keypoints_mm[-1])
-        # width = np.linalg.norm(keypoints_mm[1] - keypoints_mm[2])
         c1 = np.array([length / (2), width / (2)])
         c2 = np.array([length / (2), -width / (2)])
         c3 = np.array([-length / (2), width / (2)])
@@ -152,16 +150,18 @@ class Yolo_predict():
         my_ori = np.arctan2(lucky_keypoint[1] - keypoints_center[1], lucky_keypoint[0] - keypoints_center[0])
         # In order to grasp, this ori is based on the longest side of the box, not the label ori!
 
-        if length < width:
-            if my_ori > np.pi / 2:
-                my_ori_plot = my_ori - np.pi / 2
-            else:
-                my_ori_plot = my_ori + np.pi / 2
-        else:
-            my_ori_plot = my_ori
+        # randomly exchange the length and width to make the yolo result match the expectation of the knolling model
+        if np.random.rand() < 0.5:
+            temp = length
+            length = width
+            width = temp
+            # if my_ori > np.pi / 2:
+            #     my_ori = my_ori - np.pi / 2
+            # else:
+            #     my_ori = my_ori + np.pi / 2
 
-        rot_z = [[np.cos(my_ori_plot), -np.sin(my_ori_plot)],
-                 [np.sin(my_ori_plot), np.cos(my_ori_plot)]]
+        rot_z = [[np.cos(my_ori), -np.sin(my_ori)],
+                 [np.sin(my_ori), np.cos(my_ori)]]
         corn1 = (np.dot(rot_z, c1)) * self.mm2px
         corn2 = (np.dot(rot_z, c2)) * self.mm2px
         corn3 = (np.dot(rot_z, c3)) * self.mm2px
@@ -243,8 +243,6 @@ class Yolo_predict():
     def yolov8_predict(self, cfg=DEFAULT_CFG, use_python=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
         model = self.para_dict['yolo_model_path']
-        # model = '/home/ubuntu/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
-        # model = 'C:/Users/24356/Desktop/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'
 
         cv2.imwrite(img_path + '.png', img)
         img_path_input = img_path + '.png'
@@ -276,7 +274,7 @@ class Yolo_predict():
             pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
 
-        ######## order based on distance to draw it on the image!!!
+        ######## order based on distance to draw it on the image while deploying the model ########
         if self.para_dict['data_collection'] == False:
             mm2px = 530 / 0.34
             x_px_center = pred_xylws[:, 1] * 480
