@@ -18,7 +18,7 @@ class knolling_main:
     def __init__(self):
 
         self.kImageSize = {'width': 480, 'height': 480}
-        self.urdf_path = './urdf/'
+        self.urdf_path = '../urdf/'
         self.pybullet_path = pd.getDataPath()
         self.num_motor = 5
         self.low_scale = np.array([0.03, -0.14, 0.0, - np.pi / 2, 0])
@@ -978,7 +978,7 @@ class knolling_main:
             end = np.array([0], dtype=np.float32)
             conn.sendall(end.tobytes())
 
-        delete_path = './urdf/knolling_box/'
+        delete_path = '../urdf/knolling_box/'
         # for f in os.listdir(delete_path):
         #     os.remove(delete_path + f)
         shutil.rmtree(delete_path)
