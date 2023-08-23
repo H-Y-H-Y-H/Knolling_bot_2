@@ -5,6 +5,7 @@ import numpy as np
 import random
 import os
 from function import *
+from urdfpy import URDF
 
 class Yolo_seg_env(Arm_env):
 
@@ -16,266 +17,179 @@ class Yolo_seg_env(Arm_env):
         self.test_TN = 0
         self.test_FP = 0
         self.test_FN = 0
+        self.points_num = self.para_dict['points_range']
+        self.total_boxes = self.para_dict['total_boxes']
+        self.points_data = []
+        self.img_epoch = self.para_dict['start_num']
 
-    def try_grasp(self, data_root=None, img_index_start=None):
+        for i in range(len(self.points_num)):
+            self.points_data.append(np.loadtxt('../../../knolling_dataset/random_polygon/points_%d_%d.txt' % (self.total_boxes * i, self.total_boxes * (i + 1))))
 
-        if self.img_per_epoch + img_index_start >= self.endnum:
-            print('this is TP', self.test_TP)
-            print('this is TN', self.test_TN)
-            print('this is FP', self.test_FP)
-            print('this is FN', self.test_FN)
-            print('END!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    def reset(self, epoch=None, manipulator_after=None, lwh_after=None):
+
+        if self.img_epoch >= self.para_dict['end_num']:
             quit()
+        self.num_boxes = np.random.randint(1, 4)
+        # print('this is num boxes', self.num_boxes)
+        self.select_index = []
+        for i in range(len(self.points_num)):
+            self.select_index.append(np.random.choice(np.arange(self.total_boxes * i, self.total_boxes * (i + 1)), self.num_boxes))
 
-        ############################## Get the information of boxes #################################
-        print('this is img_index start while grasping', img_index_start)
-        manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
-
-        if len(manipulator_before) <= 1 or len(self.gt_pos_ori) == 1:
-            print('no pile in the environment, try to reset!')
-            return self.img_per_epoch
-        ############################## Get the information of boxes #################################
-
-        ############################## Generate the pos and ori of the destination ##########################
-        pos_ori_after = np.concatenate((self.para_dict['reset_pos'], np.zeros(3)), axis=0).reshape(-1, 6)
-        manipulator_after = np.repeat(pos_ori_after, len(manipulator_before), axis=0)
-        start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
-        grasp_width = np.min(new_lwh_list[:, :2], axis=1)
-        ############################## Generate the pos and ori of the destination ##########################
-
-        ############### Delete some results based on the number of the groundtruth ##############
-        box_pos_before = self.gt_pos_ori[:, :3]
-        box_ori_before = np.copy(self.gt_ori_qua)
-        if len(start_end) > len(box_pos_before):
-            print('the yolo model predict additional bounding boxes!')
-            cut_index = np.arange(len(box_pos_before), len(start_end))
-            start_end = np.delete(start_end, cut_index, axis=0)
-            pred_conf = np.delete(pred_conf, cut_index)
-            manipulator_before = np.delete(manipulator_before, cut_index, axis=0)
-            new_lwh_list = np.delete(new_lwh_list, cut_index, axis=0)
-        ############### Delete some results based on the number of the groundtruth ##############
-
-        ############## Genarete the results of LSTM model #############
-        if self.para_dict['use_lstm_model'] == True:
-            order = change_sequence(manipulator_before)
-            manipulator_before_input = manipulator_before[order]
-            new_lwh_list_input = new_lwh_list[order]
-            pred_conf_input = pred_conf[order]
-            crowded_index, prediction = self.grasp_model.pred(manipulator_before_input, new_lwh_list_input, pred_conf_input)
-            print('this is crowded_index', crowded_index)
-            print('this is prediction', prediction)
-            self.yolo_model.plot_grasp(manipulator_before_input, prediction)
-
-        ############## Genarete the results of LSTM model #############
-
-        exist_success_num = 0
-        state_id = p.saveState()
-        grasp_flag = []
-        box_data = []
-        exist_success_index = []
-        offset_low = np.array([0, 0, 0.0])
-        offset_high = np.array([0, 0, 0.04])
-        ######################## Initiate the calculator of gripper #####################
-        self.calculate_gripper()
-        ######################## Initiate the calculator of gripper #####################
-
-        for i in range(len(start_end)):
-
-            trajectory_pos_list = [self.para_dict['reset_pos'], # the origin position
-                                   [0, grasp_width[i]],  # gripper open!
-                                   offset_high + start_end[i][:3], # move directly to the above of the target
-                                   offset_low + start_end[i][:3], # decline slowly
-                                   [1, grasp_width[i]],  # gripper close
-                                   offset_high + start_end[i][:3], # lift the target up
-                                   start_end[i][6:9]] # move to the destination
-            trajectory_ori_list = [self.para_dict['reset_ori'],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   [1, grasp_width[i]],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][9:12]]
-
-            last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-            last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-            left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-            right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-
-            success_grasp_flag = True
-            for j in range(len(trajectory_pos_list)):
-                if len(trajectory_pos_list[j]) == 3:
-                    if j == 2:
-                        last_pos, left_pos, right_pos, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
-                    elif j == 3:
-                        ####################### Detect whether the gripper is disturbed by other objects during moving the gripper ####################
-                        last_pos, _, _, success_grasp_flag = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j],
-                                                                       origin_left_pos=left_pos, origin_right_pos=right_pos, index=j)
-                        if success_grasp_flag == False:
-                            break
-                        ####################### Detect whether the gripper is disturbed by other objects during moving the gripper ####################
-                    else: # 0, 4, 5, 6
-                        last_pos, _, _, _ = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
-                    last_ori = np.copy(trajectory_ori_list[j])
-                elif len(trajectory_pos_list[j]) == 2:
-                    ####################### Dtect whether the gripper is disturbed by other objects during closing the gripper ####################
-                    success_grasp_flag = self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1], left_pos, right_pos, index=j)
-                    ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
-
-            ###################### Find which box is moved and judge whether the grasp is success ######################
-            if success_grasp_flag == False:
-                # print('fail!')
-                grasp_flag.append(0)
-                pass
-            else:
-                for j in range(len(self.boxes_index)):
-                    success_grasp_flag = False
-                    fail_break_flag = False
-                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])
-                    box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[j])[1]))# this is the pos after of the grasped box
-                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
-                        for m in range(len(self.boxes_index)):
-                            box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
-                            ori_qua_after = p.getBasePositionAndOrientation(self.boxes_index[m])[1]
-                            box_ori_after = np.asarray(ori_qua_after)
-                            upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
-                            if box_pos_after[2] > 0.06 and m != j:
-                                print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
-                                p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
-                                grasp_flag.append(0)
-                                fail_break_flag = True
-                                success_grasp_flag = False
-                                break
-                            elif m == len(self.boxes_index) - 1:
-                                grasp_flag.append(1)
-                                print('grasp success!')
-                                success_grasp_flag = True
-                                fail_break_flag = False
-                        if success_grasp_flag == True or fail_break_flag == True:
-                            break
-                    elif j == len(self.boxes_index) - 1:
-                        print('the target box does not move to the designated pos or in a tilted state, grasp fail!')
-                        success_grasp_flag = False
-                        grasp_flag.append(0)
-            ###################### Judge whether the grasp is success ######################
-
-            ########################### Find which box is moved ############################
-            box_index = np.argsort(np.linalg.norm(box_pos_before[:, :2] - start_end[i, :2], axis=1))
-            if success_grasp_flag == True:
-                gt_index_grasp = box_index[~np.isin(box_index, np.asarray(exist_success_index))][0]
-                exist_success_index.append(gt_index_grasp)
-                exist_success_num += 1
-            box_data.append(np.concatenate((manipulator_before[i, :3], new_lwh_list[i, :3], manipulator_before[i, 3:])))
-            ########################### Find which box is moved ############################
-
-            p.restoreState(state_id)
-            # print('restore the previous env and try another one')
-
-        ######################### Back to the reset pos in any cases ##########################
-        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
-                                                  maxNumIterations=200,
-                                                  targetOrientation=p.getQuaternionFromEuler(
-                                                      self.para_dict['reset_ori']))
-        for motor_index in range(5):
-            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                    targetPosition=ik_angles0[motor_index], maxVelocity=20)
-        for _ in range(int(30)):
-            # time.sleep(1/480)
-            p.stepSimulation()
-        ######################### Back to the reset pos in any cases ##########################
-
-        if exist_success_num > 0:
-            # print('exist success boxes, we should remove this box and try the rest boxes!')
-            # rest_len = len(exist_success_index)
-            # ############################# Align the data of rest boxes #############################
-            # for m in range(1, len(start_end) - rest_len + 1):
-            #     grasp_flag.append(0)
-            #     box_data.append(np.concatenate((manipulator_before[i + m, :3], new_lwh_list[i + m, :3], manipulator_before[i + m, 3:])))
-            # ############################# Align the data of rest boxes #############################
-
-            random_index = np.random.choice(np.asarray(exist_success_index))
-            p.removeBody(self.boxes_index[random_index])
-            del self.boxes_index[random_index]
-            self.lwh_list = np.delete(self.lwh_list, random_index, axis=0)
-            for _ in range(int(50)):
-                # time.sleep(1/96)
-                p.stepSimulation()
-
-            ##################### after every grasp, check pos and ori of every box which are out of the field ####################
-            forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
-            delete_index = []
-            for m in range(len(self.boxes_index)):
-                cur_ori = np.asarray(
-                    p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[m])[1]))
-                cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
-                roll_flag = False
-                pitch_flag = False
-                for n in range(len(forbid_range)):
-                    if np.abs(cur_ori[0] - forbid_range[n]) < 0.01:
-                        roll_flag = True
-                    if np.abs(cur_ori[1] - forbid_range[n]) < 0.01:
-                        pitch_flag = True
-                if roll_flag == True and pitch_flag == True and (
-                        np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
-                        cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-                    1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
-                    delete_index.append(m)
-            delete_index.reverse()
-            for idx in delete_index:
-                # print('this is delete index', idx)
-                p.removeBody(self.boxes_index[idx])
-                self.boxes_index.pop(idx)
-                self.lwh_list = np.delete(self.lwh_list, idx, axis=0)
-            for _ in range(int(50)):
-                # time.sleep(1/96)
-                p.stepSimulation()
-            ##################### after every grasp, check pos and ori of every box which are out of the field ####################
-
-        box_data = np.asarray(box_data)
-        grasp_flag = np.asarray(grasp_flag).reshape(-1, 1)
-        yolo_label = np.concatenate((grasp_flag, box_data, pred_conf.reshape(-1, 1)), axis=1)
-
-        if self.para_dict['use_lstm_model'] == True:
-            print('this is prediction', prediction)
-            ground_truth = grasp_flag.reshape(-1, )[order]
-            print('ground truth grasp flag', ground_truth)
-
-            for i in range(len(prediction)):
-                if prediction[i] == 1 and ground_truth[i] == 1:
-                    self.test_TP += 1
-                if prediction[i] == 0 and ground_truth[i] == 1:
-                    self.test_TN += 1
-                if prediction[i] == 1 and ground_truth[i] == 0:
-                    self.test_FP += 1
-                if prediction[i] == 0 and ground_truth[i] == 0:
-                    self.test_FN += 1
-
-
-        if np.all(grasp_flag == 0):
-            np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
-            if self.save_img_flag == False:
-                os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
-            self.img_per_epoch += 1
-            print('this is total num of img after one epoch', self.img_per_epoch)
-            return self.img_per_epoch
+        p.resetSimulation()
+        if random.uniform(0, 1) > 0.5:
+            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
+                                       shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
         else:
-            np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
-            if self.save_img_flag == False:
-                os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
-            self.img_per_epoch += 1
-            return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
+            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2],
+                                       shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
+        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useMaximalCoordinates=True)
+
+        ######################################### Draw workspace lines ####################################3
+        p.addUserDebugLine(
+            lineFromXYZ=[self.x_low_obs - self.table_boundary, self.y_low_obs - self.table_boundary, self.z_low_obs],
+            lineToXYZ=[self.x_high_obs + self.table_boundary, self.y_low_obs - self.table_boundary, self.z_low_obs])
+        p.addUserDebugLine(
+            lineFromXYZ=[self.x_low_obs - self.table_boundary, self.y_low_obs - self.table_boundary, self.z_low_obs],
+            lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
+        p.addUserDebugLine(
+            lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
+            lineToXYZ=[self.x_high_obs + self.table_boundary, self.y_low_obs - self.table_boundary, self.z_low_obs])
+        p.addUserDebugLine(
+            lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
+            lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
+        ######################################### Draw workspace lines ####################################3
+
+        ######################################## Texture change ########################################
+        background = np.random.randint(1, 5)
+        textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
+        p.changeVisualShape(baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
+        ######################################## Texture change ########################################
+
+        p.setGravity(0, 0, -10)
+        wall_id = []
+        wall_pos = np.array([[self.x_low_obs - self.table_boundary, 0, 0],
+                             [(self.x_low_obs + self.x_high_obs) / 2, self.y_low_obs - self.table_boundary, 0],
+                             [self.x_high_obs + self.table_boundary, 0, 0],
+                             [(self.x_low_obs + self.x_high_obs) / 2, self.y_high_obs + self.table_boundary, 0]])
+        wall_ori = np.array([[0, 1.57, 0],
+                             [0, 1.57, 1.57],
+                             [0, 1.57, 0],
+                             [0, 1.57, 1.57]])
+        for i in range(len(wall_pos)):
+            wall_id.append(p.loadURDF(os.path.join(self.urdf_path, "plane_2.urdf"), basePosition=wall_pos[i],
+                                      baseOrientation=p.getQuaternionFromEuler(wall_ori[i]), useFixedBase=1,
+                                      flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+            p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
+
+        if self.para_dict['real_operate'] == False:
+            self.lwh_list = []
+            rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_ori = np.concatenate((rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw), axis=1)
+            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes * len(self.points_num), 1))
+            rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
+
+        self.boxes_index = []
+        total_boxes = 0
+        for j in range(len(self.points_num)):
+            for i in range(self.num_boxes):
+                self.boxes_index.append(p.loadURDF(('../../../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % self.select_index[j][i]), basePosition=rdm_pos[total_boxes],
+                                                   baseOrientation=p.getQuaternionFromEuler(rdm_ori[total_boxes]), useFixedBase=0,
+                                                   flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                self.lwh_list.append(np.concatenate(([0], self.points_data[j][self.select_index[j][i] - j * self.total_boxes])))
+                r = np.random.uniform(0, 0.9)
+                g = np.random.uniform(0, 0.9)
+                b = np.random.uniform(0, 0.9)
+                p.changeVisualShape(self.boxes_index[total_boxes], -1, rgbaColor=(r, g, b, 1))
+                total_boxes += 1
+        # self.lwh_list = np.asarray(self.lwh_list)
+
+        for _ in range(int(100)):
+            p.stepSimulation()
+            if self.is_render == True:
+                time.sleep(1 / 96)
+        p.changeDynamics(baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
+                         contactDamping=self.para_dict['base_contact_damping'],
+                         contactStiffness=self.para_dict['base_contact_stiffness'])
+
+        if self.para_dict['real_operate'] == False and manipulator_after is None:
+            forbid_range = np.array([-np.pi, -np.pi / 2, np.pi / 2, np.pi])
+            while True:
+                new_num_item = len(self.boxes_index)
+                delete_index = []
+                self.pos_before = []
+                self.ori_before = []
+                for i in range(len(self.boxes_index)):
+                    p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
+                                     contactDamping=self.para_dict['box_contact_damping'],
+                                     contactStiffness=self.para_dict['box_contact_stiffness'])
+
+                    cur_ori = np.asarray(
+                        p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                    self.pos_before.append(cur_pos)
+                    self.ori_before.append(cur_ori)
+                    roll_flag = False
+                    pitch_flag = False
+                    # print('this is cur ori:', cur_ori)
+                    for j in range(len(forbid_range)):
+                        if np.abs(cur_ori[0] - forbid_range[j]) < 0.1:
+                            roll_flag = True
+                        if np.abs(cur_ori[1] - forbid_range[j]) < 0.1:
+                            pitch_flag = True
+                    if roll_flag == True or pitch_flag == True or \
+                            cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[1] > self.y_high_obs or cur_pos[1] < self.y_low_obs or \
+                            cur_pos[2] < 0:
+                        delete_index.append(i)
+                        # print('delete!!!')
+                        new_num_item -= 1
+
+                self.pos_before = np.asarray(self.pos_before)
+                self.ori_before = np.asarray(self.ori_before)
+                delete_index.reverse()
+                for i in delete_index:
+                    p.removeBody(self.boxes_index[i])
+                    self.boxes_index.pop(i)
+                    self.lwh_list.pop(i)
+                    # self.lwh_list = np.delete(self.lwh_list, i, axis=0)
+                    self.pos_before = np.delete(self.pos_before, i, axis=0)
+                    self.ori_before = np.delete(self.ori_before, i, axis=0)
+                for _ in range(int(100)):
+                    # time.sleep(1/96)
+                    p.stepSimulation()
+
+                if len(delete_index) == 0:
+                    break
+        for i in range(len(self.lwh_list)):
+            self.lwh_list[i] = np.concatenate((self.pos_before[i, :2], [self.ori_before[i, 2]], self.lwh_list[i]))
+
+        if len(self.lwh_list) != 0:
+            with open(file=self.para_dict['dataset_path'] + "origin_labels/%.012d.txt" % self.img_epoch, mode="w") as f:
+                for i in range(len(self.lwh_list)):
+                    output_data = list(self.lwh_list[i])
+                    output = ' '.join(str(item) for item in output_data)
+                    f.write(output)
+                    f.write('\n')
+            self.get_obs(epoch=self.img_epoch, look_flag=True)
+            self.img_epoch += 1
+            print('this is index', self.img_epoch)
+        else:
+            pass
 
 if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 0, 'end_num': 10, 'thread': 4,
+    para_dict = {'start_num': 3500, 'end_num': 4000, 'thread': 0, 'total_boxes': 200, 'points_range': np.array([4, 5, 6]),
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
-                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(4, 5),
+                 'init_pos_range': [[0.10, 0.20], [-0.05, 0.05], [0.01, 0.02]],
+                 'init_ori_range': [[-np.pi / 8, np.pi / 8], [-np.pi / 8, np.pi / 8], [-np.pi / 8, np.pi / 8]],
+                 'boxes_num': np.random.randint(1, 5),
                  'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
@@ -284,7 +198,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_814/',
+                 'dataset_path': '../../../knolling_dataset/yolo_segmentation_820/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
@@ -304,7 +218,7 @@ if __name__ == '__main__':
     startnum = para_dict['start_num']
 
     data_root = para_dict['dataset_path']
-    with open('../../../knolling_dataset/grasp_dataset_730_readme.txt', "w") as f:
+    with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
@@ -317,8 +231,5 @@ if __name__ == '__main__':
 
     exist_img_num = startnum
     while True:
-        num_item = para_dict['boxes_num']
-        env.reset(epoch=exist_img_num)
-        img_per_epoch = env.try_grasp(data_root=data_root, img_index_start=exist_img_num)
-        exist_img_num += img_per_epoch
+        env.reset()
 

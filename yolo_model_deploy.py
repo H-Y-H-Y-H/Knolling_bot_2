@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import cv2
 from function import *
-import pyrealsense2 as rs
+# import pyrealsense2 as rs
 
 class PosePredictor(DetectionPredictor):
 

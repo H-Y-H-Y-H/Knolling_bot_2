@@ -2,7 +2,7 @@ import sys
 sys.path.append('../')
 
 import numpy as np
-import pyrealsense2 as rs
+# import pyrealsense2 as rs
 import pybullet_data as pd
 import math
 import matplotlib.pyplot as plt
@@ -232,7 +232,9 @@ class calibration_main(Arm_env):
 
         def gripper(gap, obj_width=None):
             obj_width += 0.006
-            obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
+            # obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
+            # motor_pos_range = np.array([2000, 2100, 2200, 2300, 2400, 2500, 2600])
+            obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.043, 0.046, 0.050])
             motor_pos_range = np.array([2000, 2100, 2200, 2300, 2400, 2500, 2600])
             formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
             motor_pos = np.poly1d(formula_parameters)
@@ -267,17 +269,16 @@ class calibration_main(Arm_env):
                 plt.ion()
                 plt.figure(figsize=(14, 8))
 
-            rest_pos = np.array([0, 0, 0.05])
             rest_ori = np.array([0, np.pi / 2, 0])
-            offset_low = np.array([0, 0, 0.002])
-            offset_high = np.array([0, 0, 0.035])
-
             last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
             last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
 
             if self.para_dict['data_collection'] == True:
 
-                trajectory_pos_list = np.array([[0.0, 0.14, 0.04]])
+                trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
+                                                [0.25, 0.14, 0.04],
+                                                [0.25, -0.14, 0.04],
+                                                [0.00, -0.14, 0.04]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -288,13 +289,12 @@ class calibration_main(Arm_env):
                         if len(trajectory_pos_list[j]) == 3:
                             last_pos = RL_dynamics(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                             if trajectory_pos_list[j, 2] > 0.01:
-                                # time.sleep(2)
+                                time.sleep(5)
                                 pass
                             else:
+                                time.sleep(5)
                                 pass
-                                # time.sleep(2)
                             last_ori = np.copy(rest_ori)
-
                         elif len(trajectory_pos_list[j]) == 2:
                             gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
                             # time.sleep(5)
@@ -305,28 +305,12 @@ class calibration_main(Arm_env):
                                 # time.sleep(2)
                                 pass
                             else:
-                                pass
                                 # time.sleep(2)
+                                pass
                             last_ori = np.copy(rest_ori)
-
                         elif len(trajectory_pos_list[j]) == 2:
                             gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
                             # time.sleep(5)
-            else:
-                times = 2
-                for j in range(times):
-
-                    trajectory_pos_list = np.array([np.random.uniform(0, 0.28), np.random.uniform(-0.16, 0.16), np.random.uniform(0.032, 0.08)])
-
-                    if len(trajectory_pos_list) == 3:
-                        print('ready to move', trajectory_pos_list)
-                        last_pos = move(last_pos, last_ori, trajectory_pos_list, rest_ori)
-                        # time.sleep(5)
-                        # last_pos = np.copy(trajectory_pos_list)
-                        last_ori = np.copy(rest_ori)
-
-                    elif len(trajectory_pos_list[j]) == 2:
-                        gripper(trajectory_pos_list[j][0])
 
             if self.generate_dict['real_time_flag'] == True:
                 plt.ioff()
@@ -390,34 +374,16 @@ class calibration_main(Arm_env):
             # ! reset the pos in both real and sim
             reset_pos = np.array([0.015, 0, 0.1])
             reset_ori = np.array([0, np.pi / 2, 0])
-            if self.generate_dict['ik_flag'] == 'manual':
-                cmd_motor = np.asarray(inverse_kinematic(np.copy(reset_pos), np.copy(reset_ori)), dtype=np.float32)
-                print('this is the reset motor pos', cmd_motor)
-            else:
-                pass
+            cmd_motor = np.asarray(inverse_kinematic(np.copy(reset_pos), np.copy(reset_ori)), dtype=np.float32)
+            print('this is the reset motor pos', cmd_motor)
             conn.sendall(cmd_motor.tobytes())
 
             real_motor = conn.recv(8192)
             # print('received')
             real_motor = np.frombuffer(real_motor, dtype=np.float32)
             real_motor = real_motor.reshape(-1, 6)
-
             real_xyz, _ = forward_kinematic(real_motor)
 
-            # real_xyz_init = []
-            # print('this is the shape of angles real', real_motor.shape)
-            # for i in range(len(real_motor)):
-            #     ik_angles_real = np.asarray(cmd2rad(real_tarpos2cmd(real_motor[i])), dtype=np.float32)
-            #     for motor_index in range(5):
-            #         p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-            #                                 targetPosition=ik_angles_real[motor_index], maxVelocity=25)
-            #     for i in range(30):
-            #         p.stepSimulation()
-            #     real_xyz_init = np.append(real_xyz_init, np.asarray(p.getLinkState(self.arm_id, 9)[0])).reshape(-1, 3)
-
-            # for i in range(num_motor):
-            #     p.setJointMotorControl2(self.arm_id, i, p.POSITION_CONTROL, targetPosition=ik_angles[i],
-            #                             maxVelocity=3)
             self.plt_cmd_xyz = reset_pos.reshape(-1, 3)
             self.plt_real_xyz = real_xyz
             self.plt_cmd_motor = cmd_motor.reshape(-1, 6)
@@ -461,7 +427,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../knolling_dataset/nn_data_805/',
+                 'dataset_path': '../../knolling_dataset/data_805/',
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,

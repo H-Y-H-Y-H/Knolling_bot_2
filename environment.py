@@ -14,7 +14,7 @@ from urdfpy import URDF
 from tqdm import tqdm
 import time
 import torch
-from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
@@ -717,12 +717,12 @@ class Arm_env():
         if look_flag == True:
             if self.para_dict['real_operate'] == False:
                 img, _ = get_images()
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_tar.png' % (epoch)
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                img_path = self.para_dict['dataset_path'] + 'origin_images/%012d.png' % (epoch)
                 cv2.imwrite(img_path, img)
         else:
             if self.para_dict['data_collection'] == True or self.para_dict['real_operate'] == False:

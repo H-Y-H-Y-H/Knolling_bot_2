@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-data_path = '../../knolling_dataset/nn_data_805/'
+data_path = '../../knolling_dataset/data_805/'
 
 show = 'xyz'
 
