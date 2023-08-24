@@ -340,7 +340,7 @@ class AutoBackend(nn.Module):
             im = im[0].cpu().numpy()
             im_pil = Image.fromarray((im * 255).astype('uint8'))
             # im = im.resize((192, 320), Image.ANTIALIAS)
-            y = self.model.yolov8_predict({'image': im_pil})  # coordinates are xywh normalized
+            y = self.model.yolo_pose_predict({'image': im_pil})  # coordinates are xywh normalized
             if 'confidence' in y:
                 box = xywh2xyxy(y['coordinates'] * [[w, h, w, h]])  # xyxy pixels
                 conf, cls = y['confidence'].max(1), y['confidence'].argmax(1).astype(np.float)

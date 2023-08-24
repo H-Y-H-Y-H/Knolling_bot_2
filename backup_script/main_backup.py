@@ -335,7 +335,7 @@ class knolling_main(Arm_env):
             new_lwh_list = new_lwh_list[order]
             pred_conf = pred_conf[order]
             crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-            self.yolo_model.plot_grasp(manipulator_before, prediction)
+            self.yolo_pose_model.plot_grasp(manipulator_before, prediction)
             ############ Predict the probability of grasp, remember to change the sequence of input #############
 
             restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
@@ -491,7 +491,7 @@ class knolling_main(Arm_env):
                 new_lwh_list = new_lwh_list[order]
                 pred_conf = pred_conf[order]
                 crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-                self.yolo_model.plot_grasp(manipulator_before, prediction)
+                self.yolo_pose_model.plot_grasp(manipulator_before, prediction)
             else:
                 print('nothing around the item')
                 pass
@@ -1076,7 +1076,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
-                 'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
+                 'yolo_model_path': './627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': False,
                  'use_knolling_model': False, 'use_lstm_model': True}
 

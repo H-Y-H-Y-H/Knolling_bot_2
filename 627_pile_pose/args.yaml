@@ -12,7 +12,7 @@ cache: false
 device: null
 workers: 8
 project: null
-name: train_pile_overlap_627
+name: 627_pile_pose
 exist_ok: false
 pretrained: false
 optimizer: SGD
@@ -93,4 +93,4 @@ copy_paste: 0.0
 cfg: null
 v5loader: false
 tracker: botsort.yaml
-save_dir: /home/zhizhuo/ADDdisk/Create Machine Lab/YOLOv8/runs/pose/train_pile_overlap_627
+save_dir: /home/zhizhuo/ADDdisk/Create Machine Lab/YOLOv8/runs/pose/627_pile_pose

@@ -212,7 +212,7 @@ class knolling_main(Arm_env):
             new_lwh_list = new_lwh_list[order]
             pred_conf = pred_conf[order]
             crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-            self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
+            self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
             ############ Predict the probability of grasp, remember to change the sequence of input #############
             tar_success = np.copy(len(manipulator_before))
 
@@ -392,7 +392,7 @@ class knolling_main(Arm_env):
                 crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
                 model_output = model_output[len(self.success_manipulator_after):]
                 ############## exclude boxes which have been knolling ##############
-                self.yolo_model.plot_grasp(manipulator_before, prediction, model_output)
+                self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
                 ################### Check the results to determine whether to clean again #####################
                 print('here')
 
@@ -630,7 +630,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
-                 'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
+                 'yolo_model_path': './820_pile_seg/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True}
 

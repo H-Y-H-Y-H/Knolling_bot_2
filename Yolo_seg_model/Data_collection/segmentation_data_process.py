@@ -99,46 +99,6 @@ def find_keypoints(xpos, ypos, l, w, ori, mm2px, total_1, total_2):
     keypoints_order = np.lexsort((keypoints[:, 1], keypoints[:, 0]))[::-1]
     keypoints = keypoints[keypoints_order]
 
-    # # fine-tuning the pos of keypoints to avoid the ambiguity!
-    # if np.abs(keypoints[0, 0] - keypoints[1, 0]) < 0.001 and keypoints[0, 1] < keypoints[1, 1]:
-    #     new_order = np.array([1, 0, 3, 2])
-    #     keypoints = keypoints[new_order]
-    #     total_1 += 1
-    # elif np.abs(keypoints[1, 0] - keypoints[2, 0]) < 0.001 and keypoints[1, 1] < keypoints[2, 1]:
-    #     new_order = np.array([0, 2, 1, 3])
-    #     keypoints = keypoints[new_order]
-    #     total_2 += 1
-    # # keypoint1 = np.array([((keypoint1[1] + ypos) * mm2px + 320) / 640, ((keypoint1[0] + xpos) * mm2px + 6) / 480, 1])
-    # # keypoint2 = np.array([((keypoint2[1] + ypos) * mm2px + 320) / 640, ((keypoint2[0] + xpos) * mm2px + 6) / 480, 1])
-    # # keypoint3 = np.array([((keypoint3[1] + ypos) * mm2px + 320) / 640, ((keypoint3[0] + xpos) * mm2px + 6) / 480, 1])
-    # # keypoint4 = np.array([((keypoint4[1] + ypos) * mm2px + 320) / 640, ((keypoint4[0] + xpos) * mm2px + 6) / 480, 1])
-    # # keypoints = np.concatenate((keypoint1, keypoint2, keypoint3, keypoint4), axis=0).reshape(-1, 3)
-
-    # # top-left, top-right, bottom-left, bottom-right
-    # # change sequence of kpts based on the minimum value of the sum of the distance from the kpts to the corner
-    # real_world_corner = np.array([[0, -0.17],
-    #                               [0, 0.17],
-    #                               [0.3, -0.17],
-    #                               [0.3, 0.17]])
-    # real_world_keypoints = np.copy(keypoints)
-    # real_world_keypoints[:, 1] += ypos
-    # real_world_keypoints[:, 0] += xpos
-    #
-    # keypoints_order = np.asarray(list(permutations([i for i in range(0, 4)], 4)))
-    # min_dist = np.inf
-    # best_order = np.arange(4)
-    # for i in range(len(keypoints_order)):
-    #     real_world_keypoints = real_world_keypoints[keypoints_order[i]]
-    #     test_dist = np.sum(np.linalg.norm(real_world_keypoints - real_world_corner, axis=1))
-    #     if test_dist < min_dist:
-    #         min_dist = test_dist
-    #         best_order = keypoints_order[i]
-    #     else:
-    #         pass
-    # new_keypoints = keypoints[best_order]
-
-
-
     keypoints = np.concatenate(((((keypoints[:, 1] + ypos) * mm2px + 320) / 640).reshape(-1, 1),
                                 (((keypoints[:, 0] + xpos) * mm2px + 6) / 480).reshape(-1, 1),
                                 np.ones((4, 1))), axis=1).reshape(-1, 3)

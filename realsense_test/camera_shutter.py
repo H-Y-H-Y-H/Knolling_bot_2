@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     img_path = '../../knolling_dataset/yolo_segmentation_820_real/'
     os.makedirs(img_path, exist_ok=True)
-    num_img_start = 0
-    num_img_end = 20
+    num_img_start = 20
+    num_img_end = 50
     for i in range(num_img_start, num_img_end):
         capture(img_path, i)

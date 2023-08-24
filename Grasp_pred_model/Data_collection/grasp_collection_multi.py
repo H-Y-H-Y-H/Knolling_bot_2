@@ -64,7 +64,7 @@ class Grasp_env(Arm_env):
             crowded_index, prediction = self.grasp_model.pred(manipulator_before_input, new_lwh_list_input, pred_conf_input)
             print('this is crowded_index', crowded_index)
             print('this is prediction', prediction)
-            self.yolo_model.plot_grasp(manipulator_before_input, prediction)
+            self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction)
 
         ############## Genarete the results of LSTM model #############
 
@@ -286,7 +286,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': '../../../knolling_dataset/grasp_dataset_814/',
                  'urdf_path': '../../urdf/',
-                 'yolo_model_path': '../../train_pile_overlap_627/weights/best.pt',
+                 'yolo_model_path': '../../627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': True}
 

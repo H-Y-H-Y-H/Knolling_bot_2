@@ -30,7 +30,7 @@ class Sort_objects():
         os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
         img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
         # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True)
+        results, pred_conf = yolo_model.yolo_pose_predict(img_path=img_path, real_flag=True)
 
         item_pos = results[:, :3]
         item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)

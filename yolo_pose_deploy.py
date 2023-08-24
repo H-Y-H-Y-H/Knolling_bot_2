@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import cv2
 from function import *
-# import pyrealsense2 as rs
+import pyrealsense2 as rs
 
 class PosePredictor(DetectionPredictor):
 
@@ -35,7 +35,7 @@ class PosePredictor(DetectionPredictor):
                         keypoints=pred_kpts))
         return results
 
-class Yolo_predict():
+class Yolo_pose_model():
 
     def __init__(self, para_dict):
 
@@ -241,7 +241,7 @@ class Yolo_predict():
 
         return im, result
 
-    def yolov8_predict(self, cfg=DEFAULT_CFG, real_flag=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
+    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
 
         if real_flag == True:
             model = self.para_dict['yolo_model_path']

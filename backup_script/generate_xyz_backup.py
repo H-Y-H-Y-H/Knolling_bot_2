@@ -620,7 +620,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': '../../knolling_dataset/nn_data_805/',
                  'urdf_path': '../urdf/',
-                 'yolo_model_path': './train_pile_overlap_627/weights/best.pt',
+                 'yolo_model_path': './627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': False}
 
