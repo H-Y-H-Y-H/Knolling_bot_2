@@ -254,14 +254,14 @@ class Grasp_env(Arm_env):
         if np.all(grasp_flag == 0):
             np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
             if self.save_img_flag == False:
-                os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
+                os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
             print('this is total num of img after one epoch', self.img_per_epoch)
             return self.img_per_epoch
         else:
             np.savetxt(os.path.join(data_root, "origin_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
             if self.save_img_flag == False:
-                os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
+                os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
             return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
 
@@ -272,7 +272,7 @@ if __name__ == '__main__':
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 4,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': True,
+                 'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
@@ -284,11 +284,11 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_814/',
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_829/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': False, 'use_lstm_model': False}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     startnum = para_dict['start_num']
 
     data_root = para_dict['dataset_path']
-    with open('../../../knolling_dataset/grasp_dataset_730_readme.txt', "w") as f:
+    with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
