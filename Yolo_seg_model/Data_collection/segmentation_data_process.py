@@ -105,24 +105,21 @@ def find_keypoints(xpos, ypos, l, w, ori, mm2px, total_1, total_2):
 
     return keypoints, total_1, total_2
 
-def pose4keypoints(data_root, target_path):
+def pose4keypoints(data_root, target_path, start_num, end_num):
     os.makedirs(data_root, exist_ok=True)
     os.makedirs(data_root + 'labels/', exist_ok=True)
     os.makedirs(target_path, exist_ok=True)
     os.makedirs(target_path + 'images/', exist_ok=True)
-    os.makedirs(target_path + 'labels/', exist_ok=True)
+    os.makedirs(target_path + 'preprocess_labels/', exist_ok=True)
     mm2px = 530 / 0.34  # (1558)
-    total_num = 15000
-    start_index = 2000
-    num_item = 15
 
     import warnings
     with warnings.catch_warnings(record=True) as w:
 
         total_1 = 0
         total_2 = 0
-        for i in range(total_num):
-            real_world_data = np.loadtxt(os.path.join(data_root, "origin_labels/%012d.txt") % i)
+        for i in range(start_num, end_num):
+            real_world_data = np.loadtxt(os.path.join(data_root, "origin_labels/%d.txt") % i)
             # real_world_img = cv2.imread(data_root + "origin_images/%012d.png" % i)
             corner_list = []
             label_plot = []
@@ -200,7 +197,7 @@ def pose4keypoints(data_root, target_path):
             # print('this is plot element\n', label_plot)
 
 
-            np.savetxt(os.path.join(data_root, "labels/%012d.txt") % i, label, fmt='%.8s')
+            np.savetxt(os.path.join(data_root, "preprocess_labels/%012d.txt") % i, label, fmt='%.8s')
             # img = cv2.imread(os.path.join(data_root, "images/%012d.png") % i)
             # img = yolo_box(real_world_img, label_plot)
             # color_segmentation(real_world_img, 5, label_plot)
@@ -390,37 +387,39 @@ def train_test_split(data_root, target_path, start_num, end_num):
     os.makedirs(target_path + '/images/val', exist_ok=True)
 
     for i in range(start_num, train_num + start_num):
-        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
+        cur_path = os.path.join(data_root, 'origin_images/%d.png') % (i)
         tar_path = os.path.join(target_path, 'images/train/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'preprocess_labels/%012d.txt') % (i)
+        cur_path = os.path.join(data_root, 'origin_labels/%d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/train/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
     for i in range(train_num + start_num, end_num):
-        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
+        cur_path = os.path.join(data_root, 'origin_images/%d.png') % (i)
         tar_path = os.path.join(target_path, 'images/val/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'preprocess_labels/%012d.txt') % (i)
+        cur_path = os.path.join(data_root, 'origin_labels/%d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/val/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
 if __name__ == '__main__':
 
-    # data_root = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/yolo_fix_background/'
-    # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/datasets/yolo_fix_background/'
-    #
-    # pose4keypoints(data_root, target_path)
-
-    data_root = '../../../knolling_dataset/yolo_segmentation_820/'
-    target_path = '../../../knolling_dataset/yolo_segmentation_820/'
     start_num = 0
-    end_num = 4000
-    segmentation(data_root, target_path, start_num, end_num, show_flag=False)
+    end_num = 50
+    # data_root = '../../../datasets/yolo_pile_820_real_sundry/'
+    # target_path = '../../../datasets/yolo_pile_820_real_sundry/'
+    #
+    # pose4keypoints(data_root, target_path, start_num, end_num)
 
-    data_root = '../../../knolling_dataset/yolo_segmentation_820/'
-    target_path = '../../../knolling_dataset/yolo_segmentation_820/'
+    # data_root = '../../../knolling_dataset/yolo_segmentation_820/'
+    # target_path = '../../../knolling_dataset/yolo_segmentation_820/'
+    # start_num = 0
+    # end_num = 4000
+    # segmentation(data_root, target_path, start_num, end_num, show_flag=False)
+
+    data_root = '../../../datasets/yolo_pile_820_real_sundry/'
+    target_path = '../../../datasets/yolo_pile_820_real_sundry/'
 
     train_test_split(data_root, target_path, start_num, end_num)

@@ -33,8 +33,8 @@ class Arm_env():
         self.is_render = para_dict['is_render']
         self.num_boxes = para_dict['boxes_num']
         self.save_img_flag = para_dict['save_img_flag']
-        # self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict)
-        self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
+        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict)
+        # self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
@@ -750,7 +750,9 @@ class Arm_env():
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
+                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img_path=img_path, img=img)
+
                 if len(results) == 0:
                     return np.array([]), np.array([]), np.array([])
                 # print('this is the result of yolo-pose\n', results)
@@ -775,7 +777,8 @@ class Arm_env():
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, real_flag=True)
+                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, real_flag=True)
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img_path=img_path, real_flag=True)
                 if len(results) == 0:
                     return np.array([]), np.array([]), np.array([])
                 # print('this is the result of yolo-pose\n', results)

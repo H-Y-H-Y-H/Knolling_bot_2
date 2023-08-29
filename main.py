@@ -614,7 +614,7 @@ if __name__ == '__main__':
 
     np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'yolo_conf': 0.6, 'yolo_iou': 0.5, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]],
@@ -630,8 +630,8 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
-                 'yolo_model_path': './820_pile_seg/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': False,
+                 'yolo_model_path': './828_pile_pose_real_sundry/weights/best.pt',
+                 'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True}
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,

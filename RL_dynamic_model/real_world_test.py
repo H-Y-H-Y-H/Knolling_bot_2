@@ -8,6 +8,7 @@ import os
 import socket
 from function import *
 import pybullet_utils.bullet_client as bc
+import copy
 
 # env = gym.make('KnollingPickAndPlace-v0', render_mode='human')
 #
@@ -78,7 +79,7 @@ class RL_real_world_test():
 
         return np.array([roll, pitch, yaw])
 
-    def real_world_move(self, action, last_obs):
+    def real_world_move(self, last_obs, new_obs):
 
         d = np.array([0, 0.3])
         z_bias = np.array([0.002, 0.01])
@@ -91,7 +92,7 @@ class RL_real_world_test():
         new_x_formula = np.poly1d(x_parameters)
         new_y_formula = np.poly1d(y_parameters)
 
-        cmd_xyz = last_obs[:3] + action[:3] * 0.05
+        cmd_xyz = new_obs[:3]
         cmd_xyz[0] = np.clip(cmd_xyz[0], 0, 0.28)
         cmd_xyz[1] = np.clip(cmd_xyz[1], -0.14, 0.14)
         cmd_xyz[2] = np.clip(cmd_xyz[2], -0.01, 0.18)
@@ -101,29 +102,63 @@ class RL_real_world_test():
         cmd_xyz_input[2] = cmd_xyz_input[2] + new_z_formula(distance) + 0.01
         # print('this is z add', new_z_formula(distance))
 
-
-        last_ori = self.quaternion_to_euler(last_obs[3:7])
+        last_ori = self.quaternion_to_euler(new_obs[3:7])
         cmd_ori = np.copy(last_ori)
-        cmd_ori[2] += action[3] * np.pi / 4
         if cmd_ori[2] > np.pi:
             cmd_ori[2] -= np.pi
             last_ori[2] -= np.pi
         elif cmd_ori[2] < 0:
             cmd_ori[2] += np.pi
             last_ori[2] += np.pi
-        cmd_width = np.clip(last_obs[7] + action[4] * 0.1, 0, 0.064)
+        cmd_width = np.clip(new_obs[7], 0, 0.064)
         cmd_width_input = 0.064 - cmd_width
-        send_data = np.concatenate((cmd_xyz_input, cmd_ori, [cmd_width_input], last_obs[:3], last_ori, [last_obs[7]]), dtype=np.float32)
+        send_data = np.concatenate((cmd_xyz_input, cmd_ori, [cmd_width_input], last_obs[:3], last_ori, [last_obs[7]]),
+                                   dtype=np.float32)
 
-        if cmd_xyz[2] < -0.01 or cmd_xyz[2] > 0.18 or cmd_xyz[0] < 0 or cmd_xyz[0] > 0.25 or cmd_xyz[1] > 0.14 or cmd_xyz[1] < -0.14:
-            # print('this is cmd_xyz', cmd_xyz)
-            # end = np.array([0], dtype=np.float32)
-            # self.conn.sendall(end.tobytes())
-            # print(f'evaluation over!!!!!')
-            # return None, None
+        if cmd_xyz[2] < -0.01 or cmd_xyz[2] > 0.18 or cmd_xyz[0] < 0 or cmd_xyz[0] > 0.25 or cmd_xyz[1] > 0.14 or \
+                cmd_xyz[1] < -0.14:
+            print('this is cmd_xyz', cmd_xyz)
+            end = np.array([0], dtype=np.float32)
+            self.conn.sendall(end.tobytes())
+            print(f'evaluation over!!!!!')
+            return None, None
             pass
         else:
             self.conn.sendall(send_data.tobytes())
+
+        # cmd_xyz = last_obs[:3] + action[:3] * 0.05
+        # cmd_xyz[0] = np.clip(cmd_xyz[0], 0, 0.28)
+        # cmd_xyz[1] = np.clip(cmd_xyz[1], -0.14, 0.14)
+        # cmd_xyz[2] = np.clip(cmd_xyz[2], -0.01, 0.18)
+        # distance = cmd_xyz[0]
+        # cmd_xyz_input = np.copy(cmd_xyz)
+        # # distance_y = tar_pos[0]
+        # cmd_xyz_input[2] = cmd_xyz_input[2] + new_z_formula(distance) + 0.01
+        # # print('this is z add', new_z_formula(distance))
+        #
+        #
+        # last_ori = self.quaternion_to_euler(last_obs[3:7])
+        # cmd_ori = np.copy(last_ori)
+        # cmd_ori[2] += action[3] * np.pi / 4
+        # if cmd_ori[2] > np.pi:
+        #     cmd_ori[2] -= np.pi
+        #     last_ori[2] -= np.pi
+        # elif cmd_ori[2] < 0:
+        #     cmd_ori[2] += np.pi
+        #     last_ori[2] += np.pi
+        # cmd_width = np.clip(last_obs[7] + action[4] * 0.1, 0, 0.064)
+        # cmd_width_input = 0.064 - cmd_width
+        # send_data = np.concatenate((cmd_xyz_input, cmd_ori, [cmd_width_input], last_obs[:3], last_ori, [last_obs[7]]), dtype=np.float32)
+        #
+        # if cmd_xyz[2] < -0.01 or cmd_xyz[2] > 0.18 or cmd_xyz[0] < 0 or cmd_xyz[0] > 0.25 or cmd_xyz[1] > 0.14 or cmd_xyz[1] < -0.14:
+        #     # print('this is cmd_xyz', cmd_xyz)
+        #     # end = np.array([0], dtype=np.float32)
+        #     # self.conn.sendall(end.tobytes())
+        #     # print(f'evaluation over!!!!!')
+        #     # return None, None
+        #     pass
+        # else:
+        #     self.conn.sendall(send_data.tobytes())
 
             recall_data = self.conn.recv(8192)
             recall_data = np.frombuffer(recall_data, dtype=np.float32).reshape(-1, 7)
@@ -194,23 +229,28 @@ class RL_real_world_test():
         for _ in range(50):
             # action: xyz displacement, ori displacement, width displacement
             if real_world_flag == True:
-                action, _states = self.model.predict(real_obs)
-                real_obs, _ = self.real_world_move(action, np.copy(real_obs['observation']))
+                action, _states = self.model.predict(sim_obs)
+                last_sim_obs = copy.deepcopy(sim_obs)
                 sim_obs, reward, done, truncated, info = self.env.step(action)
-                sim_obs['observation'][8:11] = np.array([0.1, 0.05, 0.01])
-                sim_obs['observation'][11:] = np.array([0, 0, np.pi / 2])
+                real_obs, _ = self.real_world_move(np.copy(last_sim_obs['observation']), np.copy(sim_obs['observation']))
+                # sim_obs['observation'][8:11] = np.array([0.1, 0.05, 0.01])
+                # sim_obs['observation'][11:] = np.array([0, 0, np.pi / 2])
                 print('here')
             else:
                 action, _states = self.model.predict(sim_obs)
                 sim_obs, reward, done, truncated, info = self.env.step(action)
                 print('here')
             # move robot #
-            # if done:
-            #     for j in range(4):
-            #         action = np.array([0, 0, 1.0, 0.0, -1.0])
-            #         # obs, reward, done, truncated, info = env.step(action)
-            #     #time.sleep(10)
-            #     break
+            if done:
+                for j in range(4):
+                    action = np.array([0, 0, 1.0, 0.0, -1.0])
+                    obs, reward, done, truncated, info = self.env.step(action)
+                print('grasp success!!!!!!!!!!')
+                end = np.array([0], dtype=np.float32)
+                self.conn.sendall(end.tobytes())
+                print(f'evaluation over!!!!!')
+                #time.sleep(10)
+                quit()
             time.sleep(0.1)
 
         if real_world_flag == True:
@@ -228,4 +268,4 @@ if __name__ == '__main__':
     test_quaternion_2 = np.array([0, 0.70716, 0, 0.70716])
     # new_euler = real_world_env.quaternion_to_euler(quaternion)
     test_euler_2 = real_world_env.quaternion_to_euler(test_quaternion_2)
-    real_world_env.arm_setup(real_world_flag=False)
+    real_world_env.arm_setup(real_world_flag=True)

@@ -49,7 +49,7 @@ def capture(img_path, epoch):
         print(second_point)
         # resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
 
-        cv2.imwrite(img_path + '%012d.png' % epoch, resized_color_image)
+        cv2.imwrite(img_path + '%d.png' % epoch, resized_color_image)
 
         cv2.namedWindow('zzz', 0)
         cv2.resizeWindow('zzz', 1280, 960)
@@ -60,9 +60,9 @@ def capture(img_path, epoch):
 
 if __name__ == '__main__':
 
-    img_path = '../../knolling_dataset/yolo_segmentation_820_real/'
+    img_path = '../../knolling_dataset/yolo_pile_820_real_sundry/origin_images/'
     os.makedirs(img_path, exist_ok=True)
-    num_img_start = 20
-    num_img_end = 50
+    num_img_start = 60
+    num_img_end = 80
     for i in range(num_img_start, num_img_end):
         capture(img_path, i)

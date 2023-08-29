@@ -283,7 +283,7 @@ class Yolo_pose_model():
 
                 cv2.imwrite(img_path + '.png', resized_color_image)
                 img_path_input = img_path + '.png'
-                args = dict(model=model, source=img_path_input, conf=0.3, iou=0.8)
+                args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'])
                 use_python = True
                 if use_python:
                     from ultralytics import YOLO
@@ -330,11 +330,11 @@ class Yolo_pose_model():
                     pred_result.append(result)
 
                 pred_result = np.asarray(pred_result)
-                ############ fill the rest of result with zeros if the number of result is less than 10 #############
-                if len(pred_result) < boxes_num:
-                    pred_result = np.concatenate((pred_result, np.zeros((int(boxes_num - len(pred_result)), pred_result.shape[1]))), axis=0)
-                print('this is result\n', pred_result)
-                ############ fill the rest of result with zeros if the number of result is less than 10 #############
+                # ############ fill the rest of result with zeros if the number of result is less than 10 #############
+                # if len(pred_result) < boxes_num:
+                #     pred_result = np.concatenate((pred_result, np.zeros((int(boxes_num - len(pred_result)), pred_result.shape[1]))), axis=0)
+                # print('this is result\n', pred_result)
+                # ############ fill the rest of result with zeros if the number of result is less than 10 #############
                 total_pred_result.append(pred_result)
 
                 cv2.namedWindow('zzz', 0)
