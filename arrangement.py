@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 class Sort_objects():
 
@@ -18,19 +19,18 @@ class Sort_objects():
         height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
                                                   self.para_dict['box_range'][2][1],
                                                   size=(self.para_dict['boxes_num'], 1)), decimals=3)
-
+        # random_range = np.concatenate((length_range, width_range, height_range), axis=1)
+        # index = np.random.randint(0, self.para_dict['kind_num'], size=(self.para_dict['boxes_num'],))
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-        # print(xyz_list)
-
         return xyz_list
 
 
     def get_data_real(self, yolo_model, evaluations=1, check='before'):
 
-        img_path = self.para_dict['img_save_path'] + 'images_%s_%s' % (evaluations, check)
-        # img_path = './learning_data_demo/demo_8/images_before'
+        os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+        img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
         # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolov8_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.para_dict['boxes_num'])
+        results, pred_conf = yolo_model.yolo_pose_predict(img_path=img_path, real_flag=True)
 
         item_pos = results[:, :3]
         item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
@@ -87,7 +87,7 @@ class Sort_objects():
         # the sequence of them are based on area and ratio!
         return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
 
-    def judge(self, item_xyz, pos_before, ori_before):
+    def judge(self, item_xyz, pos_before, ori_before, crowded_index):
         # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
 
         category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
@@ -106,7 +106,7 @@ class Sort_objects():
         transform_flag = []
         new_pos_before = []
         new_ori_before = []
-        new_boxes_index = []
+        new_crowded_index = []
         rest_index = np.arange(len(item_xyz))
         index = 0
 
@@ -125,7 +125,7 @@ class Sort_objects():
                                 new_item_xyz.append(item_xyz[m])
                                 new_pos_before.append(pos_before[m])
                                 new_ori_before.append(ori_before[m])
-                                # new_boxes_index.append(boxes_index[m])
+                                new_crowded_index.append(crowded_index[m])
                                 index += 1
                                 rest_index = np.delete(rest_index, np.where(rest_index == m))
                 if len(kind_index) != 0:
@@ -135,7 +135,7 @@ class Sort_objects():
         new_pos_before = np.asarray(new_pos_before).reshape(-1, 3)
         new_ori_before = np.asarray(new_ori_before).reshape(-1, 3)
         transform_flag = np.asarray(transform_flag)
-        new_boxes_index = np.asarray(new_boxes_index)
+        new_crowded_index = np.asarray(new_crowded_index)
         if len(rest_index) != 0:
             # we should implement the rest of boxes!
             rest_xyz = item_xyz[rest_index]
@@ -143,7 +143,7 @@ class Sort_objects():
             all_index.append(list(np.arange(index, len(item_xyz))))
             transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
 
-        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_boxes_index
+        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_crowded_index
 
 class configuration_zzz():
 

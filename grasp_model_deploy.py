@@ -1,5 +1,5 @@
 import numpy as np
-from Grasp_pred_model.network import LSTMRegressor
+from Grasp_pred_model.lstm_network import LSTMRegressor
 import torch.nn as nn
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
@@ -45,4 +45,4 @@ class Grasp_model():
         # move_list = np.arange(int(num_item / 2), num_item)
         move_list = pred_N
 
-        return move_list, prediction
+        return move_list, prediction, output

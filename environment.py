@@ -1,6 +1,8 @@
-from yolo_model_deploy import *
+from yolo_pose_deploy import *
+from yolo_seg_deploy import *
 from arrangement import *
 from grasp_model_deploy import *
+from arrange_model_deploy import *
 from function import *
 import pybullet as p
 import pybullet_data as pd
@@ -13,11 +15,11 @@ from urdfpy import URDF
 from tqdm import tqdm
 import time
 import torch
-from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler
 
 class Arm_env():
 
-    def __init__(self, para_dict, knolling_para=None, lstm_dict=None):
+    def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
 
         self.para_dict = para_dict
         self.knolling_para = knolling_para
@@ -31,13 +33,15 @@ class Arm_env():
         self.is_render = para_dict['is_render']
         self.num_boxes = para_dict['boxes_num']
         self.save_img_flag = para_dict['save_img_flag']
-        self.yolo_model = Yolo_predict(para_dict=para_dict)
+        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict)
+        # self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
-        else:
-            pass
+        if self.para_dict['use_knolling_model'] == True:
+            self.arrange_dict = arrange_dict
+            self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict)
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -89,10 +93,9 @@ class Arm_env():
         # p.setPhysicsEngineParameter(numSolverIterations=10)
         p.setTimeStep(1. / 120.)
 
-    def reset(self, epoch=None):
+    def reset(self, epoch=None, manipulator_after=None, lwh_after=None):
 
         p.resetSimulation()
-
         if random.uniform(0, 1) > 0.5:
             p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
                                        shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
@@ -163,32 +166,42 @@ class Arm_env():
                                 flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
             p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
 
-        if self.para_dict['real_operate'] == False:
-            self.lwh_list = self.boxes_sort.get_data_virtual()
-            rdm_ori_roll  = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.num_boxes, 1))
-            rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.num_boxes, 1))
-            rdm_ori_yaw   = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.num_boxes, 1))
-            rdm_ori = np.concatenate((rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw), axis=1)
-            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes, 1))
-            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes, 1))
-            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes, 1))
-            rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
+        if manipulator_after is None:
+            if self.para_dict['real_operate'] == False:
+                self.lwh_list = self.boxes_sort.get_data_virtual()
+                rdm_ori_roll  = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.num_boxes, 1))
+                rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.num_boxes, 1))
+                rdm_ori_yaw   = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.num_boxes, 1))
+                rdm_ori = np.concatenate((rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw), axis=1)
+                rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes, 1))
+                rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes, 1))
+                rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes, 1))
+                rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
+            else:
+                # the sequence here is based on area and ratio!!! must be converted additionally!!!
+                # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
+                manipulator_init, lwh_list_init, _ = self.get_obs()
+                rdm_pos = manipulator_init[:, :3]
+                rdm_ori = manipulator_init[:, 3:]
+                self.lwh_list = lwh_list_init
         else:
-            # the sequence here is based on area and ratio!!! must be converted additionally!!!
-            self.lwh_list, self.pos_before, self.ori_before, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
-            # these data has defined in function change_config, we don't need to define them twice!!!
-            sim_pos = np.copy(self.pos_before)
-            sim_pos[:, :2] += 0.006
+            self.lwh_list = np.copy(lwh_after)
+            rdm_pos = np.copy(manipulator_after[:, :3])
+            rdm_ori = np.copy(manipulator_after[:, 3:])
+            self.num_boxes = len(manipulator_after)
 
         self.boxes_index = []
         if self.para_dict['data_collection'] == True:
             box_path = self.para_dict['dataset_path'] + "box_urdf/thread_%d/epoch_%d/" % (self.para_dict['thread'], epoch)
         else:
-            box_path = self.para_dict['dataset_path']
+            if manipulator_after is None:
+                box_path = self.para_dict['dataset_path'] + 'before/'
+            else:
+                box_path = self.para_dict['dataset_path'] + 'after/'
         os.makedirs(box_path, exist_ok=True)
-        temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
 
         for i in range(self.num_boxes):
+            temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
             temp_box.links[0].inertial.mass = self.para_dict['box_mass']
             temp_box.links[0].collisions[0].origin[2, 3] = 0
             length = self.lwh_list[i, 0]
@@ -212,10 +225,8 @@ class Arm_env():
                     p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
         else:
             for i in range(self.num_boxes):
-                self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i),
-                                                   basePosition=self.pos_before[i],
-                                                   baseOrientation=p.getQuaternionFromEuler(self.ori_before[i]),
-                                                   useFixedBase=False,
+                self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
+                                                   baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
                                                    flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
                 r = np.random.uniform(0, 0.9)
                 g = np.random.uniform(0, 0.9)
@@ -230,7 +241,7 @@ class Arm_env():
                                      contactDamping=self.para_dict['base_contact_damping'],
                                      contactStiffness=self.para_dict['base_contact_stiffness'])
 
-        if self.para_dict['real_operate'] == False:
+        if self.para_dict['real_operate'] == False and manipulator_after is None:
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
             while True:
                 new_num_item = len(self.boxes_index)
@@ -279,75 +290,30 @@ class Arm_env():
                 if len(delete_index) == 0:
                     break
 
-                # self.pos_before = []
-                # self.ori_before = []
-                # check_delete_index = []
-                # for i in range(len(self.boxes_index)):
-                #     cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                #     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                #     self.pos_before.append(cur_pos)
-                #     self.ori_before.append(cur_ori)
-                #     roll_flag = False
-                #     pitch_flag = False
-                #     for j in range(len(forbid_range)):
-                #         if np.abs(cur_ori[0] - forbid_range[j]) < 0.01:
-                #             roll_flag = True
-                #         if np.abs(cur_ori[1] - forbid_range[j]) < 0.01:
-                #             pitch_flag = True
-                #     if roll_flag == True and pitch_flag == True and (
-                #             np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
-                #             cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-                #         1] > self.y_high_obs or \
-                #             cur_pos[1] < self.y_low_obs:
-                #         check_delete_index.append(i)
-                #         # print('this is cur ori on check:', cur_ori)
-                # self.pos_before = np.asarray(self.pos_before)
-                # self.ori_before = np.asarray(self.ori_before)
-                # if len(check_delete_index) == 0:
-                #     break
-
         self.img_per_epoch = 0
         # return img_per_epoch_result
 
-    def manual_knolling(self, pos_before, ori_before, lwh_list):  # this is main function!!!!!!!!!
+    def manual_knolling(self, pos_before, ori_before, lwh_list, crowded_index):  # this is main function!!!!!!!!!
 
         if self.para_dict['use_knolling_model'] == True:
-            ######################## knolling demo ###############################
+            input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
+            pos_before_input = pos_before.astype(np.float32)
+            ori_before_input = ori_before.astype(np.float32)
+            lwh_list_input = lwh_list.astype(np.float32)
 
-            ################## change order based on distance between boxes and upper left corner ##################
-            order = change_sequence(self.pos_before)
-            self.pos_before = self.pos_before[order]
-            self.ori_before = self.ori_before[order]
-            self.lwh_list = self.lwh_list[order]
-            knolling_model_input = np.concatenate((self.pos_before[:, :2], self.lwh_list[:, :2],
-                                                   self.ori_before[:, 2].reshape(-1, 1)), axis=1).reshape(1, -1)
-            ################## change order based on distance between boxes and upper left corner ##################
-
-            ################## input the demo data ##################
-            knolling_demo_data = np.loadtxt('./num_10_after_demo_8.txt')[0].reshape(-1, 5)
-            ################## input the demo data ##################
-
-            index = []
-            after_knolling = []
-            after_knolling = np.asarray(after_knolling)
-
-            self.pos_after = np.concatenate((knolling_demo_data[:, :2], np.zeros(len(knolling_demo_data)).reshape(-1, 1)), axis=1)
-            self.ori_after = np.concatenate((np.zeros((len(knolling_demo_data), 2)), knolling_demo_data[:, 4].reshape(-1, 1)),
-                                            axis=1)
-            for i in range(len(knolling_demo_data)):
-                if knolling_demo_data[i, 2] < knolling_demo_data[i, 3]:
-                    self.ori_after[i, 2] += np.pi / 2
-
-            # self.items_pos_list = np.concatenate((after_knolling[:, :2], np.zeros(len(after_knolling)).reshape(-1, 1)), axis=1)
-            # self.items_ori_list = np.concatenate((np.zeros((len(after_knolling), 2)), after_knolling[:, 4].reshape(-1, 1)), axis=1)
-            # self.xyz_list = np.concatenate((after_knolling[:, 2:4], (np.ones(len(after_knolling)) * 0.012).reshape(-1, 1)), axis=1)
-            ######################## knolling demo ###############################
+            pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+            print('here')
+            manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+            manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), np.zeros((len(input_index), 3))), axis=1)
+            lwh_list_classify = lwh_list_input[input_index]
+            rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
+            manipulator_after[rotate_index, -1] += np.pi / 2
         else:
             # determine the center of the tidy configuration
             if len(self.lwh_list) <= 2:
                 print('the number of item is too low, no need to knolling!')
-            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, self.boxes_index = self.boxes_sort.judge(
-                lwh_list, pos_before, ori_before)
+            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, crowded_index_classify = self.boxes_sort.judge(
+                lwh_list, pos_before, ori_before, crowded_index)
 
             calculate_reorder = configuration_zzz(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
             pos_after_classify, ori_after_classify = calculate_reorder.calculate_block()
@@ -362,7 +328,7 @@ class Arm_env():
             lwh_list_classify = lwh_list_classify[order]
             pos_after_classify = pos_after_classify[order]
             ori_after_classify = ori_after_classify[order]
-            # boxes_index_classify = boxes_index_classify[order]
+            crowded_index_classify = crowded_index_classify[order]
             ################## change order based on distance between boxes and upper left corner ##################
 
             x_low = np.min(pos_after_classify, axis=0)[0]
@@ -733,8 +699,7 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, epoch=0):
-
+    def get_obs(self, epoch=0, look_flag=False):
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
                                                                              height=480,
@@ -751,79 +716,79 @@ class Arm_env():
             my_im[:, :, 2] = temp
             img = np.copy(my_im)
             return img, top_height
+        if look_flag == True:
+            if self.para_dict['real_operate'] == False:
+                img, _ = get_images()
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d.png' % (epoch)
+                cv2.imwrite(img_path, img)
+        else:
+            if self.para_dict['data_collection'] == True or self.para_dict['real_operate'] == False:
+                self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
+                if len(self.boxes_index) == 0:
+                    return np.array([]), np.array([]), np.array([])
+                self.constrain_id = []
+                for i in range(len(self.boxes_index)):
+                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                    box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
+                    self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
+                self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
+                self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
+                self.gt_ori_qua = np.asarray(self.gt_ori_qua)
+                self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
+                self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
 
-        if self.para_dict['data_collection'] == True or self.para_dict['obs_order'] == 'sim_image_obj':
-            self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
-            if len(self.boxes_index) == 0:
-                return np.array([]), np.array([]), np.array([])
-            self.constrain_id = []
-            for i in range(len(self.boxes_index)):
-                box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
-                self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
-            self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
-            self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
-            self.gt_ori_qua = np.asarray(self.gt_ori_qua)
-            self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
-            self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
+                img, _ = get_images()
+                os.makedirs(self.para_dict['dataset_path'] + 'sim_images/', exist_ok=True)
+                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch)
 
-            img, _ = get_images()
-            os.makedirs(self.para_dict['dataset_path'] + 'origin_images/', exist_ok=True)
-            img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (epoch)
+                ################### the results of object detection has changed the order!!!! ####################
+                # structure of results: x, y, z, length, width, ori
+                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img_path=img_path, img=img)
 
-            ################### the results of object detection has changed the order!!!! ####################
-            # structure of results: x, y, z, length, width, ori
-            results, pred_conf = self.yolo_model.yolov8_predict(img_path=img_path, img=img)
-            if len(results) == 0:
-                return np.array([]), np.array([]), np.array([])
-            # print('this is the result of yolo-pose\n', results)
-            ################### the results of object detection has changed the order!!!! ####################
+                if len(results) == 0:
+                    return np.array([]), np.array([]), np.array([])
+                # print('this is the result of yolo-pose\n', results)
+                ################### the results of object detection has changed the order!!!! ####################
 
-            manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
-            new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
-            # print('this is manipulator before after the detection \n', manipulator_before)
+                manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+                new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
+                # print('this is manipulator before after the detection \n', manipulator_before)
 
-            return manipulator_before, new_lwh_list, pred_conf
+                return manipulator_before, new_lwh_list, pred_conf
 
-        if self.para_dict['obs_order'] == 'real_image_obj':
-            # # temp useless because of knolling demo
-            # img_path = 'Test_images/image_real'
-            # # structure: x,y,length,width,yaw
-            # results = yolov8_predict(img_path=img_path, real_flag=self.general_parameters['real_operate, target=None)
-            # print('this is the result of yolo-pose\n', results)
-            #
-            # z = 0
-            # roll = 0
-            # pitch = 0
-            # index = []
-            # print('this is self.xyz\n', self.xyz_list)
-            # for i in range(len(self.xyz_list)):
-            #     for j in range(len(results)):
-            #         if (np.abs(self.xyz_list[i, 0] - results[j, 2]) <= 0.002 and np.abs(
-            #                 self.xyz_list[i, 1] - results[j, 3]) <= 0.002) or \
-            #                 (np.abs(self.xyz_list[i, 1] - results[j, 2]) <= 0.002 and np.abs(
-            #                     self.xyz_list[i, 0] - results[j, 3]) <= 0.002):
-            #             if j not in index:
-            #                 print(f"find first xyz{i} in second xyz{j}")
-            #                 index.append(j)
-            #                 break
-            #             else:
-            #                 pass
-            #
-            # manipulator_before = []
-            # for i in index:
-            #     manipulator_before.append([results[i][0], results[i][1], z, roll, pitch, results[i][4]])
-            # # for i in range(len(self.xyz_list)):
-            # #     manipulator_before.append([self.pos_before[i][0], self.pos_before[i][1], z, roll, pitch, self.ori_before[i][2]])
+            if self.para_dict['real_operate'] == True:
 
-            manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
-            manipulator_before = np.asarray(manipulator_before)
-            new_xyz_list = self.lwh_list
-            print('this is manipulator before after the detection \n', manipulator_before)
+                # ################ this only be used while testing ###############
+                # manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
+                # manipulator_before = np.asarray(manipulator_before)
+                # new_xyz_list = self.lwh_list
+                # print('this is manipulator before after the detection \n', manipulator_before)
 
-            return manipulator_before, new_xyz_list
+                os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+                img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch)
+
+                ################### the results of object detection has changed the order!!!! ####################
+                # structure of results: x, y, z, length, width, ori
+                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, real_flag=True)
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img_path=img_path, real_flag=True)
+                if len(results) == 0:
+                    return np.array([]), np.array([]), np.array([])
+                # print('this is the result of yolo-pose\n', results)
+                ################### the results of object detection has changed the order!!!! ####################
+
+                manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+                new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
+                # print('this is manipulator before after the detection \n', manipulator_before)
+
+                return manipulator_before, new_lwh_list, pred_conf
 
 if __name__ == '__main__':
 
@@ -849,7 +814,7 @@ if __name__ == '__main__':
                  'base_restitution': 0, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_721_heavy_test/',
                  'urdf_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/urdf/',
-                 'yolo_model_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/train_pile_overlap_627/weights/best.pt'}
+                 'yolo_model_path': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/627_pile_pose/weights/best.pt'}
 
     startnum = para_dict['start_num']
     endnum = para_dict['end_num']

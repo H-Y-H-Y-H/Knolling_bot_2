@@ -5,7 +5,7 @@ import os
 sys.path.append('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/')
 sys.path.append('/home/ubuntu/Desktop/Knolling_bot_2/')
 # from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
-from network import LSTMRegressor
+from lstm_network import LSTMRegressor
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -42,7 +42,6 @@ if __name__ == '__main__':
         para_dict['batch_size'] = 64
         test_file_para = '730_2_TPFN_'
         total_error = []
-        # '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_dataset_713/labels/'
 
         num_img = para_dict['num_img']
         ratio = para_dict['ratio']
@@ -80,15 +79,17 @@ if __name__ == '__main__':
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=para_dict['patience'], factor=para_dict['factor'])
 
-        valid_loss = []
         model.eval()
 
         model_pred_recall = []
         model_pred_precision = []
         model_pred_accuracy = []
+        model_loss = []
         max_precision = -np.inf
         max_accuracy = -np.inf
         for i in range(len(model_threshold)):
+            valid_loss = []
+            test_loss = []
             with torch.no_grad():
                 # print('eval')
                 for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(test_loader):
@@ -107,7 +108,9 @@ if __name__ == '__main__':
                         valid_loss.append(loss.item())
                         not_one_result_per_img, tar_true, tar_false, TP, TN, FP, FN,\
                         yolo_dominated_TP, yolo_dominated_TN, yolo_dominated_FP, yolo_dominated_FN, \
-                        grasp_dominated_TP, grasp_dominated_TN, grasp_dominated_FP, grasp_dominated_FN = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch, model_threshold=model_threshold[i])
+                        grasp_dominated_TP, grasp_dominated_TN, grasp_dominated_FP, grasp_dominated_FN, loss = model.detect_accuracy(predict=out, target=grasp_data_batch, box_conf=box_data_batch, model_threshold=model_threshold[i])
+                        test_loss.append(loss.item())
+                        pass
 
             if TP + FN == 0:
                 recall = 0
@@ -132,7 +135,10 @@ if __name__ == '__main__':
                 max_accuracy = accuracy
 
             avg_valid_loss = np.mean(valid_loss)
-            print('\n avg valid loss', avg_valid_loss)
+            avg_test_loss = np.mean(test_loss)
+            model_loss.append(avg_test_loss)
+            print('\navg valid loss', avg_valid_loss)
+            print('avg test loss', avg_test_loss)
 
             print('total_img', valid_num)
             print('not one result per img', not_one_result_per_img)
@@ -171,24 +177,12 @@ if __name__ == '__main__':
 
             model.not_one_result_per_img = 0
 
-            # print('yolo_dominated_TP:', yolo_dominated_TP)
-            # print('yolo_dominated_TN:', yolo_dominated_TN)
-            # print('yolo_dominated_FP:', yolo_dominated_FP)
-            # print('yolo_dominated_FN:', yolo_dominated_FN)
-            # print('yolo_dominated_Accuracy: %.04f' % ((yolo_dominated_TP + yolo_dominated_FN) / (yolo_dominated_TP + yolo_dominated_TN + yolo_dominated_FP + yolo_dominated_FN)))
-            # print('yolo_dominated_Recall: %.04f' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FN)))
-            # print('yolo_dominated_Precision: %.04f' % (yolo_dominated_TP / (yolo_dominated_TP + yolo_dominated_FP)))
-            # print('grasp_dominated_TP:', grasp_dominated_TP)
-            # print('grasp_dominated_TN:', grasp_dominated_TN)
-            # print('grasp_dominated_FP:', grasp_dominated_FP)
-            # print('grasp_dominated_FN:', grasp_dominated_FN)
-            # print('grasp_dominated_Accuracy: %.04f' % ((grasp_dominated_TP + grasp_dominated_FN) / (grasp_dominated_TP + grasp_dominated_TN + grasp_dominated_FP + grasp_dominated_FN)))
-            # print('grasp_dominated_Recall: %.04f' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FN)))
-            # print('grasp_dominated_Precision: %.04f' % (grasp_dominated_TP / (grasp_dominated_TP + grasp_dominated_FP)))
-
         model_pred_recall = np.asarray(model_pred_recall)
         model_pred_precision = np.asarray(model_pred_precision)
         model_pred_accuracy = np.asarray(model_pred_accuracy)
+        model_loss = np.asarray(model_loss)
+        model_loss_mean = np.mean(model_loss)
+        model_loss_std = np.std(model_loss)
 
         print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
         print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
@@ -199,10 +193,12 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels2.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels1.png')
         plt.show()
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_labels2.txt", "w") as f:
+        np.savetxt(para_dict['model_path'] + 'model_loss.txt', model_loss)
+
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels1.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
@@ -212,6 +208,11 @@ if __name__ == '__main__':
             f.write(f'threshold: {max_accuracy_threshold}, max accuracy: {max_accuracy}\n')
             f.write(f'threshold: {max_precision_threshold}, max precision: {max_precision}\n')
             f.write('----------- Dataset -----------\n')
+
+            f.write('----------- Statistics -----------\n')
+            f.write(f'model_loss_mean: {model_loss_mean}\n')
+            f.write(f'model_loss_std: {model_loss_std}\n')
+            f.write('----------- Statistics -----------\n')
 
         # with open(para_dict['model_path'] + test_file_para + "test.txt", "w") as f:
         #     f.write('----------- Dataset -----------\n')

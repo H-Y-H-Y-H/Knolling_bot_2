@@ -7,7 +7,60 @@ import numpy as np
 import csv
 
 filename = "robot_arm1"
+m1 = 0.20615
+m2 = 0.200
+len_wrist = 0.174
+height_base = 0.105
+theta_1_offset = np.arctan2(0.05, 0.2)
+origin_offset = 0.084
 
+def inverse_kinematic(pos, ori, parameters=None):
+    if pos.shape[0] == 3:
+        pos = pos.reshape(1, 3)
+        ori = ori.reshape(1, 3)
+
+
+    pos[:, 0] += origin_offset
+    x = pos[:, 0]
+    y = pos[:, 1]
+    z = pos[:, 2]
+    yaw = ori[:, 2]
+    distance = np.sqrt(x ** 2 + y ** 2)
+    z_cal = z + len_wrist - height_base
+
+    theta_2 = np.arccos(((m1 ** 2 - m2 ** 2 - z_cal ** 2 - distance ** 2) / (2 * m2)) / np.sqrt(z_cal ** 2 + distance ** 2)) - np.arccos(z_cal / np.sqrt(z_cal ** 2 + distance ** 2))
+    theta_1 = np.arccos((distance - m2 * np.sin(theta_2)) / m1)
+    motor_0 = np.arctan2(y, x) + np.pi
+    motor_1 = np.pi * 2 - (theta_1 + theta_1_offset + np.pi / 2)
+    motor_2 = theta_2 + np.pi / 2 - theta_1 - theta_1_offset + np.pi / 2
+    motor_3 = np.pi - theta_2
+    motor_4 = np.pi - (yaw - (motor_0 - np.pi))
+
+    motor = np.concatenate((motor_0.reshape(-1, 1), motor_1.reshape(-1, 1), motor_2.reshape(-1, 1), motor_3.reshape(-1, 1), motor_4.reshape(-1, 1)), axis=1)
+    motor = motor / (np.pi * 2) * 4096
+    motor = np.insert(motor, 1, motor[:, 1], axis=1)
+    return motor
+
+def forward_kinematic(motor):
+
+    motor = motor / 4096 * (np.pi * 2)
+    motor = np.delete(motor, 2, axis=1)
+    print(motor)
+    theta_0 = motor[:, 0] - np.pi
+    theta_1 = np.pi * 2 - motor[:, 1] - theta_1_offset - np.pi / 2
+    theta_2 = motor[:, 2] - np.pi / 2 + theta_1 + theta_1_offset - np.pi / 2
+    theta_3 = np.pi - motor[:, 3]
+    yaw = motor[:, 0] - np.pi + np.pi - motor[:, 4]
+    distance = m1 * np.cos(theta_1) + m2 * np.sin(theta_2)
+    x = distance * np.cos(theta_0)
+    y = distance * np.sin(theta_0)
+    z = height_base + (m1 * np.sin(theta_1) - m2 * np.cos(theta_2)) - len_wrist
+
+    pos = np.concatenate((x.reshape(-1, 1), y.reshape(-1, 1), z.reshape(-1, 1)), axis=1)
+    pos[:, 0] -= origin_offset
+    ori = np.concatenate((np.zeros(len(motor)).reshape(-1, 1), np.ones(len(motor)).reshape(-1, 1) * np.pi / 2, yaw.reshape(-1, 1)), axis=1)
+
+    return pos, ori
 
 def reset(robotID):
     p.setJointMotorControlArray(robotID, [0, 1, 2, 3, 4, 7, 8], p.POSITION_CONTROL,
@@ -55,7 +108,7 @@ def real_tarpos2cmd(tar_pos):  # real to sim!!!!!!!!!!!
 
     tar_pos = np.delete(tar_pos, 2)
     tar_pos = np.asarray(tar_pos)
-    print('this is tar from calculation', tar_pos)
+    # print('this is tar from calculation', tar_pos)
     pos2deg = 4095 / 360
     motion_limit = np.asarray([1 / 180, 1 / 135, 1 / 135, 1 / 90, 1 / 180])
     reset_pos = [3075, 1025, 1050, 2050, 2050]

@@ -1,2 +1,6 @@
 /Grasp_pred_model/results/
 /Grasp_pred_model/wandb/
+/backup_script/
+/realsense_test/
+/knolling_box/
+/RL_dynamic_model/
