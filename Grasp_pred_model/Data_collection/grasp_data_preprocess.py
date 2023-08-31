@@ -89,7 +89,11 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
     output_index = target_start_index - 1
     for i in tqdm(range(start_index, data_num + start_index)):
         origin_data = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 11)
+        data_x_offset = np.random.uniform(-0.05, 0.05)
+        data_y_offset = np.random.uniform(-0.10, 0.10)
         data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        data[:, 1] += data_x_offset
+        data[:, 2] += data_y_offset
         # data = origin_data
         if np.any(data[:, 0] != 0):
             # print('this is index of not all zero data', i)
@@ -180,7 +184,7 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
     # print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
     # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
 
-    for i in range(source_start_index, int(data_num + source_start_index)):
+    for i in tqdm(range(source_start_index, int(data_num + source_start_index))):
         cur_path = source_path + '%012d.txt' % (i)
         tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
@@ -292,28 +296,28 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_730/origin_labels/'
-    # target_data_path = '../../../knolling_dataset/grasp_dataset_730/labels_1/'
-    # # target_data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # data_num = 300000
-    # start_index = 0
-    # target_start_index = 0
-    # dropout_prob = 0
-    # # data_preprocess_csv(data_path, data_num, start_index)
-    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_5/'
+    # target_data_path = data_root + 'origin_labels_713_lab/'
+
+    data_num = 520
+    start_index = 0
+    target_start_index = 0
+    dropout_prob = 0
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
-    # target_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    # source_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    # target_path = '../../../knolling_dataset/grasp_dataset_829/origin_labels/'
     # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 420000
-    # target_start_index = 420000
-    # num = 100000
+    # source_start_index = 0
+    # target_start_index = 0
+    # num = 520000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
-    analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
-    valid_num = 10000
-    yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    # data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
+    # analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
+    # valid_num = 10000
+    # yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)

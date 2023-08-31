@@ -150,28 +150,28 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'decive': 'cuda:0',
-             'num_img': 300000,
+             'num_img': 520000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': '../Grasp_pred_model/results/LSTM_730_5_heavy_dropout0/',
-             'data_path': '../../knolling_dataset/grasp_dataset_730/labels_1/',
+             'model_path': '../Grasp_pred_model/results/LSTM_829_3_heavy_dropout0/',
+             'data_path': '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4/',
              'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
              'input_size': 6,
-             'hidden_size': 64,
+             'hidden_size': 16,
              'box_one_img': 10,
-             'num_layers': 4,
+             'num_layers': 8,
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '730_5_distance_dropout0',
+             'run_name': '829_3_distance_dropout0',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
              'wandb_flag': True,
              'use_mse': False,
              'use_scaler': False,
              'fine-tuning': False,
-             'hidden_node_1': 32, 'hidden_node_2': 8}
+             'hidden_node_1': 16, 'hidden_node_2': 8}
 
 if __name__ == '__main__':
 
@@ -319,16 +319,13 @@ if __name__ == '__main__':
             scheduler.step(avg_valid_loss)
         current_epoch += 1
 
-    if para_dict['wandb_flag'] == True:
-        wandb.init()
-        for step in range(current_epoch):
-            wandb.log({'Train_loss': all_train_loss[step]}, step=step)
-            wandb.log({'Valid_loss': all_valid_loss[step]}, step=step)
-        wandb.finish()
+        if para_dict['wandb_flag'] == True:
+            wandb.log({'Train_loss': avg_train_loss})
+            wandb.log({'Valid_loss': avg_valid_loss})
 
-    # mask = torch.ones_like(target_batch, dtype=torch.bool)
-    #
-    # target_batch_atten_mask = (target_batch == 0).bool()
-    # target_batch.masked_fill_(label_mask, -100)
-    #
-    # torch.nn.utils.rnn.pack_padded_sequence
+    # if para_dict['wandb_flag'] == True:
+    #     wandb.init()
+    #     for step in range(current_epoch):
+    #         wandb.log({'Train_loss': all_train_loss[step]}, step=step)
+    #         wandb.log({'Valid_loss': all_valid_loss[step]}, step=step)
+    #     wandb.finish()
