@@ -11,7 +11,7 @@ class Grasp_env(Arm_env):
 
         super(Grasp_env, self).__init__(para_dict=para_dict)
 
-    def try_grasp(self, data_root=None, img_index_start=None):
+    def try_unstack(self, data_root=None, img_index_start=None):
 
         if self.img_per_epoch + img_index_start >= self.endnum:
             print('END!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
@@ -209,7 +209,7 @@ class Grasp_env(Arm_env):
             if self.save_img_flag == False:
                 os.remove(data_root + 'origin_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
-            return self.try_grasp(data_root=data_root, img_index_start=img_index_start)
+            return self.try_unstack(data_root=data_root, img_index_start=img_index_start)
 
 if __name__ == '__main__':
 
@@ -253,5 +253,5 @@ if __name__ == '__main__':
     while True:
         num_item = para_dict['boxes_num']
         env.reset(epoch=exist_img_num)
-        img_per_epoch = env.try_grasp(data_root=data_root, img_index_start=exist_img_num)
+        img_per_epoch = env.try_unstack(data_root=data_root, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch

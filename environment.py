@@ -27,8 +27,8 @@ class Arm_env():
         self.kImageSize = {'width': 480, 'height': 480}
         self.endnum = para_dict['end_num']
         self.init_pos_range = para_dict['init_pos_range']
-        self.center_offset_range = para_dict['center_offset_range']
         self.init_ori_range = para_dict['init_ori_range']
+        self.init_offset_range = para_dict['init_offset_range']
         self.urdf_path = para_dict['urdf_path']
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
@@ -177,9 +177,7 @@ class Arm_env():
                 rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes, 1))
                 rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes, 1))
                 rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes, 1))
-                center_offset = np.array([np.random.uniform(self.center_offset_range[0][0], self.center_offset_range[0][1]),
-                                          np.random.uniform(self.center_offset_range[1][0], self.center_offset_range[1][1])])
-                rdm_pos = np.concatenate((rdm_pos_x + center_offset[0], rdm_pos_y + center_offset[1], rdm_pos_z), axis=1)
+                rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
                 # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])

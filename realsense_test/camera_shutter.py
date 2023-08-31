@@ -2,6 +2,7 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import os
+import time
 
 def capture(img_path, epoch):
 
@@ -58,11 +59,86 @@ def capture(img_path, epoch):
             cv2.destroyAllWindows()
             break
 
+def capture_video():
+
+    cap = cv2.VideoCapture(8)
+    # set the resolution height
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    # set the resolution width
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter('sundry_box_3.avi', fourcc, fps, (w, h))
+
+    recording = False
+    print('To start recording, please press "s"')
+    num = 0
+    while (cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            # frame = cv2.flip(frame, 0)
+            cv2.namedWindow('frame', 0)
+            cv2.resizeWindow('frame', 1280, 960)
+            cv2.imshow('frame', frame)
+            key = cv2.waitKey(1) & 0xFF
+
+            if key == ord('q'):
+                break
+            elif key == ord('s'):
+                print('start recording', num)
+                recording = not recording  # Toggle recording state
+            elif key == ord('p'):
+                print('pause recording', num)
+                recording = not recording  # Toggle recording state
+
+            if recording:
+                out.write(frame)
+            num += 1
+        else:
+            break
+
+    # Release everything if job is finishedq
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+
+def show_save_video(output_path):
+
+    cap = cv2.VideoCapture('sundry_box_2.avi')
+    frame_read = 0
+    num = 1351
+    while (cap.isOpened()):
+        ret, frame = cap.read()
+
+        # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if frame_read % 1 == 0:
+            print('this is save num', num)
+            cv2.imwrite(output_path + '%012d.png' % num, frame)
+            num += 1
+        frame_read += 1
+        # cv2.imshow('frame', frame)
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
+        # time.sleep(0.02)
+
+    cap.release()
+    cv2.destroyAllWindows()
+
 if __name__ == '__main__':
 
-    img_path = '../../knolling_dataset/yolo_pile_820_real_sundry/origin_images/'
-    os.makedirs(img_path, exist_ok=True)
-    num_img_start = 60
-    num_img_end = 80
-    for i in range(num_img_start, num_img_end):
-        capture(img_path, i)
+    # img_path = '../../knolling_dataset/yolo_pile_820_real_box/origin_images/'
+    # os.makedirs(img_path, exist_ok=True)
+    # num_img_start = 60
+    # num_img_end = 100
+    # for i in range(num_img_start, num_img_end):
+    #     capture(img_path, i)
+
+    output_path = '../../knolling_dataset/yolo_pile_830_real_box/origin_images/'
+    os.makedirs(output_path, exist_ok=True)
+    # capture_video()
+    show_save_video(output_path)
