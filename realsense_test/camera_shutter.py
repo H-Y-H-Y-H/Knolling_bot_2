@@ -109,14 +109,19 @@ def capture_video():
 
 def show_save_video(output_path):
 
-    cap = cv2.VideoCapture('sundry_box_2.avi')
+    cap = cv2.VideoCapture('sundry_box_3.avi')
     frame_read = 0
-    num = 1351
+    num = 1857
     while (cap.isOpened()):
         ret, frame = cap.read()
 
+        flag = np.random.random()
+        if flag < 0.5:
+            kernel_size = np.random.choice([1, 3, 5])
+            frame = cv2.GaussianBlur(frame, (kernel_size, kernel_size), 0)
+
         # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if frame_read % 1 == 0:
+        if frame_read % 3 == 0:
             print('this is save num', num)
             cv2.imwrite(output_path + '%012d.png' % num, frame)
             num += 1

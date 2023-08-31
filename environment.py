@@ -3,7 +3,7 @@ from yolo_seg_deploy import *
 from arrangement import *
 from grasp_model_deploy import *
 from arrange_model_deploy import *
-from function import *
+from utils import *
 import pybullet as p
 import pybullet_data as pd
 import os
@@ -177,7 +177,10 @@ class Arm_env():
                 rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes, 1))
                 rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes, 1))
                 rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes, 1))
-                rdm_pos = np.concatenate((rdm_pos_x, rdm_pos_y, rdm_pos_z), axis=1)
+                x_offset = np.random.uniform(self.init_offset_range[0][0], self.init_offset_range[0][1])
+                y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
+                print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
+                rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
                 # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
@@ -199,31 +202,31 @@ class Arm_env():
                 box_path = self.para_dict['dataset_path'] + 'before/'
             else:
                 box_path = self.para_dict['dataset_path'] + 'after/'
-        os.makedirs(box_path, exist_ok=True)
+        # os.makedirs(box_path, exist_ok=True)
 
-        for i in range(self.num_boxes):
-            temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
-            temp_box.links[0].inertial.mass = self.para_dict['box_mass']
-            temp_box.links[0].collisions[0].origin[2, 3] = 0
-            length = self.lwh_list[i, 0]
-            width = self.lwh_list[i, 1]
-            height = self.lwh_list[i, 2]
-            temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
-            temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
-            temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
-            temp_box.save(box_path + 'box_%d.urdf' % (i))
+        # for i in range(self.num_boxes):
+        #     temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
+        #     temp_box.links[0].inertial.mass = self.para_dict['box_mass']
+        #     temp_box.links[0].collisions[0].origin[2, 3] = 0
+        #     length = self.lwh_list[i, 0]
+        #     width = self.lwh_list[i, 1]
+        #     height = self.lwh_list[i, 2]
+        #     temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
+        #     temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
+        #     temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
+        #     temp_box.save(box_path + 'box_%d.urdf' % (i))
         if self.para_dict['real_operate'] == False:
             for i in range(self.num_boxes):
-                self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
-                                               baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
-                                               flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                obj_name = f'object_{i}'
+                create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
+                self.boxes_index.append(int(i + 6))
+                # self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
+                #                                baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                #                                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
                 r = np.random.uniform(0, 0.9)
                 g = np.random.uniform(0, 0.9)
                 b = np.random.uniform(0, 0.9)
-                if random.random() < 0.05:
-                    p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(0.1, 0.1, 0.1, 1))
-                else:
-                    p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
         else:
             for i in range(self.num_boxes):
                 self.boxes_index.append(p.loadURDF((box_path + "box_%d.urdf" % i), basePosition=rdm_pos[i],
@@ -247,17 +250,14 @@ class Arm_env():
             while True:
                 new_num_item = len(self.boxes_index)
                 delete_index = []
-                self.pos_before = []
-                self.ori_before = []
+
                 for i in range(len(self.boxes_index)):
                     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
                                                          contactDamping=self.para_dict['box_contact_damping'],
                                                          contactStiffness=self.para_dict['box_contact_stiffness'])
-
-                    cur_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    cur_qua = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1])
+                    cur_ori = np.asarray(p.getEulerFromQuaternion(cur_qua))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                    self.pos_before.append(cur_pos)
-                    self.ori_before.append(cur_ori)
                     roll_flag = False
                     pitch_flag = False
                     # print('this is cur ori:', cur_ori)
@@ -275,15 +275,11 @@ class Arm_env():
                         # print('delete!!!')
                         new_num_item -= 1
 
-                self.pos_before = np.asarray(self.pos_before)
-                self.ori_before = np.asarray(self.ori_before)
                 delete_index.reverse()
                 for i in delete_index:
                     p.removeBody(self.boxes_index[i])
                     self.boxes_index.pop(i)
                     self.lwh_list = np.delete(self.lwh_list, i, axis=0)
-                    self.pos_before = np.delete(self.pos_before, i, axis=0)
-                    self.ori_before = np.delete(self.ori_before, i, axis=0)
                 for _ in range(int(100)):
                     # time.sleep(1/96)
                     p.stepSimulation()
@@ -729,30 +725,28 @@ class Arm_env():
                 cv2.imwrite(img_path, img)
         else:
             if self.para_dict['data_collection'] == True or self.para_dict['real_operate'] == False:
-                self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
-                if len(self.boxes_index) == 0:
-                    return np.array([]), np.array([]), np.array([])
-                self.constrain_id = []
-                for i in range(len(self.boxes_index)):
-                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                    box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                    self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
-                    self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
-                    self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
-                self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
-                self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
-                self.gt_ori_qua = np.asarray(self.gt_ori_qua)
-                self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
-                self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
+                # self.box_pos, self.box_ori, self.gt_ori_qua = [], [], []
+                # if len(self.boxes_index) == 0:
+                #     return np.array([]), np.array([]), np.array([])
+                # self.constrain_id = []
+                # for i in range(len(self.boxes_index)):
+                #     box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                #     box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                #     self.gt_ori_qua.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                #     self.box_pos = np.append(self.box_pos, box_pos).astype(np.float32)
+                #     self.box_ori = np.append(self.box_ori, box_ori).astype(np.float32)
+                # self.box_pos = self.box_pos.reshape(len(self.boxes_index), 3)
+                # self.box_ori = self.box_ori.reshape(len(self.boxes_index), 3)
+                # self.gt_ori_qua = np.asarray(self.gt_ori_qua)
+                # self.gt_pos_ori = np.concatenate((self.box_pos, self.box_ori), axis=1)
+                # self.gt_pos_ori = self.gt_pos_ori.astype(np.float32)
 
                 img, _ = get_images()
-                os.makedirs(self.para_dict['dataset_path'] + 'sim_images/', exist_ok=True)
-                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch)
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
-                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img_path=img_path, img=img)
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch)
 
                 if len(results) == 0:
                     return np.array([]), np.array([]), np.array([])
@@ -772,9 +766,6 @@ class Arm_env():
                 # manipulator_before = np.asarray(manipulator_before)
                 # new_xyz_list = self.lwh_list
                 # print('this is manipulator before after the detection \n', manipulator_before)
-
-                os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
-                img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch)
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
@@ -832,8 +823,6 @@ if __name__ == '__main__':
     mm2px = 530 / 0.34
 
     env = Arm_env(para_dict=para_dict)
-    os.makedirs(para_dict['dataset_path'] + 'origin_images/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'origin_labels/', exist_ok=True)
 
     exist_img_num = startnum
     while True:

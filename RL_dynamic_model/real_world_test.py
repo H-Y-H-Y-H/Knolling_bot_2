@@ -6,7 +6,7 @@ import RL_dynamic_model.knolling_gym as knolling_gym
 import gymnasium as gym
 import os
 import socket
-from function import *
+from utils import *
 import pybullet_utils.bullet_client as bc
 import copy
 

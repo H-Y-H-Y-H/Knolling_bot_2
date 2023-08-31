@@ -4,7 +4,7 @@ import pybullet_data as pd
 import numpy as np
 import random
 import os
-from function import *
+from utils import *
 
 class Grasp_env(Arm_env):
 

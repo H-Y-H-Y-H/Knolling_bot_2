@@ -4,13 +4,16 @@ import pybullet_data as pd
 import numpy as np
 import random
 import os
-from function import *
+from utils import *
 
 class Unstack_env(Arm_env):
 
     def __init__(self, para_dict=None, lstm_dict=None):
 
         super(Unstack_env, self).__init__(para_dict=para_dict, lstm_dict=lstm_dict)
+        self.table_center = np.array([0.15, 0])
+        self.begin_pos = np.array([0.05, 0, 0.10])
+        self.begin_ori = np.array([0, np.pi / 2, 0])
 
     def try_unstack(self, data_root=None, img_index_start=None):
 
@@ -22,7 +25,7 @@ class Unstack_env(Arm_env):
         print('this is img_index start while grasping', img_index_start)
         manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
 
-        if len(manipulator_before) <= 1 or len(self.pos_before) == 1:
+        if len(manipulator_before) <= 1 or len(self.boxes_index) == 1:
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
         ############################## Get the information of boxes #################################
@@ -35,19 +38,35 @@ class Unstack_env(Arm_env):
         crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before_input, new_lwh_list_input, pred_conf_input)
         print('this is crowded_index', crowded_index)
         print('this is prediction', prediction)
-        # self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+        self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
         if len(crowded_index) < len(manipulator_before_input):
             print('There are some boxes can be grasp, try to reset!')
+            os.remove(data_root + 'sim_images/%012d_pred.png' % (self.img_per_epoch + img_index_start))
+            os.remove(data_root + 'sim_images/%012d_pred_grasp.png' % (self.img_per_epoch + img_index_start))
+            os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
             return self.img_per_epoch
         else:
-            output_data = np.concatenate((self.pos_before, self.ori_before, self.lwh_list, self.qua_before), axis=1)
-            np.savetxt(os.path.join(data_root, "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch)),
-                       output_data, fmt='%.04f')
-            if self.save_img_flag == False:
-                os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
-            self.img_per_epoch += 1
-            print('this is total num of img after one epoch', self.img_per_epoch)
-            return self.img_per_epoch
+            if self.para_dict['rl_configuration'] == True:
+                pos_before = []
+                ori_before = []
+                qua_before = []
+                for i in range(len(self.boxes_index)):
+                    qua_before.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1]))
+                    ori_before.append(np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[i])[1])))
+                    pos_before.append(np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0]))
+                pos_before = np.asarray(pos_before)
+                ori_before = np.asarray(ori_before)
+                qua_before = np.asarray(qua_before)
+                output_data = np.concatenate((pos_before, ori_before, self.lwh_list, qua_before), axis=1)
+                np.savetxt(os.path.join(data_root, "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch)),
+                           output_data, fmt='%.04f')
+                if self.save_img_flag == False:
+                    os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
+                self.img_per_epoch += 1
+                print('this is total num of img after one epoch', self.img_per_epoch)
+                return self.img_per_epoch
+            else:
+                pass
         ############## Genarete the results of LSTM model #############
 
         self.calculate_gripper()
@@ -63,6 +82,8 @@ class Unstack_env(Arm_env):
             # time.sleep(1/480)
             p.stepSimulation()
         ######################### Back to the reset pos in any cases ##########################
+
+
 
         # if exist_success_num > 0:
         #     # print('exist success boxes, we should remove this box and try the rest boxes!')
@@ -133,14 +154,14 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 0, 'end_num': 10, 'thread': 4,
+    para_dict = {'start_num': 250, 'end_num': 500, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
-                 'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': False,
+                 'reset_pos': np.array([0.02, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
+                 'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -151,7 +172,7 @@ if __name__ == '__main__':
                  'dataset_path': '../../../knolling_dataset/RL_configuration_831/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
                  'use_knolling_model': False, 'use_lstm_model': True}
 
     lstm_dict = {'input_size': 6,
@@ -162,8 +183,8 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'threshold': 0.5,
-                 'grasp_model_path': '../../models/LSTM_730_2_heavy_dropout0/best_model.pt', }
+                 'threshold': 0.6,
+                 'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
 
     startnum = para_dict['start_num']
 

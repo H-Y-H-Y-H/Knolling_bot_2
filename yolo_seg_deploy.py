@@ -1,7 +1,7 @@
 # Ultralytics YOLO 🚀, AGPL-3.0 license
 
 import torch
-from function import *
+from utils import *
 import cv2
 import pyrealsense2 as rs
 import numpy as np

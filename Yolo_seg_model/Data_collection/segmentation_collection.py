@@ -4,7 +4,7 @@ import pybullet_data as pd
 import numpy as np
 import random
 import os
-from function import *
+from utils import *
 from urdfpy import URDF
 
 class Yolo_seg_env(Arm_env):

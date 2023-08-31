@@ -32,8 +32,8 @@ if __name__ == '__main__':
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 520000
-        para_dict['model_path'] = '../Grasp_pred_model/results/LSTM_727_3_heavy_multi_dropout0/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_1/'
+        para_dict['model_path'] = '../models/LSTM_829_1_heavy_dropout0/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8

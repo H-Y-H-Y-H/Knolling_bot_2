@@ -4,7 +4,7 @@ from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 import numpy as np
 import torch
 import cv2
-from function import *
+from utils import *
 import pyrealsense2 as rs
 
 class PosePredictor(DetectionPredictor):
@@ -241,9 +241,12 @@ class Yolo_pose_model():
 
         return im, result
 
-    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img_path=None, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None):
+    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None, epoch=None):
 
+        self.epoch = epoch
         if real_flag == True:
+            img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (self.epoch)
+            os.makedirs(img_path, exist_ok=True)
             model = self.para_dict['yolo_model_path']
             pipeline = rs.pipeline()
             config = rs.config()
@@ -353,7 +356,7 @@ class Yolo_pose_model():
 
         else:
             model = self.para_dict['yolo_model_path']
-
+            img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
             cv2.imwrite(img_path + '.png', img)
             img_path_input = img_path + '.png'
             args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
@@ -424,11 +427,11 @@ class Yolo_pose_model():
 
             self.img_output = origin_img
             if self.para_dict['save_img_flag'] == True:
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', origin_img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', origin_img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
                 img_path_output = img_path + '_pred.png'
                 cv2.imwrite(img_path_output, origin_img)
             pred_result = np.asarray(pred_result)
@@ -441,7 +444,7 @@ class Yolo_pose_model():
         y_px_center = manipulator_before[:, 1] * self.mm2px + 320
         zzz_lw = 1
         tf = 1
-        img_path = self.para_dict['dataset_path'] + 'origin_images/%012d' % (0)
+        img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
         for i in range(len(manipulator_before)):
             if prediction[i] == 0:
                 label = 'False %.03f' % model_output[i, 1]
@@ -451,10 +454,10 @@ class Yolo_pose_model():
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
         if self.para_dict['save_img_flag'] == True:
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow('zzz', self.img_output)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', self.img_output)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
             img_path_output = img_path + '_pred_grasp.png'
             cv2.imwrite(img_path_output, self.img_output)
