@@ -241,12 +241,12 @@ class Yolo_pose_model():
 
         return im, result
 
-    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img=None, target=None, boxes_num=None, height_data=None, test_pile_detection=None, epoch=None):
+    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
         self.epoch = epoch
         if real_flag == True:
             img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (self.epoch)
-            os.makedirs(img_path, exist_ok=True)
+            # os.makedirs(img_path, exist_ok=True)
             model = self.para_dict['yolo_model_path']
             pipeline = rs.pipeline()
             config = rs.config()
@@ -373,13 +373,13 @@ class Yolo_pose_model():
             one_img = images[0]
 
             pred_result = []
-            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
+            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
             if len(pred_xylws) == 0:
                 return [], []
             else:
-                pred_cls = one_img.boxes.cls.cpu().detach().numpy()
-                pred_conf = one_img.boxes.conf.cpu().detach().numpy()
-                pred_keypoints = one_img.keypoints.cpu().detach().numpy()
+                pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
+                pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
+                pred_keypoints = one_img.keypoints.cpu().detach().numpy()[:gt_boxes_num]
                 pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
                 pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
                 pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)

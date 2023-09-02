@@ -28,7 +28,7 @@ class knolling_main(Arm_env):
             # sequence pos_before, ori_before, pos_after, ori_after
             pos_before = manipulator_before[:, :3]
             ori_before = manipulator_before[:, 3:6]
-            manipulator_before, manipulator_after, lwh_list = self.manual_knolling(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list)
+            manipulator_before, manipulator_after, lwh_list = self.get_knolling_data(pos_before=pos_before, ori_before=ori_before, lwh_list=new_lwh_list)
             start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
             print('get start and end')
 

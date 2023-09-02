@@ -25,8 +25,6 @@ def create_box(body_name: str,
     """
     Create a box.
     """
-    # print("-----------------------SPAWNING BOX------------------------")
-    # decide the size of the box
     length = size[0]
     width = size[1]
     height = size[2]
@@ -98,16 +96,6 @@ def _create_geometry(
         baseOrientation=orientation
     )
 
-    # p.changeDynamics(box_id, -1, lateralFriction=self.para_dict['box_lateral_friction'],
-    #                  contactDamping=self.para_dict['box_contact_damping'],
-    #                  contactStiffness=self.para_dict['box_contact_stiffness'])
-
-    # if lateral_friction is not None:
-    #     self.set_lateral_friction(body=body_name, link=-1, lateral_friction=lateral_friction)
-    # if spinning_friction is not None:
-    #     self.set_spinning_friction(body=body_name, link=-1, spinning_friction=spinning_friction)
-    # if contact_damping is not None and contact_stiffness is not None:
-    #     self.set_contact_damping_and_stiffness(body=body_name, link=-1, contact_damping=contact_damping, contact_stiffness=contact_stiffness)
 def inverse_kinematic(pos, ori, parameters=None):
     if pos.shape[0] == 3:
         pos = pos.reshape(1, 3)

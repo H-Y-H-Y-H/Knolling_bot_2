@@ -387,27 +387,27 @@ def train_test_split(data_root, target_path, start_num, end_num):
     os.makedirs(target_path + '/images/val', exist_ok=True)
 
     for i in range(start_num, train_num + start_num):
-        cur_path = os.path.join(data_root, 'origin_images/%d.png') % (i)
+        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
         tar_path = os.path.join(target_path, 'images/train/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'origin_labels/%d.txt') % (i)
+        cur_path = os.path.join(data_root, 'origin_labels/%012d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/train/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
     for i in range(train_num + start_num, end_num):
-        cur_path = os.path.join(data_root, 'origin_images/%d.png') % (i)
+        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
         tar_path = os.path.join(target_path, 'images/val/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'origin_labels/%d.txt') % (i)
+        cur_path = os.path.join(data_root, 'origin_labels/%012d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/val/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
 if __name__ == '__main__':
 
     start_num = 0
-    end_num = 50
+    end_num = 11008
     # data_root = '../../../datasets/yolo_pile_820_real_sundry/'
     # target_path = '../../../datasets/yolo_pile_820_real_sundry/'
     #
@@ -419,7 +419,7 @@ if __name__ == '__main__':
     # end_num = 4000
     # segmentation(data_root, target_path, start_num, end_num, show_flag=False)
 
-    data_root = '../../../datasets/yolo_pile_820_real_sundry/'
-    target_path = '../../../datasets/yolo_pile_820_real_sundry/'
+    data_root = '../../../knolling_dataset/yolo_pile_830_real_box/'
+    target_path = '../../../knolling_dataset/yolo_pile_830_real_box/'
 
     train_test_split(data_root, target_path, start_num, end_num)

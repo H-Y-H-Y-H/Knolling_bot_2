@@ -73,7 +73,7 @@ def capture_video():
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('sundry_box_3.avi', fourcc, fps, (w, h))
+    out = cv2.VideoWriter('sundry_box_4.avi', fourcc, fps, (w, h))
 
     recording = False
     print('To start recording, please press "s"')
@@ -109,9 +109,9 @@ def capture_video():
 
 def show_save_video(output_path):
 
-    cap = cv2.VideoCapture('sundry_box_3.avi')
+    cap = cv2.VideoCapture('sundry_box_4.avi')
     frame_read = 0
-    num = 1857
+    num = 9252
     while (cap.isOpened()):
         ret, frame = cap.read()
 
@@ -121,7 +121,7 @@ def show_save_video(output_path):
             frame = cv2.GaussianBlur(frame, (kernel_size, kernel_size), 0)
 
         # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if frame_read % 3 == 0:
+        if frame_read % 1 == 0:
             print('this is save num', num)
             cv2.imwrite(output_path + '%012d.png' % num, frame)
             num += 1

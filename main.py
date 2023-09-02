@@ -405,10 +405,10 @@ class knolling_main(Arm_env):
 
             pos_before = manipulator_before[:, :3]
             ori_before = manipulator_before[:, 3:6]
-            manipulator_before, manipulator_after, lwh_list = self.manual_knolling(pos_before=pos_before,
-                                                                                   ori_before=ori_before,
-                                                                                   lwh_list=new_lwh_list,
-                                                                                   crowded_index=crowded_index)
+            manipulator_before, manipulator_after, lwh_list = self.get_knolling_data(pos_before=pos_before,
+                                                                                     ori_before=ori_before,
+                                                                                     lwh_list=new_lwh_list,
+                                                                                     crowded_index=crowded_index)
             ########### add the offset of the manipulator to avoid collision ###########
             manipulator_after[:, 0] += 0.01
             ########### add the offset of the manipulator to avoid collision ###########
@@ -617,7 +617,7 @@ if __name__ == '__main__':
                  'yolo_conf': 0.6, 'yolo_iou': 0.5, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]],
+                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
                  'is_render': True,
@@ -630,7 +630,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
-                 'yolo_model_path': './828_pile_pose_real_sundry/weights/best.pt',
+                 'yolo_model_path': './models/830_pile_real_box/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True}
 
@@ -652,8 +652,8 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'threshold': 0.5,
-                 'grasp_model_path': './Grasp_pred_model/results/LSTM_730_2_heavy_dropout0/best_model.pt',}
+                 'threshold': 0.6,
+                 'grasp_model_path': './models/LSTM_829_1_heavy_dropout0/best_model.pt',}
 
     arrange_dict = {'running_name': 'whole-cherry-11'}
 
