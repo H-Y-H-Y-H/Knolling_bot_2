@@ -172,6 +172,7 @@ class Unstack_env(Arm_env):
         print('this is crowded_index', crowded_index)
         print('this is prediction', prediction)
 
+
         return manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output
 
     def get_ray(self, pos_ori, lwh):

@@ -99,7 +99,7 @@ class Generate_Dataset(Dataset):
         return len(self.box_data)
 
 # use conf
-para_dict = {'decive': 'cuda:0',
+para_dict = {'device': 'cuda:0',
              'num_img': 600,
              'ratio': 0.8,
              'epoch': 300,
@@ -108,22 +108,24 @@ para_dict = {'decive': 'cuda:0',
              'output_data_path': '../../knolling_dataset/MLP_unstack_901/sim_labels_unstack/',
              'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'batch_size': 64,
-             'input_size': 6,
-             'output_size': 2,
+             'output_size': 6,
              'abort_learning': 20,
              'set_dropout': 0.1,
              'num_boxes': 5,
              'run_name': 'MLP_902_1',
              'project_name': 'zzz_MLP_unstack',
              'wandb_flag': False,
-             'use_mse': False,
+             'use_mse': True,
              'use_scaler': False,
-             'fine-tuning': False}
+             'fine-tuning': False,
+             'node_1': 128,
+             'node_2': 32,
+             'node_3': 8}
 
 if __name__ == '__main__':
 
     if torch.cuda.is_available():
-        device = para_dict['decive']
+        device = para_dict['device']
 
     else:
         device = 'cpu'
@@ -161,12 +163,8 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     # initialize the parameters of the model
-    input_size = para_dict['input_size']
-    hidden_size = para_dict['hidden_size']
-    num_layers = para_dict['num_layers']
-    output_size = para_dict['output_size']
     learning_rate = para_dict['learning_rate']
-    model = MLP(input_dim=input_size, output_dim=output_size)
+    model = MLP(para_dict=para_dict)
 
     ##########################################################################
     if para_dict['fine-tuning'] == True:
@@ -191,17 +189,16 @@ if __name__ == '__main__':
 
         model.train()
         # print('train')
-        for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(train_loader):
-            box_data_batch = box_data_batch.to(device, dtype=torch.float32)
-            grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
+        for batch_id, (box_data, unstack_data) in enumerate(train_loader):
+            box_data = box_data.to(device, dtype=torch.float32)
+            unstack_data = unstack_data.to(device, dtype=torch.float32)
 
             optimizer.zero_grad()
-            box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
-            out = model.forward(box_data_pack)
+            out = model.forward(box_data)
             if para_dict['use_mse'] == True:
-                loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+                loss = model.maskedMSELoss(predict=out, target=unstack_data)
             else:
-                loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
+                loss = model.maskedCrossEntropyLoss(predict=out, target=unstack_data, boxes_data=box_data)
             train_loss.append(loss.item())
 
             loss.backward()
@@ -213,17 +210,16 @@ if __name__ == '__main__':
         model.eval()
         with torch.no_grad():
             # print('eval')
-            for batch_id, (box_data_batch, grasp_data_batch, num_box) in enumerate(test_loader):
+            for batch_id, (box_data, unstack_data) in enumerate(test_loader):
                 # print(batch_id)
-                box_data_batch = box_data_batch.to(device, dtype=torch.float32)
-                grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
+                box_data = box_data.to(device, dtype=torch.float32)
+                unstack_data = unstack_data.to(device, dtype=torch.float32)
 
-                box_data_pack = pack_padded_sequence(box_data_batch, num_box, batch_first=True)
-                out = model.forward(box_data_pack)
+                out = model.forward(box_data)
                 if para_dict['use_mse'] == True:
-                    loss = model.maskedMSELoss(predict=out, target=grasp_data_batch)
+                    loss = model.maskedMSELoss(predict=out, target=unstack_data)
                 else:
-                    loss = model.maskedCrossEntropyLoss(predict=out, target=grasp_data_batch, boxes_data=box_data_batch)
+                    loss = model.maskedCrossEntropyLoss(predict=out, target=unstack_data, boxes_data=box_data)
                 valid_loss.append(loss.item())
 
         avg_valid_loss = np.mean(valid_loss)

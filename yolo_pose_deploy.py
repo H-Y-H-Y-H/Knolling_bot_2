@@ -356,9 +356,9 @@ class Yolo_pose_model():
 
         else:
             model = self.para_dict['yolo_model_path']
-            if first_flag == True:
-                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-                cv2.imwrite(img_path + '.png', img)
+            # if first_flag == True:
+            img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+            cv2.imwrite(img_path + '.png', img)
             # img_path_input = img_path + '.png'
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
             use_python = True
@@ -435,8 +435,8 @@ class Yolo_pose_model():
                 # cv2.imshow('zzz', origin_img)
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
-                # img_path_output = img_path + '_pred.png'
-                # cv2.imwrite(img_path_output, origin_img)
+                img_path_output = img_path + '_pred.png'
+                cv2.imwrite(img_path_output, origin_img)
                 pass
             pred_result = np.asarray(pred_result)
 
