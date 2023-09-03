@@ -5,12 +5,12 @@ import os
 sys.path.append('/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/')
 sys.path.append('/home/ubuntu/Desktop/Knolling_bot_2/')
 # from Grasp_pred_model.Data_collection.grasp_or_yolo_collection import Arm_env
-from lstm_network import LSTMRegressor
+from network_lstm import LSTMRegressor
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
-from train_model import Generate_Dataset, data_split, collate_fn, para_dict
+from train_lstm import Generate_Dataset, data_split, collate_fn, para_dict
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from torch.utils.data import Dataset, DataLoader
-from lstm_network import LSTMRegressor
+from network_lstm import LSTMRegressor
 from tqdm import tqdm
 import sys
 sys.path.append('../')

@@ -241,7 +241,7 @@ class Yolo_pose_model():
 
         return im, result
 
-    def yolo_pose_predict(self, cfg=DEFAULT_CFG, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
+    def yolo_pose_predict(self, first_flag=False, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
         self.epoch = epoch
         if real_flag == True:
@@ -356,10 +356,11 @@ class Yolo_pose_model():
 
         else:
             model = self.para_dict['yolo_model_path']
-            img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-            cv2.imwrite(img_path + '.png', img)
-            img_path_input = img_path + '.png'
-            args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+            if first_flag == True:
+                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+                cv2.imwrite(img_path + '.png', img)
+            # img_path_input = img_path + '.png'
+            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
             use_python = True
             if use_python:
                 from ultralytics import YOLO
@@ -368,13 +369,15 @@ class Yolo_pose_model():
                 predictor = PosePredictor(overrides=args)
                 predictor.predict_cli()
 
-            origin_img = cv2.imread(img_path_input)
+            # origin_img = cv2.imread(img_path_input)
+            origin_img = np.copy(img)
             use_xylw = False # use lw or keypoints to export length and width
             one_img = images[0]
 
             pred_result = []
             pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
-            if len(pred_xylws) == 0:
+            if len(pred_xylws) <= 1: # filter the results no more than 1
+                print('yolo no more than 1')
                 return [], []
             else:
                 pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
@@ -386,20 +389,20 @@ class Yolo_pose_model():
 
 
             ######## order based on distance to draw it on the image while deploying the model ########
-            if self.para_dict['data_collection'] == False:
-                mm2px = 530 / 0.34
-                x_px_center = pred_xylws[:, 1] * 480
-                y_px_center = pred_xylws[:, 0] * 640
-                mm_center = np.concatenate(
-                    (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
-                pred_order = change_sequence(mm_center)
+            # if self.para_dict['data_collection'] == False:
+            mm2px = 530 / 0.34
+            x_px_center = pred_xylws[:, 1] * 480
+            y_px_center = pred_xylws[:, 0] * 640
+            mm_center = np.concatenate(
+                (((x_px_center - 6) / mm2px).reshape(-1, 1), ((y_px_center - 320) / mm2px).reshape(-1, 1)), axis=1)
+            pred_order = change_sequence(mm_center)
 
-                pred = pred[pred_order]
-                pred_xylws = pred_xylws[pred_order]
-                pred_keypoints = pred_keypoints[pred_order]
-                pred_cls = pred_cls[pred_order]
-                pred_conf = pred_conf[pred_order]
-                print('this is the pred order', pred_order)
+            pred = pred[pred_order]
+            pred_xylws = pred_xylws[pred_order]
+            pred_keypoints = pred_keypoints[pred_order]
+            pred_cls = pred_cls[pred_order]
+            pred_conf = pred_conf[pred_order]
+            print('this is the pred order', pred_order)
 
             for j in range(len(pred_xylws)):
 
@@ -432,8 +435,9 @@ class Yolo_pose_model():
                 # cv2.imshow('zzz', origin_img)
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
-                img_path_output = img_path + '_pred.png'
-                cv2.imwrite(img_path_output, origin_img)
+                # img_path_output = img_path + '_pred.png'
+                # cv2.imwrite(img_path_output, origin_img)
+                pass
             pred_result = np.asarray(pred_result)
 
         return pred_result, pred_conf

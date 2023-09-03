@@ -1,5 +1,5 @@
 import numpy as np
-from Grasp_pred_model.lstm_network import LSTMRegressor
+from Grasp_pred_model.network_lstm import LSTMRegressor
 import torch.nn as nn
 import torch
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence

@@ -487,7 +487,7 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, epoch=0, look_flag=False):
+    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False):
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
                                                                              height=480,
@@ -522,7 +522,7 @@ class Arm_env():
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
-                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index))
+                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
 
                 if len(results) == 0:
                     return np.array([]), np.array([]), np.array([])

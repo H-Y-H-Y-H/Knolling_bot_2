@@ -81,7 +81,7 @@ class Unstack_env(Arm_env):
                 p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
                                         targetPosition=ik_angles0[motor_index], maxVelocity=25, force=self.para_dict['move_force'])
             move_success_flag = True
-            for i in range(20):
+            for i in range(10):
                 p.stepSimulation()
                 if self.is_render:
                     time.sleep(1 / 1080)
@@ -153,11 +153,11 @@ class Unstack_env(Arm_env):
 
         return output_data, flag
 
-    def get_grasp_info(self, img_index_start):
+    def get_grasp_info(self, img_index_start, baseline_flag=False):
 
         ############################## Get the information of boxes #################################
         print('this is img_index start while grasping', img_index_start)
-        manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
+        manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start, baseline_flag=baseline_flag)
         if len(manipulator_before) <= 1 or len(self.boxes_index) == 1:
             return manipulator_before, None, None, None, None, None
         ############################## Get the information of boxes #################################
@@ -171,50 +171,34 @@ class Unstack_env(Arm_env):
                                                                         pred_conf_input)
         print('this is crowded_index', crowded_index)
         print('this is prediction', prediction)
-        self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+
 
         return manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output
 
     def get_ray(self, pos_ori, lwh):
 
-        # stack_center = np.mean(pos_ori[:, :2], axis=0)
-        # far_box_index = np.argmax(np.linalg.norm(pos_ori[:, :2] - self.table_center, axis=1))
-        # far_box_pos = pos_ori[far_box_index, :2]
-        # main_angle = np.arctan2((stack_center - far_box_pos)[1], (stack_center - far_box_pos)[0])
-        # angle_list = np.linspace(main_angle - self.angular_distance * (self.num_rays // 2),
-        #                          main_angle + self.angular_distance * (self.num_rays // 2),
-        #                          num=self.num_rays, endpoint=True)
-        # move_distance = np.linalg.norm(far_box_pos - stack_center) * 2
-        # direction_far_stack = (stack_center - far_box_pos) / (move_distance / 2)
-        # entry_distance = np.linalg.norm(lwh[far_box_index, :2]) / 2 + np.linalg.norm(
-        #     [self.gripper_width, self.gripper_height]) / 2
-        # ray_start_pos = far_box_pos + entry_distance * (-direction_far_stack)
-        # ray_start_pos = np.repeat([ray_start_pos], repeats=self.num_rays, axis=0)
-        # ray_end_pos = ray_start_pos + np.concatenate(
-        #     ((move_distance + entry_distance) * np.cos(angle_list).reshape(-1, 1),
-        #      (move_distance + entry_distance) * np.sin(angle_list).reshape(-1, 1)), axis=1)
-        # rays = np.concatenate((ray_start_pos, np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-        #                        np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1),
-        #                        ray_end_pos, np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-        #                        np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1)), axis=1)
-
         stack_center = np.mean(pos_ori[:, :2], axis=0)
         far_box_index = np.argmax(np.linalg.norm(pos_ori[:, :2] - stack_center, axis=1))
         far_box_pos = pos_ori[far_box_index, :2]
+        # radius_start = (np.linalg.norm(stack_center - far_box_pos) +
+        #           np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
+        #           np.linalg.norm([self.gripper_width, self.gripper_height]) / 2 +
+        #           self.gripper_interval)
+        radius_end = (np.linalg.norm(stack_center - far_box_pos))
         radius_start = (np.linalg.norm(stack_center - far_box_pos) +
-                  np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
-                  np.linalg.norm([self.gripper_width, self.gripper_height]) / 2 +
-                  self.gripper_interval)
-        radius_end = (np.linalg.norm(stack_center - far_box_pos) +
-                        np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2))
+                        np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
+                        self.gripper_width / 2)
+        # radius_end = 0
         center_list = self.gaussian_center(stack_center)
         angle_list = np.random.uniform(-np.pi, np.pi, self.num_rays)
+
         x_offset_start = np.cos(angle_list) * radius_start
         y_offset_start = np.sin(angle_list) * radius_start
         x_offset_end = np.cos(angle_list) * radius_end
         y_offset_end = np.sin(angle_list) * radius_end
         start_pos = np.array([center_list[:, 0] + x_offset_start, center_list[:, 1] + y_offset_start]).T
         end_pos = np.array([center_list[:, 0] - x_offset_end, center_list[:, 1] - y_offset_end]).T
+
         rays = np.concatenate((start_pos, np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
                                np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1) + np.pi / 2,
                                end_pos, np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
@@ -240,7 +224,7 @@ class Unstack_env(Arm_env):
             print('this is success', self.success)
             quit()
 
-        manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output = self.get_grasp_info(img_index_start)
+        manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output = self.get_grasp_info(img_index_start, baseline_flag=True)
         if len(manipulator_before_input) <= 1 or len(self.boxes_index) == 1:
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
@@ -266,13 +250,12 @@ class Unstack_env(Arm_env):
         ############## Genarete the results of LSTM model #############
 
         self.calculate_gripper()
-        input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
 
         rays = self.get_ray(manipulator_before_input, new_lwh_list_input)
         state_id = p.saveState()
         offset_low = np.array([0, 0, 0.0])
         offset_high = np.array([0, 0, 0.04])
-        max_grasp_num = np.copy(len(manipulator_before_input) - len(crowded_index))
+        max_grasp_num = 0
         max_grasp_index = None
         out_times = 0
         fail_times = 0
@@ -324,6 +307,8 @@ class Unstack_env(Arm_env):
                     if test_grasp_num > max_grasp_num:
                         max_grasp_num = test_grasp_num
                         max_grasp_index = i
+                        self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+                        input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
                     if len(crowded_index) == 0:
                         print('great')
                         self.success += 1
@@ -331,13 +316,18 @@ class Unstack_env(Arm_env):
             else:
                 fail_times += 1
             p.restoreState(state_id)
-        output_data = rays[max_grasp_index].reshape(1, -1)
 
-        if out_times >= len(rays) or fail_times >= len(rays):
+        if out_times >= len(rays) or fail_times >= len(rays) or max_grasp_num == 0:
             print('all methods fail, abort this epoch!')
             return self.img_per_epoch
         else:
-            np.savetxt(data_root + "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch), output_data, fmt='%.04f')
+            output_data = rays[max_grasp_index].reshape(2, -1)
+            print(f'this is output index {max_grasp_index}')
+            print('output data', output_data)
+            # output: xyz, xyz
+            # input: box_xyz, box_ori, box_lwh, yolo_conf, grasp_fail_success
+            np.savetxt(data_root + "sim_labels_output/%012d.txt" % (img_index_start + self.img_per_epoch), output_data, fmt='%.04f')
+            np.savetxt(data_root + "sim_labels_input/%012d.txt" % (img_index_start + self.img_per_epoch), input_data, fmt='%.04f')
             if self.save_img_flag == False:
                 os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
@@ -362,18 +352,18 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 0, 'end_num': 50, 'thread': 0,
+    para_dict = {'start_num': 2000, 'end_num': 2100, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': False,
+                 'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': True,
-                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
+                 'is_render': False,
+                 'box_range': [[0.016, 0.048], [0.016], [0.01, 0.016]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
-                 'move_threshold': 0.001, 'move_force': 10,
+                 'move_threshold': 0.001, 'move_force': 30,
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
@@ -407,6 +397,8 @@ if __name__ == '__main__':
     env = Unstack_env(para_dict=para_dict, lstm_dict=lstm_dict)
     os.makedirs(data_root + 'sim_images/', exist_ok=True)
     os.makedirs(data_root + 'sim_labels/', exist_ok=True)
+    os.makedirs(data_root + 'sim_labels_box/', exist_ok=True)
+    os.makedirs(data_root + 'sim_labels_unstack/', exist_ok=True)
 
     exist_img_num = startnum
     while True:
