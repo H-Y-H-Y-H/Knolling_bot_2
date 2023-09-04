@@ -13,7 +13,7 @@ len_wrist = 0.174
 height_base = 0.105
 theta_1_offset = np.arctan2(0.05, 0.2)
 origin_offset = 0.084
-
+height_offset = 0.005
 
 def create_box(body_name: str,
                position: np.ndarray,
@@ -97,12 +97,12 @@ def _create_geometry(
     )
 
 def inverse_kinematic(pos, ori, parameters=None):
+
     if pos.shape[0] == 3:
         pos = pos.reshape(1, 3)
         ori = ori.reshape(1, 3)
-
-
     pos[:, 0] += origin_offset
+    pos[:, 2] += height_offset
     x = pos[:, 0]
     y = pos[:, 1]
     z = pos[:, 2]
@@ -127,7 +127,7 @@ def forward_kinematic(motor):
 
     motor = motor / 4096 * (np.pi * 2)
     motor = np.delete(motor, 2, axis=1)
-    print(motor)
+    # print('this is motor in forward_kinematic', motor)
     theta_0 = motor[:, 0] - np.pi
     theta_1 = np.pi * 2 - motor[:, 1] - theta_1_offset - np.pi / 2
     theta_2 = motor[:, 2] - np.pi / 2 + theta_1 + theta_1_offset - np.pi / 2
@@ -140,6 +140,7 @@ def forward_kinematic(motor):
 
     pos = np.concatenate((x.reshape(-1, 1), y.reshape(-1, 1), z.reshape(-1, 1)), axis=1)
     pos[:, 0] -= origin_offset
+    pos[:, 2] -= height_offset
     ori = np.concatenate((np.zeros(len(motor)).reshape(-1, 1), np.ones(len(motor)).reshape(-1, 1) * np.pi / 2, yaw.reshape(-1, 1)), axis=1)
 
     return pos, ori

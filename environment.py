@@ -33,7 +33,7 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict)
+        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict)
         # self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
@@ -504,6 +504,7 @@ class Arm_env():
             my_im[:, :, 2] = temp
             img = np.copy(my_im)
             return img, top_height
+
         if look_flag == True:
             if self.para_dict['real_operate'] == False:
                 img, _ = get_images()
@@ -515,48 +516,36 @@ class Arm_env():
                 img_path = self.para_dict['dataset_path'] + 'sim_images/%012d.png' % (epoch)
                 cv2.imwrite(img_path, img)
         else:
-            if self.para_dict['data_collection'] == True or self.para_dict['real_operate'] == False:
+            if self.para_dict['real_operate'] == False:
 
                 img, _ = get_images()
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
-                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                if self.para_dict['use_lstm_model'] == True:
+                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                else:
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
 
-                if len(results) == 0:
-                    return np.array([]), np.array([]), np.array([])
-                # print('this is the result of yolo-pose\n', results)
                 ################### the results of object detection has changed the order!!!! ####################
-
-                manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
-                new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
-                # print('this is manipulator before after the detection \n', manipulator_before)
-
-                return manipulator_before, new_lwh_list, pred_conf
 
             if self.para_dict['real_operate'] == True:
 
-                # ################ this only be used while testing ###############
-                # manipulator_before = np.concatenate((self.pos_before, self.ori_before), axis=1)
-                # manipulator_before = np.asarray(manipulator_before)
-                # new_xyz_list = self.lwh_list
-                # print('this is manipulator before after the detection \n', manipulator_before)
-
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, real_flag=True)
-                results, pred_conf = self.yolo_pose_model.yolo_pose_predict(real_flag=True)
-                if len(results) == 0:
-                    return np.array([]), np.array([]), np.array([])
-                # print('this is the result of yolo-pose\n', results)
+                if self.para_dict['use_lstm_model'] == True:
+                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
+                else:
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
+
                 ################### the results of object detection has changed the order!!!! ####################
 
-                manipulator_before = np.concatenate((results[:, :3], np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
-                new_lwh_list = np.concatenate((results[:, 3:5], np.ones((len(results), 1)) * 0.016), axis=1)
-                # print('this is manipulator before after the detection \n', manipulator_before)
-
+            if self.para_dict['use_lstm_model'] == True:
+                return manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output
+            else:
                 return manipulator_before, new_lwh_list, pred_conf
+
 
 if __name__ == '__main__':
 

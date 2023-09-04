@@ -292,17 +292,17 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_730/origin_labels/'
-    # target_data_path = '../../../knolling_dataset/grasp_dataset_730/labels_1/'
-    # # target_data_path = data_root + 'origin_labels_713_lab/'
-    #
-    # data_num = 300000
-    # start_index = 0
-    # target_start_index = 0
-    # dropout_prob = 0
-    # # data_preprocess_csv(data_path, data_num, start_index)
-    # # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
+    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_5/'
+    # target_data_path = data_root + 'origin_labels_713_lab/'
+
+    data_num = 300000
+    start_index = 0
+    target_start_index = 0
+    dropout_prob = 0
+    # data_preprocess_csv(data_path, data_num, start_index)
+    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
+    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
     # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
@@ -313,7 +313,7 @@ if __name__ == '__main__':
     # num = 100000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
-    analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
-    valid_num = 10000
-    yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    # data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
+    # analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
+    # valid_num = 10000
+    # yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)

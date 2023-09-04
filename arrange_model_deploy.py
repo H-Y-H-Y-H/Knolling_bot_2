@@ -43,7 +43,7 @@ class Arrange_model():
                                           num_gaussians=5)
 
         print("Number of parameters:", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
-        PATH = './Arrange_knolling_model/%s/%s' % (name, model_name)
+        PATH = './models/%s/%s' % (name, model_name)
         checkpoint = torch.load(PATH, map_location=self.para_dict['device'])
         self.model.load_state_dict(checkpoint)
         print('here')
