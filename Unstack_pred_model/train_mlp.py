@@ -12,7 +12,7 @@ from tqdm import tqdm
 import time
 from network_mlp import MLP
 
-def data_preprocess(box_path, unstack_path, total_num, ratio, valid_num, test_model=False, use_scaler=False):
+def data_preprocess(box_path, unstack_path, total_num, ratio, valid_num=None, test_model=False, use_scaler=False):
 
     num_train = int(total_num * ratio)
 
@@ -21,6 +21,9 @@ def data_preprocess(box_path, unstack_path, total_num, ratio, valid_num, test_mo
     total_unstack_data_train = []
     total_unstack_data_test = []
     data_total = []
+
+    if valid_num is None:
+        valid_num = total_num
 
     if use_scaler == True:
         scaler = StandardScaler()
@@ -48,23 +51,35 @@ def data_preprocess(box_path, unstack_path, total_num, ratio, valid_num, test_mo
             for i in tqdm(range(num_train)):
                 box_data_train = np.loadtxt(box_path + '%012d.txt' % i)
                 unstack_data_train = np.loadtxt(unstack_path + '%012d.txt' % i)
-                box_data_train = box_data_train[:, [0, 1, 5, 6, 7, 9, 11]].reshape(-1, )
-                unstack_data_train = unstack_data_train[:, [0, 1, 5]].reshape(-1, )
-                total_box_data_train.append(box_data_train)
-                total_unstack_data_train.append(unstack_data_train)
+                # box_data_train = box_data_train[:, [0, 1, 5, 6, 7, 9, 11]].reshape(-1, )
+                # unstack_data_train = unstack_data_train[:, [0, 1, 5]].reshape(-1, )
+                total_box_data_train.append(box_data_train.reshape(-1, ))
+                total_unstack_data_train.append(unstack_data_train.reshape(-1, ))
             print('\ntotal train data:', len(total_unstack_data_train))
 
             print('load the valid data ...')
             for i in tqdm(range(num_train, total_num)):
                 box_data_test = np.loadtxt(box_path + '%012d.txt' % i)
                 unstack_data_test = np.loadtxt(unstack_path + '%012d.txt' % i)
-                box_data_test = box_data_test[:, [0, 1, 5, 6, 7, 9, 11]].reshape(-1, )
-                unstack_data_test = unstack_data_test[:, [0, 1, 5]].reshape(-1, )
-                total_box_data_test.append(box_data_test)
-                total_unstack_data_test.append(unstack_data_test)
+                # box_data_test = box_data_test[:, [0, 1, 5, 6, 7, 9, 11]].reshape(-1, )
+                # unstack_data_test = unstack_data_test[:, [0, 1, 5]].reshape(-1, )
+                total_box_data_test.append(box_data_test.reshape(-1, ))
+                total_unstack_data_test.append(unstack_data_test.reshape(-1, ))
             print('total valid data:', len(total_unstack_data_test))
 
             return total_box_data_train, total_box_data_test, total_unstack_data_train, total_unstack_data_test
+
+        else:
+            print('load the valid data ...')
+            for i in tqdm(range(num_train, valid_num + num_train)):
+                box_data_test = np.loadtxt(box_path + '%012d.txt' % i)
+                unstack_data_test = np.loadtxt(unstack_path + '%012d.txt' % i)
+                total_box_data_test.append(box_data_test.reshape(-1, ))
+                total_unstack_data_test.append(unstack_data_test.reshape(-1, ))
+            print('total valid data:', len(total_unstack_data_test))
+
+            return total_box_data_test, total_unstack_data_test
+
 
 def data_padding(box_train, box_test):
 
@@ -100,21 +115,21 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'device': 'cuda:0',
-             'num_img': 600,
+             'num_img': 48000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': './results/MLP_902_1/',
-             'input_data_path': '../../knolling_dataset/MLP_unstack_901/sim_labels_box/',
-             'output_data_path': '../../knolling_dataset/MLP_unstack_901/sim_labels_unstack/',
-             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
+             'model_path': './results/MLP_902_4/',
+             'input_data_path': '../../knolling_dataset/MLP_unstack_902/labels_box/',
+             'output_data_path': '../../knolling_dataset/MLP_unstack_902/labels_unstack/',
+             'learning_rate': 0.0001, 'patience': 10, 'factor': 0.1,
              'batch_size': 64,
              'output_size': 6,
              'abort_learning': 20,
              'set_dropout': 0.1,
              'num_boxes': 5,
-             'run_name': 'MLP_902_1',
+             'run_name': 'MLP_902_4',
              'project_name': 'zzz_MLP_unstack',
-             'wandb_flag': False,
+             'wandb_flag': True,
              'use_mse': True,
              'use_scaler': False,
              'fine-tuning': False,
@@ -135,8 +150,6 @@ if __name__ == '__main__':
     if para_dict['wandb_flag'] == True:
         wandb.config = para_dict
         wandb.init(project=para_dict['project_name'],
-                 notes='knolling_bot_2',
-                 tags=['baseline', 'paper1'],
                  name=para_dict['run_name'])
         wandb.config.update(para_dict)
         print('this is para_dict\n', para_dict)
@@ -164,7 +177,8 @@ if __name__ == '__main__':
 
     # initialize the parameters of the model
     learning_rate = para_dict['learning_rate']
-    model = MLP(para_dict=para_dict)
+    model = MLP(num_boxes=para_dict['num_boxes'], output_size=para_dict['output_size'],
+                node_1=para_dict['node_1'], node_2=para_dict['node_2'], node_3=para_dict['node_3'], device=para_dict['device'])
 
     ##########################################################################
     if para_dict['fine-tuning'] == True:

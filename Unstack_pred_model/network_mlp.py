@@ -5,19 +5,18 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 import numpy as np
 
 class MLP(nn.Module):
-    def __init__(self, para_dict=None):
+    def __init__(self, num_boxes, output_size, node_1, node_2, node_3, device):
         super(MLP, self).__init__()
 
-        self.para_dict = para_dict
-        self.input_dim = self.para_dict['num_boxes'] * 7
-        self.output_dim = self.para_dict['output_size']
+        self.input_dim = num_boxes * 7
+        self.output_dim = output_size
 
 
         # Define the output layer
-        self.linear1 = nn.Linear(self.input_dim, self.para_dict['node_1']).to(self.para_dict['device'])
-        self.linear2 = nn.Linear(self.para_dict['node_1'], self.para_dict['node_2']).to(self.para_dict['device'])
-        self.linear3 = nn.Linear(self.para_dict['node_2'], self.para_dict['node_3']).to(self.para_dict['device'])
-        self.linear4 = nn.Linear(self.para_dict['node_3'], self.output_dim).to(self.para_dict['device'])
+        self.linear1 = nn.Linear(self.input_dim, node_1).to(device)
+        self.linear2 = nn.Linear(node_1, node_2).to(device)
+        self.linear3 = nn.Linear(node_2, node_3).to(device)
+        self.linear4 = nn.Linear(node_3, self.output_dim).to(device)
         self.relu = nn.ReLU()
         self.softmax = nn.Softmax(dim=2)
 

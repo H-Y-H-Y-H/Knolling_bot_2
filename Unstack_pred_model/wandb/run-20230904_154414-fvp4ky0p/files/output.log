@@ -1,0 +1,167 @@
+this is para_dict
+ {'device': 'cuda:0', 'num_img': 4800, 'ratio': 0.8, 'epoch': 300, 'model_path': './results/MLP_902_1/', 'input_data_path': '../../knolling_dataset/MLP_unstack_902/labels_box/', 'output_data_path': '../../knolling_dataset/MLP_unstack_902/labels_unstack/', 'learning_rate': 0.001, 'patience': 10, 'factor': 0.1, 'batch_size': 64, 'output_size': 6, 'abort_learning': 20, 'set_dropout': 0.1, 'num_boxes': 5, 'run_name': 'MLP_902_1', 'project_name': 'zzz_MLP_unstack', 'wandb_flag': True, 'use_mse': True, 'use_scaler': False, 'fine-tuning': False, 'node_1': 128, 'node_2': 32, 'node_3': 8}
+load the train data ...
+total train data: 3840
+load the valid data ...
+total valid data: 960
+not fine-tuning
+100%|██████████| 3840/3840 [00:00<00:00, 8879.71it/s]
+100%|██████████| 960/960 [00:00<00:00, 9070.07it/s]
+Training_Loss At Epoch 0:	 0.382358
+Testing_Loss At Epoch 0:	 0.362739
+epoch0, time used: 0.54, lr: 0.001
+Training_Loss At Epoch 1:	 0.35085
+Testing_Loss At Epoch 1:	 0.356387
+epoch1, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 2:	 0.341632
+Testing_Loss At Epoch 2:	 0.343625
+epoch2, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 3:	 0.324427
+Testing_Loss At Epoch 3:	 0.317256
+epoch3, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 4:	 0.294064
+Testing_Loss At Epoch 4:	 0.278658
+epoch4, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 5:	 0.272136
+Testing_Loss At Epoch 5:	 0.261856
+epoch5, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 6:	 0.258916
+Testing_Loss At Epoch 6:	 0.256522
+epoch6, time used: 0.11, lr: 0.001
+Training_Loss At Epoch 7:	 0.252044
+Testing_Loss At Epoch 7:	 0.251634
+epoch7, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 8:	 0.246106
+Testing_Loss At Epoch 8:	 0.248646
+epoch8, time used: 0.07, lr: 0.001
+epoch9, time used: 0.09, lr: 0.001
+Training_Loss At Epoch 10:	 0.240447
+Testing_Loss At Epoch 10:	 0.246007
+epoch10, time used: 0.1, lr: 0.001
+epoch11, time used: 0.07, lr: 0.001
+Training_Loss At Epoch 12:	 0.234686
+Testing_Loss At Epoch 12:	 0.239646
+epoch12, time used: 0.1, lr: 0.001
+epoch13, time used: 0.09, lr: 0.001
+Training_Loss At Epoch 14:	 0.228233
+Testing_Loss At Epoch 14:	 0.238686
+epoch14, time used: 0.09, lr: 0.001
+epoch15, time used: 0.11, lr: 0.001
+epoch16, time used: 0.1, lr: 0.001
+Training_Loss At Epoch 17:	 0.222602
+Testing_Loss At Epoch 17:	 0.234702
+epoch17, time used: 0.08, lr: 0.001
+epoch18, time used: 0.1, lr: 0.001
+Training_Loss At Epoch 19:	 0.214809
+Testing_Loss At Epoch 19:	 0.234622
+epoch19, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 20:	 0.213995
+Testing_Loss At Epoch 20:	 0.226023
+epoch20, time used: 0.08, lr: 0.001
+epoch21, time used: 0.11, lr: 0.001
+epoch22, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 23:	 0.20991
+Testing_Loss At Epoch 23:	 0.222656
+epoch23, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 24:	 0.202952
+Testing_Loss At Epoch 24:	 0.221573
+epoch24, time used: 0.1, lr: 0.001
+Training_Loss At Epoch 25:	 0.199244
+Testing_Loss At Epoch 25:	 0.220676
+epoch25, time used: 0.08, lr: 0.001
+epoch26, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 27:	 0.195517
+Testing_Loss At Epoch 27:	 0.220261
+epoch27, time used: 0.11, lr: 0.001
+Training_Loss At Epoch 28:	 0.194774
+Testing_Loss At Epoch 28:	 0.2191
+epoch28, time used: 0.08, lr: 0.001
+epoch29, time used: 0.08, lr: 0.001
+epoch30, time used: 0.1, lr: 0.001
+Training_Loss At Epoch 31:	 0.188573
+Testing_Loss At Epoch 31:	 0.214856
+epoch31, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 32:	 0.189143
+Testing_Loss At Epoch 32:	 0.212436
+epoch32, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 33:	 0.184863
+Testing_Loss At Epoch 33:	 0.211463
+epoch33, time used: 0.11, lr: 0.001
+epoch34, time used: 0.08, lr: 0.001
+epoch35, time used: 0.08, lr: 0.001
+epoch36, time used: 0.1, lr: 0.001
+epoch37, time used: 0.08, lr: 0.001
+epoch38, time used: 0.08, lr: 0.001
+epoch39, time used: 0.09, lr: 0.001
+epoch40, time used: 0.08, lr: 0.001
+epoch41, time used: 0.08, lr: 0.001
+epoch42, time used: 0.09, lr: 0.001
+Training_Loss At Epoch 43:	 0.171655
+Testing_Loss At Epoch 43:	 0.207946
+epoch43, time used: 0.08, lr: 0.001
+epoch44, time used: 0.08, lr: 0.001
+epoch45, time used: 0.09, lr: 0.001
+epoch46, time used: 0.09, lr: 0.001
+epoch47, time used: 0.08, lr: 0.001
+epoch48, time used: 0.09, lr: 0.001
+epoch49, time used: 0.08, lr: 0.001
+epoch50, time used: 0.07, lr: 0.001
+epoch51, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 52:	 0.159789
+Testing_Loss At Epoch 52:	 0.204484
+epoch52, time used: 0.08, lr: 0.001
+epoch53, time used: 0.08, lr: 0.001
+epoch54, time used: 0.1, lr: 0.001
+epoch55, time used: 0.07, lr: 0.001
+epoch56, time used: 0.07, lr: 0.001
+epoch57, time used: 0.08, lr: 0.001
+epoch58, time used: 0.07, lr: 0.001
+epoch59, time used: 0.07, lr: 0.001
+epoch60, time used: 0.08, lr: 0.001
+epoch61, time used: 0.08, lr: 0.001
+epoch62, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 63:	 0.148993
+Testing_Loss At Epoch 63:	 0.203772
+epoch63, time used: 0.08, lr: 0.001
+epoch64, time used: 0.07, lr: 0.001
+epoch65, time used: 0.07, lr: 0.001
+Training_Loss At Epoch 66:	 0.143818
+Testing_Loss At Epoch 66:	 0.203201
+epoch66, time used: 0.09, lr: 0.001
+epoch67, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 68:	 0.141192
+Testing_Loss At Epoch 68:	 0.199999
+epoch68, time used: 0.07, lr: 0.001
+epoch69, time used: 0.08, lr: 0.001
+epoch70, time used: 0.08, lr: 0.001
+epoch71, time used: 0.08, lr: 0.001
+epoch72, time used: 0.09, lr: 0.001
+epoch73, time used: 0.07, lr: 0.001
+epoch74, time used: 0.07, lr: 0.001
+epoch75, time used: 0.07, lr: 0.001
+epoch76, time used: 0.08, lr: 0.001
+epoch77, time used: 0.08, lr: 0.001
+Training_Loss At Epoch 78:	 0.13807
+Testing_Loss At Epoch 78:	 0.198503
+epoch78, time used: 0.09, lr: 0.001
+epoch79, time used: 0.08, lr: 0.001
+epoch80, time used: 0.07, lr: 0.001
+epoch81, time used: 0.08, lr: 0.001
+epoch82, time used: 0.07, lr: 0.001
+epoch83, time used: 0.07, lr: 0.001
+epoch84, time used: 0.09, lr: 0.001
+epoch85, time used: 0.08, lr: 0.001
+epoch86, time used: 0.08, lr: 0.001
+epoch87, time used: 0.09, lr: 0.001
+epoch88, time used: 0.07, lr: 0.001
+epoch89, time used: 0.07, lr: 0.001
+epoch90, time used: 0.07, lr: 0.0001
+epoch91, time used: 0.08, lr: 0.0001
+epoch92, time used: 0.07, lr: 0.0001
+epoch93, time used: 0.09, lr: 0.0001
+epoch94, time used: 0.07, lr: 0.0001
+epoch95, time used: 0.07, lr: 0.0001
+epoch96, time used: 0.07, lr: 0.0001
+epoch97, time used: 0.07, lr: 0.0001
+epoch98, time used: 0.08, lr: 0.0001
+epoch99, time used: 0.09, lr: 0.0001
