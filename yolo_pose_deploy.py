@@ -129,18 +129,25 @@ class Yolo_pose_model():
         # In order to grasp, this ori is based on the longest side of the box, not the label ori!
 
         # randomly exchange the length and width to make the yolo result match the expectation of the knolling model
-        if np.random.rand() < 0.5:
-            # temp = length
-            # length = width
-            # width = temp
-            # if my_ori > np.pi / 2:
-            #     return_ori = my_ori - np.pi / 2
-            # else:
-            #     return_ori = my_ori + np.pi / 2
-            pass
-        else:
-            pass
-        return_ori = my_ori
+
+        # # 不要随便交换长宽，grasp model会寄掉！！！！！！
+        # if np.random.rand() < 0.5:
+        #     # temp = length
+        #     # length = width
+        #     # width = temp
+        #     # if my_ori > np.pi / 2:
+        #     #     return_ori = my_ori - np.pi / 2
+        #     # else:
+        #     #     return_ori = my_ori + np.pi / 2
+        #     pass
+        # else:
+        #     pass
+        # # 不要随便交换长宽，grasp model会寄掉！！！！！！
+
+        if my_ori > np.pi:
+            my_ori -= np.pi
+        elif my_ori < 0:
+            my_ori += np.pi
 
         rot_z = [[np.cos(my_ori), -np.sin(my_ori)],
                  [np.sin(my_ori), np.cos(my_ori)]]
@@ -154,7 +161,6 @@ class Yolo_pose_model():
         corn3 = [corn3[0] + x_px_center, corn3[1] + y_px_center]
         corn4 = [corn4[0] + x_px_center, corn4[1] + y_px_center]
         ############### zzz plot parameters ###############
-
 
         ############### zzz plot the box ###############
         if isinstance(box, torch.Tensor):
@@ -174,7 +180,7 @@ class Yolo_pose_model():
         plot_w = np.copy(width)
         label1 = 'cls: %d, conf: %.5f' % (cls, conf)
         label2 = 'index: %d, x: %.4f, y: %.4f' % (index, plot_x, plot_y)
-        label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, return_ori)
+        label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
         if label:
             w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
@@ -218,7 +224,7 @@ class Yolo_pose_model():
             im = cv2.circle(im, (int(x_coord), int(y_coord)), radius, color_k, -1, lineType=cv2.LINE_AA)
         ############### zzz plot the keypoints ###############
 
-        result = np.concatenate((box_center, [z_mm_center], [round(length, 4)], [round(width, 4)], [return_ori]))
+        result = np.concatenate((box_center, [z_mm_center], [round(length, 4)], [round(width, 4)], [my_ori]))
 
         return im, result
 
@@ -226,7 +232,7 @@ class Yolo_pose_model():
 
         self.epoch = epoch
         if real_flag == True:
-            img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (self.epoch)
+            self.img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (self.epoch)
             # os.makedirs(img_path, exist_ok=True)
             model = self.para_dict['yolo_model_path']
             pipeline = rs.pipeline()
@@ -326,14 +332,14 @@ class Yolo_pose_model():
                 cv2.imshow('zzz', origin_img)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
-                    img_path_output = img_path + '_pred.png'
+                    img_path_output = self.img_path + '_pred.png'
                     cv2.imwrite(img_path_output, origin_img)
                     break
 
         else:
             model = self.para_dict['yolo_model_path']
             # if first_flag == True:
-            img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+            self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
             # cv2.imwrite(img_path + '.png', img)
             # img_path_input = img_path + '.png'
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
@@ -411,14 +417,14 @@ class Yolo_pose_model():
                                                                                 pred_conf)
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)
-                self.plot_grasp(manipulator_before, prediction, model_output)
+                # self.plot_grasp(manipulator_before, prediction, model_output)
             if self.para_dict['save_img_flag'] == True:
                 # cv2.namedWindow('zzz', 0)
                 # cv2.resizeWindow('zzz', 1280, 960)
                 # cv2.imshow('zzz', origin_img)
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
-                img_path_output = img_path + '_pred.png'
+                img_path_output = self.img_path + '_pred.png'
                 cv2.imwrite(img_path_output, origin_img)
                 pass
 
@@ -442,11 +448,11 @@ class Yolo_pose_model():
             self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        # if self.para_dict['save_img_flag'] == True:
-        #     # cv2.namedWindow('zzz', 0)
-        #     # cv2.resizeWindow('zzz', 1280, 960)
-        #     # cv2.imshow('zzz', self.img_output)
-        #     # cv2.waitKey(0)
-        #     # cv2.destroyAllWindows()
-        #     img_path_output = img_path + '_pred_grasp.png'
-        #     cv2.imwrite(img_path_output, self.img_output)
+        if self.para_dict['save_img_flag'] == True:
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', self.img_output)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            img_path_output = self.img_path + '_pred_grasp.png'
+            cv2.imwrite(img_path_output, self.img_output)

@@ -15,13 +15,16 @@ class Unstack_env(Arm_env):
         self.table_center = np.array([0.15, 0])
         # self.begin_pos = np.array([0.04, 0, 0.12])
         # self.begin_ori = np.array([0, np.pi / 2, 0])
-        self.num_rays = 1
-        self.angular_distance = np.pi / 12
-        self.ray_height = 0.015
+        self.num_rays = 5
+        self.angular_distance = np.pi / 4
+        if self.para_dict['real_operate'] == True:
+            self.ray_height = 0.015
+        else:
+            self.ray_height = 0.01
 
         self.grid_size = 5
-        self.x_range = (-0.01, 0.01)
-        self.y_range = (-0.01, 0.01)
+        self.x_range = (-0.001, 0.001)
+        self.y_range = (-0.001, 0.001)
         x_center = 0
         y_center = 0
 
@@ -153,7 +156,7 @@ class Unstack_env(Arm_env):
                     break
 
             ee_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-            if ee_pos[2] - target_pos[2] > 0.005 and (index == 3 or index == 4) and move_success_flag == True:
+            if ee_pos[2] - target_pos[2] > 0.005 and (index == 2 or index == 3 or index == 4) and move_success_flag == True:
                 move_success_flag = False
                 print('ee can not reach the bottom, fail!')
 
@@ -262,7 +265,11 @@ class Unstack_env(Arm_env):
                         self.gripper_width / 2)
         # radius_end = 0
         center_list = self.gaussian_center(stack_center)
-        angle_list = np.random.uniform(-np.pi, np.pi, self.num_rays)
+        angle_center_stack = np.arctan2(stack_center[1] - self.table_center[1], stack_center[0] - self.table_center[0])
+        # angle_list = np.random.uniform(-np.pi, np.pi, self.num_rays)
+        angle_list = np.random.uniform(angle_center_stack - (self.num_rays // 2) * self.angular_distance,
+                                       angle_center_stack + (self.num_rays // 2) * self.angular_distance, self.num_rays)
+
 
         x_offset_start = np.cos(angle_list) * radius_start
         y_offset_start = np.sin(angle_list) * radius_start
@@ -421,20 +428,33 @@ class Unstack_env(Arm_env):
                         if len(manipulator_before_input) <= 1 or len(self.boxes_index) == 1:
                             print('no pile in the environment, try to reset!')
                             return self.img_per_epoch
-                    elif len(manipulator_before_input) <= 1:
+                        else:
+                            test_grasp_num = len(manipulator_before_input) - len(crowded_index)
+                            if test_grasp_num > max_grasp_num:
+                                max_grasp_num = test_grasp_num
+                                max_grasp_index = i
+                                self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+                                input_data = np.concatenate((manipulator_before_input, new_lwh_list_input,
+                                                             pred_conf_input.reshape(-1, 1), model_output), axis=1)
+                            if len(crowded_index) == 0:
+                                print('great')
+                                self.success += 1
+                                break
+                    else:
+                        if len(manipulator_before_input) <= 1:
                             print('no pile in the environment, try to reset!')
                             return self.img_per_epoch
-                    else:
-                        test_grasp_num = len(manipulator_before_input) - len(crowded_index)
-                        if test_grasp_num > max_grasp_num:
-                            max_grasp_num = test_grasp_num
-                            max_grasp_index = i
-                            self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
-                            input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
-                        if len(crowded_index) == 0:
-                            print('great')
-                            self.success += 1
-                            break
+                        else:
+                            test_grasp_num = len(manipulator_before_input) - len(crowded_index)
+                            if test_grasp_num > max_grasp_num:
+                                max_grasp_num = test_grasp_num
+                                max_grasp_index = i
+                                self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+                                input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
+                            if len(crowded_index) == 0:
+                                print('great')
+                                self.success += 1
+                                break
             else:
                 fail_times += 1
             p.restoreState(state_id)
@@ -467,14 +487,14 @@ if __name__ == '__main__':
 
     # simulation: iou 0.8
     # real world: iou=0.5
-    para_dict = {'start_num': 0, 'end_num': 5, 'thread': 0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.5, 'device': 'cuda:0',
+    para_dict = {'start_num': 0, 'end_num': 10, 'thread': 0,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, -0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.016]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -482,10 +502,10 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_901/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_902/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/830_pile_real_box/weights/best.pt',
-                 'real_operate': True, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,
                  'use_knolling_model': False, 'use_lstm_model': True}
 
     lstm_dict = {'input_size': 6,
