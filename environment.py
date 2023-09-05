@@ -21,7 +21,6 @@ class Arm_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
 
-
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
@@ -498,7 +497,7 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False):
+    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False, sub_index=0):
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
                                                                              height=480,
@@ -536,8 +535,8 @@ class Arm_env():
                 # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
 
                 if self.para_dict['use_lstm_model'] == True:
-
-                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
+                        = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag, sub_index=sub_index)
                 else:
                     manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
 
@@ -548,7 +547,8 @@ class Arm_env():
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 if self.para_dict['use_lstm_model'] == True:
-                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
+                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
+                        = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
                 else:
                     manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
 

@@ -88,9 +88,13 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
     tar_false = 0
     output_index = target_start_index - 1
     for i in tqdm(range(start_index, data_num + start_index)):
-        origin_data = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 11)
-        data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
-        # data = origin_data
+        origin_data = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+        # data_x_offset = np.random.uniform(-0.05, 0.05)
+        # data_y_offset = np.random.uniform(-0.10, 0.10)
+        # data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        # data[:, 1] += data_x_offset
+        # data[:, 2] += data_y_offset
+        data = origin_data
         if np.any(data[:, 0] != 0):
             # print('this is index of not all zero data', i)
             total_not_all_zero += 1
@@ -124,13 +128,85 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         # print(i + target_start_index - start_index)
         tar_true += len(np.where(data[:, 0] == 1)[0])
         tar_false += len(np.where(data[:, 0] == 0)[0])
-        np.savetxt(target_path + '%012d.txt' % (output_index), data, fmt='%.04f')
+        # np.savetxt(target_path + '%012d.txt' % (output_index), data, fmt='%.04f')
 
     print('this is total not all zero', total_not_all_zero)
     print('this is the max length in the dataset', max_length)
     print('this is total tar true in the result dataset', tar_true)
     print('this is total tar false in the result dataset', tar_false)
     print('this is total num of images', output_index)
+
+def data_analysis_preprocess(path, data_num, start_index=0, target_data_path=None, target_start_index=None, dropout_prob=None, set_conf=None):
+
+    target_path = target_data_path
+    os.makedirs(target_path, exist_ok=True)
+
+    max_length = 0
+    total_not_all_zero = 0
+    tar_true = 0
+    tar_false = 0
+    output_index = target_start_index - 1
+    conf_low_num = 0
+    total_num = 0
+    for i in tqdm(range(start_index, data_num + start_index)):
+        origin_data = np.loadtxt(path + '%012d.txt' % i).reshape(-1, 7)
+        # data_x_offset = np.random.uniform(-0.05, 0.05)
+        # data_y_offset = np.random.uniform(-0.10, 0.10)
+        # data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
+        # data[:, 1] += data_x_offset
+        # data[:, 2] += data_y_offset
+        data = origin_data
+
+        conf_low_index = np.where(data[:, -1] < set_conf)[0]
+        # manually set the conf
+        data[conf_low_index, -1] = set_conf
+
+        conf_low_num += len(conf_low_index)
+        total_num += len(data)
+
+        if np.any(data[:, 0] != 0):
+            # print('this is index of not all zero data', i)
+            total_not_all_zero += 1
+            output_index += 1
+            # print(total_not_all_zero)
+        else:
+            flag = np.random.rand()
+            if flag < dropout_prob:
+                continue
+            else:
+                # print('this is output index', output_index)
+                output_index += 1
+                pass
+
+        tar_index = np.where(data[:, -2] < 0)[0]
+        if len(tar_index) > 0:
+            pass
+            # print('this is tar index', tar_index)
+            # print('this is ori', data[tar_index, :])
+        data[tar_index, -2] += np.pi
+
+        order = change_sequence(data)
+        data = data[order]
+
+        if len(data) > max_length:
+            max_length = len(data)
+        # print('this is origin data\n', data)
+        # normal_data = scaler.transform(data)
+        # print('this is normal data\n', normal_data)
+
+        # print(i + target_start_index - start_index)
+        tar_true += len(np.where(data[:, 0] == 1)[0])
+        tar_false += len(np.where(data[:, 0] == 0)[0])
+        # np.savetxt(target_path + '%012d.txt' % (output_index), data, fmt='%.04f')
+
+    print('this is total not all zero', total_not_all_zero)
+    print('this is the max length in the dataset', max_length)
+    print('this is total tar true in the result dataset', tar_true)
+    print('this is total tar false in the result dataset', tar_false)
+    print('this is total num of images', output_index)
+
+    print('this is total num', total_num)
+    print('this is num with high conf', conf_low_num)
 
 def data_preprocess_np_standard(path, data_num, start_index, target_data_path=None, target_start_index=None):
     target_path = target_data_path + 'labels/'
@@ -250,6 +326,17 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         print('this is yolo pred TN', yolo_pred_TN)
         print('this is yolo pred FP', yolo_pred_FP)
         print('this is yolo pred FN', yolo_pred_FN)
+        print('Accuracy (TP + FN) / all: %.04f' % accuracy)
+        if (yolo_pred_TP + yolo_pred_FN) == 0:
+            print('Recall (TP / (TP + FN)) 0')
+        else:
+            print('Recall (TP / (TP + FN)) %.04f' % (yolo_pred_TP / (yolo_pred_TP + yolo_pred_FN)))
+        if (yolo_pred_TP + yolo_pred_FP) == 0:
+            print('Precision (TP / (TP + FP)) 0')
+        else:
+            print('Precision (TP / (TP + FP)) %.04f' % (yolo_pred_TP / (yolo_pred_TP + yolo_pred_FP)))
+        print('(FN / (FP + FN)) %.04f' % (yolo_pred_FN / (yolo_pred_FP + yolo_pred_FN)))
+        print('\n')
 
     yolo_pred_recall = np.asarray(yolo_pred_recall)
     yolo_pred_precision = np.asarray(yolo_pred_precision)
@@ -292,17 +379,18 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
-    target_data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_5/'
+    data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
+    target_data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 300000
+    data_num = 520000
     start_index = 0
     target_start_index = 0
     dropout_prob = 0
+    set_conf = 0.95
     # data_preprocess_csv(data_path, data_num, start_index)
     # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
+    data_analysis_preprocess(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob, set_conf)
 
     # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
     # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
@@ -313,7 +401,7 @@ if __name__ == '__main__':
     # num = 100000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_2/'
-    # analysis_path = '../results/LSTM_727_2_heavy_multi_dropout0.5/'
-    # valid_num = 10000
-    # yolo_accuracy_analysis(path=data_path, total_num=296000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    # data_path = '../../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
+    # analysis_path = '../../models/LSTM_829_1_heavy_dropout0/'
+    # valid_num = 20000
+    # yolo_accuracy_analysis(path=data_path, total_num=520000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)

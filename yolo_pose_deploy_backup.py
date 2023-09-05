@@ -48,9 +48,6 @@ class Yolo_pose_model():
         else:
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
 
-        self.yolo_device = self.para_dict['device']
-        print('this is yolo device', self.yolo_device)
-
     def find_keypoints(self, xpos, ypos, l, w, ori, mm2px):
 
         gamma = ori
@@ -376,7 +373,7 @@ class Yolo_pose_model():
             else:
                 self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_%d' % (self.epoch, sub_index)
                 cv2.imwrite(self.img_path + '.png', img)
-            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
+            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
             use_python = True
             if use_python:
                 from ultralytics import YOLO

@@ -28,19 +28,19 @@ if __name__ == '__main__':
         model_threshold_start = 0.0
         model_threshold_end = 1
         check_point = 50
-        valid_num = 10000
+        valid_num = 20000
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 520000
         para_dict['model_path'] = '../models/LSTM_829_1_heavy_dropout0/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
         para_dict['batch_size'] = 64
-        test_file_para = '730_2_TPFN_'
+        # test_file_para = '730_2_TPFN_'
         total_error = []
 
         num_img = para_dict['num_img']
@@ -193,12 +193,15 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels1.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels4.png')
         plt.show()
 
         np.savetxt(para_dict['model_path'] + 'model_loss.txt', model_loss)
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_labels1.txt", "w") as f:
+        total_evaluate_data = np.concatenate(([model_threshold], [model_pred_recall], [model_pred_precision], [model_pred_accuracy]), axis=0).T
+        np.savetxt(para_dict['model_path'] + 'model_data_labels4.txt', total_evaluate_data)
+
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels4.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
@@ -213,6 +216,9 @@ if __name__ == '__main__':
             f.write(f'model_loss_mean: {model_loss_mean}\n')
             f.write(f'model_loss_std: {model_loss_std}\n')
             f.write('----------- Statistics -----------\n')
+
+            for i in range(len(model_threshold)):
+                f.write(f'threshold: {model_threshold[i]:.6f}, recall: {model_pred_recall[i]:.4f}, precision: {model_pred_precision[i]:.4f}, accuracy: {model_pred_accuracy[i]:.4f}\n')
 
 
     else:
