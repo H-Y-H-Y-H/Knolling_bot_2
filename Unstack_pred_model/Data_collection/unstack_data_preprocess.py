@@ -86,8 +86,11 @@ def data_preprocess_np_min_max(path, data_num, start_index=0, target_data_path=N
         origin_data_unstack = np.loadtxt(path_unstack + '%012d.txt' % i)
         data_box = np.delete(origin_data_box, [2, 3, 4, 8, 10], axis=1)
         data_unstack = np.delete(origin_data_unstack, [2, 3, 4], axis=1)
-        tuning_index = np.where(data_unstack[:, -1] > np.pi)[0]
-        data_unstack[tuning_index, -1] -= np.pi
+        large_index = np.where(data_unstack[:, -1] > np.pi / 2)[0]
+        data_unstack[large_index, -1] -= np.pi
+
+        small_index = np.where(data_unstack[:, -1] < -np.pi / 2)[0]
+        data_unstack[small_index, -1] += np.pi
 
         np.savetxt(target_path_box + '%012d.txt' % (i), data_box, fmt='%.04f')
         np.savetxt(target_path_unstack + '%012d.txt' % (i), data_unstack, fmt='%.04f')
@@ -149,11 +152,11 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/MLP_unstack_901/'
-    target_data_path = '../../../knolling_dataset/MLP_unstack_901/'
+    data_path = '../../../knolling_dataset/MLP_unstack_902/'
+    target_data_path = '../../../knolling_dataset/MLP_unstack_902/'
     # target_data_path = data_root + 'origin_labels_713_lab/'
 
-    data_num = 2000
+    data_num = 48000
     start_index = 0
     target_start_index = 0
     dropout_prob = 0
