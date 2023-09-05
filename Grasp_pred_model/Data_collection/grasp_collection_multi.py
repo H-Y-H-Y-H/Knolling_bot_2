@@ -31,7 +31,7 @@ class Grasp_env(Arm_env):
         print('this is img_index start while grasping', img_index_start)
         manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
 
-        if len(manipulator_before) <= 1 or len(self.gt_pos_ori) == 1:
+        if len(manipulator_before) <= 1 or len(self.boxes_index) == 1:
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
         ############################## Get the information of boxes #################################
@@ -273,7 +273,7 @@ if __name__ == '__main__':
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': False,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'center_offset_range': [[0, 0], [0, 0]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[0, 0], [0, 0]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
                  'is_render': False,
@@ -284,9 +284,9 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_726_ratio_multi/',
+                 'dataset_path': '../../../knolling_dataset/grasp_dataset_904/',
                  'urdf_path': '../../urdf/',
-                 'yolo_model_path': '../../627_pile_pose/weights/best.pt',
+                 'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': False}
 
@@ -296,7 +296,7 @@ if __name__ == '__main__':
                  'output_size': 2,
                  'hidden_node_1': 32, 'hidden_node_2': 8,
                  'batch_size': 1,
-                 'device': 'cuda:0',
+                 'device': 'cuda:1',
                  'set_dropout': 0.1,
                  'threshold': 0.5,
                  'grasp_model_path': '../results/LSTM_727_2_heavy_multi_dropout0.5/best_model.pt', }
@@ -312,8 +312,8 @@ if __name__ == '__main__':
     os.makedirs(data_root, exist_ok=True)
 
     env = Grasp_env(para_dict=para_dict, lstm_dict=lstm_dict)
-    os.makedirs(data_root + 'origin_images/', exist_ok=True)
-    os.makedirs(data_root + 'origin_labels/', exist_ok=True)
+    os.makedirs(data_root + 'sim_images/', exist_ok=True)
+    os.makedirs(data_root + 'sim_labels/', exist_ok=True)
 
     exist_img_num = startnum
     while True:

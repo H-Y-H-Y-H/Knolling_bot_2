@@ -8,14 +8,42 @@ from utils import *
 import pyrealsense2 as rs
 from grasp_model_deploy import *
 
+class PosePredictor(DetectionPredictor):
+
+    def postprocess(self, preds, img, orig_img):
+        preds = ops.non_max_suppression(preds,
+                                        self.args.conf,
+                                        self.args.iou,
+                                        agnostic=self.args.agnostic_nms,
+                                        max_det=self.args.max_det,
+                                        classes=self.args.classes,
+                                        nc=len(self.model.names))
+
+        results = []
+        for i, pred in enumerate(preds):
+            orig_img = orig_img[i] if isinstance(orig_img, list) else orig_img
+            shape = orig_img.shape
+            pred[:, :4] = ops.scale_boxes(img.shape[2:], pred[:, :4], shape).round()
+            pred_kpts = pred[:, 6:].view(len(pred), *self.model.kpt_shape) if len(pred) else pred[:, 6:]
+            pred_kpts = ops.scale_coords(img.shape[2:], pred_kpts, shape)
+            path, _, _, _, _ = self.batch
+            img_path = path[i] if isinstance(path, list) else path
+            results.append(
+                Results(orig_img=orig_img,
+                        path=img_path,
+                        names=self.model.names,
+                        boxes=pred[:, :6],
+                        keypoints=pred_kpts))
+        return results
+
 class Yolo_pose_model():
 
-    def __init__(self, para_dict, lstm_dict=False):
+    def __init__(self, para_dict, lstm_dict=False, use_lstm=False):
 
         self.mm2px = 530 / 0.34
         self.px2mm = 0.34 / 530
         self.para_dict = para_dict
-        if lstm_dict is None:
+        if use_lstm == False:
             pass
         else:
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
@@ -241,11 +269,11 @@ class Yolo_pose_model():
             # Get device product line for setting a supporting resolution
             pipeline_wrapper = rs.pipeline_wrapper(pipeline)
             pipeline_profile = config.resolve(pipeline_wrapper)
-            device = pipeline_profile.get_device()
-            device_product_line = str(device.get_info(rs.camera_info.product_line))
+            device_camera = pipeline_profile.get_device()
+            device_product_line = str(device_camera.get_info(rs.camera_info.product_line))
 
             found_rgb = False
-            for s in device.sensors:
+            for s in device_camera.sensors:
                 if s.get_info(rs.camera_info.name) == 'RGB Camera':
                     found_rgb = True
                     break
@@ -272,7 +300,7 @@ class Yolo_pose_model():
 
                 # cv2.imwrite(img_path + '.png', resized_color_image)
                 # img_path_input = img_path + '.png'
-                args = dict(model=model, source=resized_color_image, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'])
+                args = dict(model=model, source=resized_color_image, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
                 use_python = True
                 if use_python:
                     from ultralytics import YOLO
@@ -340,13 +368,16 @@ class Yolo_pose_model():
             model = self.para_dict['yolo_model_path']
             # if first_flag == True:
             self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-            # cv2.imwrite(img_path + '.png', img)
-            # img_path_input = img_path + '.png'
-            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+            cv2.imwrite(self.img_path + '.png', img)
+            img_path_input = self.img_path + '.png'
+            args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
             use_python = True
             if use_python:
                 from ultralytics import YOLO
                 images = YOLO(model)(**args)
+            else:
+                predictor = PosePredictor(overrides=args)
+                predictor.predict_cli()
 
             # origin_img = cv2.imread(img_path_input)
             origin_img = np.copy(img)
@@ -357,7 +388,10 @@ class Yolo_pose_model():
             pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
             if len(pred_xylws) <= 1: # filter the results no more than 1
                 print('yolo no more than 1')
-                return [], []
+                if self.para_dict['use_lstm_model'] == True:
+                    return [], [], [], [], [], []
+                else:
+                    return [], [], []
             else:
                 pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
                 pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
@@ -433,6 +467,29 @@ class Yolo_pose_model():
         else:
             return manipulator_before, new_lwh_list, pred_conf
 
+    def yolo_pose_test(self):
+
+        model = "../../models/830_pile_real_box/weights/best.pt"
+        source_pth = '../../../knolling_dataset/MLP_unstack_902/sim_images'
+
+        model = '/home/ubuntu/Desktop/Knolling_bot_2/models/830_pile_real_box/weights/best.pt'
+        source_pth = '/home/ubuntu/Desktop/knolling_dataset/MLP_unstack_902/sim_images'
+        # model = "./models/830_pile_real_box/weights/best.pt"
+        # source_pth = '../knolling_dataset/MLP_unstack_902/sim_images'
+
+
+        # args = dict(model=model, source=source_pth, conf=self.para_dict['yolo_conf'],
+        #             iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+        args = dict(model=model, source=source_pth, conf=0.6,
+                    iou=0.8, device='cuda:1')
+        use_python = True
+        if use_python:
+            from ultralytics import YOLO
+            images = YOLO(model)(**args)
+        else:
+            predictor = PosePredictor(overrides=args)
+            predictor.predict_cli()
+
     def plot_grasp(self, manipulator_before, prediction, model_output):
 
         x_px_center = manipulator_before[:, 0] * self.mm2px + 6
@@ -456,3 +513,8 @@ class Yolo_pose_model():
             # cv2.destroyAllWindows()
             img_path_output = self.img_path + '_pred_grasp.png'
             cv2.imwrite(img_path_output, self.img_output)
+
+if __name__ == '__main__':
+
+    zzz_yolo = Yolo_pose_model(None, None)
+    zzz_yolo.yolo_pose_test()

@@ -16,7 +16,7 @@ class Grasp_model():
                                   hidden_node_2=self.lstm_dict['hidden_node_2'],
                                   batch_size=self.lstm_dict['batch_size'], device=self.lstm_dict['device'], criterion=nn.CrossEntropyLoss(),
                                   set_dropout=self.lstm_dict['set_dropout'])
-        self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path']))
+        self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path'], map_location=self.lstm_dict['device']))
         self.softmax = nn.Softmax(dim=2)
 
     def pred(self, manipulator_before, lwh_list, conf_list):
@@ -30,7 +30,7 @@ class Grasp_model():
 
         with torch.no_grad():
             # print('eval')
-            input_data = input_data.to(self.para_dict['device'], dtype=torch.float32)
+            input_data = input_data.to(self.lstm_dict['device'], dtype=torch.float32)
             # box_data_batch = box_data_batch.to(device, dtype=torch.float32)
             # grasp_data_batch = grasp_data_batch.to(device, dtype=torch.float32)
 

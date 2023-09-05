@@ -20,7 +20,7 @@ if __name__ == '__main__':
     if use_dataset == True:
 
         if torch.cuda.is_available():
-            device = 'cuda:0'
+            device = 'cuda:1'
         else:
             device = 'cpu'
         print("Device:", device)

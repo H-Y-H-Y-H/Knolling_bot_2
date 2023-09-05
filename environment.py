@@ -1,7 +1,7 @@
 from yolo_pose_deploy import *
-from yolo_seg_deploy import *
+
 from arrangement import *
-from grasp_model_deploy import *
+# from grasp_model_deploy import *
 from arrange_model_deploy import *
 from utils import *
 import pybullet as p
@@ -21,6 +21,7 @@ class Arm_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
 
+
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
@@ -33,12 +34,14 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict)
+        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+        # self.yolo_pose_model = Yolo_pose_model(None, None)
+        # self.yolo_pose_model.yolo_pose_test()
         # self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
-            self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
+            # self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict)
@@ -231,6 +234,8 @@ class Arm_env():
                 new_num_item = len(self.boxes_index)
                 delete_index = []
 
+                self.gt_pos_ori = []
+                self.gt_ori_qua = []
                 for i in range(len(self.boxes_index)):
                     p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
                                                          contactDamping=self.para_dict['box_contact_damping'],
@@ -238,6 +243,8 @@ class Arm_env():
                     cur_qua = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1])
                     cur_ori = np.asarray(p.getEulerFromQuaternion(cur_qua))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                    self.gt_pos_ori.append(cur_pos)
+                    self.gt_ori_qua.append(cur_qua)
                     roll_flag = False
                     pitch_flag = False
                     # print('this is cur ori:', cur_ori)
@@ -254,12 +261,16 @@ class Arm_env():
                         delete_index.append(i)
                         # print('delete!!!')
                         new_num_item -= 1
+                self.gt_pos_ori = np.asarray(self.gt_pos_ori)
+                self.gt_ori_qua = np.asarray(self.gt_ori_qua)
 
                 delete_index.reverse()
                 for i in delete_index:
                     p.removeBody(self.boxes_index[i])
                     self.boxes_index.pop(i)
                     self.lwh_list = np.delete(self.lwh_list, i, axis=0)
+                    self.gt_pos_ori = np.delete(self.gt_pos_ori, i, axis=0)
+                    self.gt_ori_qua = np.delete(self.gt_ori_qua, i, axis=0)
                 for _ in range(int(100)):
                     # time.sleep(1/96)
                     p.stepSimulation()
@@ -523,7 +534,9 @@ class Arm_env():
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
+
                 if self.para_dict['use_lstm_model'] == True:
+
                     manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
                 else:
                     manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
@@ -553,7 +566,7 @@ if __name__ == '__main__':
     # random.seed(183)
 
     para_dict = {'start_num': 00, 'end_num': 10000, 'thread': 0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cpu',
                  'save_img_flag': False,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [3 * np.pi / 16, np.pi / 4]],
@@ -581,7 +594,7 @@ if __name__ == '__main__':
     #         f.write(key + ': ')
     #         f.write(str(value) + '\n')
 
-    os.makedirs(para_dict['dataset_path'], exist_ok=True)
+    # os.makedirs(para_dict['dataset_path'], exist_ok=True)
 
     max_box_num = para_dict['max_box_num']
     min_box_num = para_dict['min_box_num']
