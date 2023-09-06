@@ -301,7 +301,7 @@ class Unstack_env(Arm_env):
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -335,9 +335,14 @@ class Unstack_env(Arm_env):
 
         manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output = self.get_obs(epoch=self.img_per_epoch + img_index_start, baseline_flag=True)
         if self.para_dict['real_operate'] == False:
-            if len(self.boxes_index) <= 1:
+            if len(manipulator_before_input) <= 1 or len(self.boxes_index) == 1:
                 print('no pile in the environment, try to reset!')
                 return self.img_per_epoch
+        else:
+            while len(crowded_index) < len(manipulator_before_input):
+                manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output = self.get_obs(
+                    epoch=self.img_per_epoch + img_index_start, baseline_flag=True)
+                print('There are some boxes can be grasp, try to take another picture!')
 
         if len(crowded_index) < len(manipulator_before_input):
             print('There are some boxes can be grasp, try to reset!')
@@ -477,10 +482,14 @@ class Unstack_env(Arm_env):
 
 if __name__ == '__main__':
 
+    np.random.seed(111)
+    random.seed(111)
+
     # simulation: iou 0.8
     # real world: iou=0.5
-    para_dict = {'start_num': 84000, 'end_num': 96000, 'thread': 0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+
+    para_dict = {'start_num': 48000, 'end_num': 48100, 'thread': 0,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
@@ -494,10 +503,10 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_903/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_905/',
                  'urdf_path': '../../urdf/',
-                 'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,
+                 'yolo_model_path': '../../models/830_pile_real_box/weights/best.pt',
+                 'real_operate': True, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,
                  'use_knolling_model': False, 'use_lstm_model': True}
 
     lstm_dict = {'input_size': 6,
@@ -506,9 +515,9 @@ if __name__ == '__main__':
                  'output_size': 2,
                  'hidden_node_1': 32, 'hidden_node_2': 8,
                  'batch_size': 1,
-                 'set_dropout': 0.1,
+                 'set_dropout': 0.0,
                  'threshold': 0.6,
-                 'device': 'cuda:1',
+                 'device': 'cuda:0',
                  'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
 
     startnum = para_dict['start_num']

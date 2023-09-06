@@ -210,8 +210,8 @@ class Yolo_pose_model():
         plot_l = np.copy(length)
         plot_w = np.copy(width)
         label1 = 'cls: %d, conf: %.5f' % (cls, conf)
-        label2 = 'index: %d, x: %.4f, y: %.4f' % (index, plot_x, plot_y)
-        label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
+        label2 = 'index: %d, x: %.6f, y: %.6f' % (index, plot_x, plot_y)
+        label3 = 'l: %.6f, w: %.6f, ori: %.6f' % (plot_l, plot_w, my_ori)
         if label:
             w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
@@ -368,6 +368,7 @@ class Yolo_pose_model():
                     break
 
         else:
+
             model = self.para_dict['yolo_model_path']
             if first_flag == True:
                 self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
@@ -385,8 +386,8 @@ class Yolo_pose_model():
                 predictor = PosePredictor(overrides=args)
                 predictor.predict_cli()
 
-            # origin_img = cv2.imread(img_path_input)
-            origin_img = np.copy(img)
+            origin_img = cv2.imread(img_path_input)
+            # origin_img = np.copy(img)
             use_xylw = False # use lw or keypoints to export length and width
             one_img = images[0]
 

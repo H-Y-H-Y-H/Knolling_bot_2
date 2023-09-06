@@ -28,8 +28,10 @@ class Grasp_model():
                                      lwh_list[:, :2],
                                      manipulator_before[:, -1].reshape(-1, 1),
                                      conf_list.reshape(-1, 1)), axis=1)
+        input_data_test = np.copy(input_data)
         input_data = torch.unsqueeze(torch.from_numpy(input_data), 0)
 
+        self.model.eval()
         with torch.no_grad():
             # print('eval')
             input_data = input_data.to(self.lstm_device, dtype=torch.float32)
