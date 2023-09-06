@@ -33,13 +33,14 @@ if __name__ == '__main__':
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 520000
         para_dict['model_path'] = '../models/LSTM_829_1_heavy_dropout0/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4_rdm_pos/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
         para_dict['hidden_node_1'] = 32
         para_dict['hidden_node_2'] = 8
-        para_dict['batch_size'] = 1
+        para_dict['batch_size'] = 64
+        para_dict['set_dropout'] = 0
         # test_file_para = '730_2_TPFN_'
         total_error = []
 

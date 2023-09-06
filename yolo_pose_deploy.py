@@ -203,8 +203,8 @@ class Yolo_pose_model():
         plot_l = np.copy(length)
         plot_w = np.copy(width)
         label1 = 'cls: %d, conf: %.5f' % (cls, conf)
-        label2 = 'index: %d, x: %.6f, y: %.6f' % (index, plot_x, plot_y)
-        label3 = 'l: %.6f, w: %.6f, ori: %.6f' % (plot_l, plot_w, my_ori)
+        label2 = 'index: %d, x: %.4f, y: %.4f' % (index, plot_x, plot_y)
+        label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
         if label:
             w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
@@ -360,13 +360,7 @@ class Yolo_pose_model():
 
         else:
             model = self.para_dict['yolo_model_path']
-            self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-            if first_flag == True and self.para_dict['save_img_flag'] == True:
-                cv2.imwrite(self.img_path + '.png', img)
-            else:
-                # self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_%d' % (self.epoch, sub_index)
-                # cv2.imwrite(self.img_path + '.png', img)
-                pass
+
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             use_python = True
             if use_python:
@@ -449,15 +443,16 @@ class Yolo_pose_model():
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)
 
-            # if self.para_dict['save_img_flag'] == True:
-            #     cv2.namedWindow('zzz', 0)
-            #     cv2.resizeWindow('zzz', 1280, 960)
-            #     cv2.imshow('zzz', origin_img)
-            #     cv2.waitKey(0)
-            #     cv2.destroyAllWindows()
-            #     img_path_output = self.img_path + '_pred.png'
-            #     cv2.imwrite(img_path_output, origin_img)
-            #     pass
+            if self.para_dict['save_img_flag'] == True and first_flag == True:
+                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', origin_img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                img_path_output = self.img_path + '_pred.png'
+                cv2.imwrite(img_path_output, origin_img)
+                pass
 
         if self.para_dict['use_lstm_model'] == True:
             return manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output
@@ -486,6 +481,17 @@ class Yolo_pose_model():
     #     else:
     #         predictor = PosePredictor(overrides=args)
     #         predictor.predict_cli()
+
+    def plot_unstack(self, success_ray):
+
+        start_pos = success_ray[0, :2]
+        start_px = [int(start_pos[0] * self.mm2px + 6), int(start_pos[1] * self.mm2px + 320)]
+        end_pos = success_ray[1, :2]
+        end_px = [int(end_pos[0] * self.mm2px + 6), int(end_pos[1] * self.mm2px + 320)]
+
+        self.img_output = cv2.line(self.img_output, (start_px[1], start_px[0]), (end_px[1], end_px[0]), (255, 0, 0), 1)
+
+        pass
 
     def plot_grasp(self, manipulator_before, prediction, model_output):
 

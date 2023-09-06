@@ -18,7 +18,7 @@ class Grasp_model():
                                   hidden_node_2=self.lstm_dict['hidden_node_2'],
                                   batch_size=self.lstm_dict['batch_size'], device=self.lstm_device, criterion=nn.CrossEntropyLoss(),
                                   set_dropout=self.lstm_dict['set_dropout'])
-        self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path'], map_location=self.lstm_dict['device']))
+        self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path'], map_location=self.lstm_device))
         self.softmax = nn.Softmax(dim=2)
 
     def pred(self, manipulator_before, lwh_list, conf_list):

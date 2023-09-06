@@ -57,8 +57,6 @@ class LSTMRegressor(nn.Module):
         h0 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, self.hidden_dim).to(self.device, dtype=torch.float32)
         c0 = torch.zeros(self.num_layers * self.num_directions, self.batch_size, self.hidden_dim).to(self.device, dtype=torch.float32)
 
-        input_test = input_data.cpu().detach().numpy()
-
         output, (hn, cn) = self.lstm(input_data, (h0.detach(), c0.detach()))
         if deploy_flag == True:
             unpacked_out = output
@@ -74,7 +72,6 @@ class LSTMRegressor(nn.Module):
             out = self.relu(self.linear1(unpacked_out))
             out = self.relu(self.linear2(out))
             out = self.linear3(out)
-        out_test = out.cpu().detach().numpy()
         return out
 
     def maskedMSELoss(self, predict, target, ignore_index = -100):
