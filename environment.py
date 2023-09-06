@@ -528,27 +528,26 @@ class Arm_env():
         else:
             if self.para_dict['real_operate'] == False:
 
-                while True:
-                    img, _ = get_images()
+                img, _ = get_images()
 
-                    ################### the results of object detection has changed the order!!!! ####################
-                    # structure of results: x, y, z, length, width, ori
-                    # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
-                    if self.para_dict['use_lstm_model'] == True:
-                        manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
-                            = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag, sub_index=sub_index)
-                        self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
-                        cv2.namedWindow('zzz', 0)
-                        cv2.resizeWindow('zzz', 1280, 960)
-                        cv2.imshow('zzz', self.yolo_pose_model.img_output)
-                        if cv2.waitKey(1) & 0xFF == ord('q'):
-                            cv2.destroyAllWindows()
-                            # img_path_output = self.img_path + '_pred.png'
-                            # cv2.imwrite(img_path_output, origin_img)
-                            break
-                    else:
-                        manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
-                    ################### the results of object detection has changed the order!!!! ####################
+                ################### the results of object detection has changed the order!!!! ####################
+                # structure of results: x, y, z, length, width, ori
+                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
+                if self.para_dict['use_lstm_model'] == True:
+                    manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
+                        = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag, sub_index=sub_index)
+                    # self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
+                    # cv2.namedWindow('zzz', 0)
+                    # cv2.resizeWindow('zzz', 1280, 960)
+                    # cv2.imshow('zzz', self.yolo_pose_model.img_output)
+                    # if cv2.waitKey(1) & 0xFF == ord('q'):
+                    #     cv2.destroyAllWindows()
+                    #     # img_path_output = self.img_path + '_pred.png'
+                    #     # cv2.imwrite(img_path_output, origin_img)
+                    #     break
+                else:
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                ################### the results of object detection has changed the order!!!! ####################
 
             else:
 

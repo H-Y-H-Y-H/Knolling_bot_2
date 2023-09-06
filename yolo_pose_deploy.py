@@ -140,12 +140,6 @@ class Yolo_pose_model():
         c3 = np.array([-length / (2), width / (2)])
         c4 = np.array([-length / (2), -width / (2)])
         if use_xylw == True:
-            # length = scaled_xylw[2] / 3
-            # width = scaled_xylw[3] / 3
-            # c1 = np.array([length / (2), width / (2)])
-            # c2 = np.array([length / (2), -width / (2)])
-            # c3 = np.array([-length / (2), width / (2)])
-            # c4 = np.array([-length / (2), -width / (2)])
             box_center = np.array([scaled_xylw[0], scaled_xylw[1]])
         else:
             box_center = keypoints_center
@@ -200,7 +194,6 @@ class Yolo_pose_model():
         p1 = np.array([int(box[0] * 640), int(box[1] * 480)])
         # print('this is p1 and p2', p1, p2)
 
-        # cv2.rectangle(self.im, p1, p2, color, thickness=zzz_lw, lineType=cv2.LINE_AA)
         im = cv2.line(im, (int(corn1[1]), int(corn1[0])), (int(corn2[1]), int(corn2[0])), color, 1)
         im = cv2.line(im, (int(corn2[1]), int(corn2[0])), (int(corn4[1]), int(corn4[0])), color, 1)
         im = cv2.line(im, (int(corn4[1]), int(corn4[0])), (int(corn3[1]), int(corn3[0])), color, 1)
@@ -215,7 +208,6 @@ class Yolo_pose_model():
         if label:
             w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
-            # cv2.rectangle(self.im, p1, p2, color, 0, cv2.LINE_AA)  # filled
             if truth_flag == True:
                 txt_color = (0, 0, 255)
                 # im = cv2.putText(im, label1, (p1[0] - 50, p1[1] - 32 if outside else p1[1] + h + 2),
@@ -227,9 +219,8 @@ class Yolo_pose_model():
                                  0, zzz_lw / 3, (0, 0, 255), thickness=tf, lineType=cv2.LINE_AA)
                 im = cv2.putText(im, label2, (p1[0] - 50, p1[1] + 32 if outside else p1[1] + h + 12),
                                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
-                m = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
+                im = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
                                 0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
-            # im = cv2.putText(im, label1, (c1[0] - 70, c1[1] - 35), 0, tl / 3, color, thickness=tf, lineType=cv2.LINE_AA)
         ############### zzz plot the box ###############
 
         ############### zzz plot the keypoints ###############
@@ -368,15 +359,14 @@ class Yolo_pose_model():
                     break
 
         else:
-
             model = self.para_dict['yolo_model_path']
-            if first_flag == True:
-                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+            self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+            if first_flag == True and self.para_dict['save_img_flag'] == True:
                 cv2.imwrite(self.img_path + '.png', img)
-                img_path_input = self.img_path + '.png'
             else:
-                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_%d' % (self.epoch, sub_index)
-                cv2.imwrite(self.img_path + '.png', img)
+                # self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_%d' % (self.epoch, sub_index)
+                # cv2.imwrite(self.img_path + '.png', img)
+                pass
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             use_python = True
             if use_python:
@@ -386,8 +376,8 @@ class Yolo_pose_model():
                 predictor = PosePredictor(overrides=args)
                 predictor.predict_cli()
 
-            origin_img = cv2.imread(img_path_input)
-            # origin_img = np.copy(img)
+            # origin_img = cv2.imread(img_path_input)
+            origin_img = np.copy(img)
             use_xylw = False # use lw or keypoints to export length and width
             one_img = images[0]
 
@@ -458,16 +448,16 @@ class Yolo_pose_model():
                                                                                 pred_conf)
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)
-                # self.plot_grasp(manipulator_before, prediction, model_output)
-            if self.para_dict['save_img_flag'] == True:
-                # cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
-                # cv2.imshow('zzz', origin_img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                # img_path_output = self.img_path + '_pred.png'
-                # cv2.imwrite(img_path_output, origin_img)
-                pass
+
+            # if self.para_dict['save_img_flag'] == True:
+            #     cv2.namedWindow('zzz', 0)
+            #     cv2.resizeWindow('zzz', 1280, 960)
+            #     cv2.imshow('zzz', origin_img)
+            #     cv2.waitKey(0)
+            #     cv2.destroyAllWindows()
+            #     img_path_output = self.img_path + '_pred.png'
+            #     cv2.imwrite(img_path_output, origin_img)
+            #     pass
 
         if self.para_dict['use_lstm_model'] == True:
             return manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output
@@ -512,15 +502,14 @@ class Yolo_pose_model():
             self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        if self.para_dict['save_img_flag'] == True:
-            # cv2.namedWindow('zzz', 0)
-            # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', self.img_output)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-            # img_path_output = self.img_path + '_pred_grasp.png'
-            # cv2.imwrite(img_path_output, self.img_output)
-            pass
+        # cv2.namedWindow('zzz', 0)
+        # cv2.resizeWindow('zzz', 1280, 960)
+        # cv2.imshow('zzz', self.img_output)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        img_path_output = self.img_path + '_pred_grasp.png'
+        cv2.imwrite(img_path_output, self.img_output)
+        pass
 
 if __name__ == '__main__':
 
