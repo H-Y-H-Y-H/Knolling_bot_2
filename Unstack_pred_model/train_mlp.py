@@ -115,19 +115,19 @@ class Generate_Dataset(Dataset):
 
 # use conf
 para_dict = {'device': 'cuda:0',
-             'num_img': 48000,
+             'num_img': 160000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': './results/MLP_902_4/',
-             'input_data_path': '../../knolling_dataset/MLP_unstack_902/labels_box/',
-             'output_data_path': '../../knolling_dataset/MLP_unstack_902/labels_unstack/',
-             'learning_rate': 0.0001, 'patience': 10, 'factor': 0.1,
+             'model_path': './results/MLP_905_3/',
+             'input_data_path': '../../knolling_dataset/MLP_unstack_905/labels_box/',
+             'output_data_path': '../../knolling_dataset/MLP_unstack_905/labels_unstack/',
+             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
              'batch_size': 64,
              'output_size': 6,
              'abort_learning': 20,
-             'set_dropout': 0.1,
+             'set_dropout': 0.05,
              'num_boxes': 5,
-             'run_name': 'MLP_902_4',
+             'run_name': 'MLP_905_3',
              'project_name': 'zzz_MLP_unstack',
              'wandb_flag': True,
              'use_mse': True,
@@ -205,7 +205,9 @@ if __name__ == '__main__':
         # print('train')
         for batch_id, (box_data, unstack_data) in enumerate(train_loader):
             box_data = box_data.to(device, dtype=torch.float32)
+            box_data_test = box_data.cpu().detach().numpy()
             unstack_data = unstack_data.to(device, dtype=torch.float32)
+            unstack_data_test = unstack_data.cpu().detach().numpy()
 
             optimizer.zero_grad()
             out = model.forward(box_data)

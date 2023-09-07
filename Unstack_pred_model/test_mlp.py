@@ -9,7 +9,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     runs = api.runs("zzz_MLP_unstack")
 
-    name = "MLP_902_4"
+    name = "MLP_905_1"
     # model_name = 'latest_model.pt'
     model_name = "best_model.pt"
 
@@ -59,9 +59,13 @@ if __name__ == '__main__':
         for batch_id, (box_data, unstack_data) in enumerate(test_loader):
             # print(batch_id)
             box_data = box_data.to(device, dtype=torch.float32)
+            box_data_test = box_data.cpu().detach().numpy()
             unstack_data = unstack_data.to(device, dtype=torch.float32)
+            unstack_data_test = unstack_data.cpu().detach().numpy()
 
             out = model.forward(box_data)
+            output = out.cpu().detach().numpy()
+
             if config.use_mse == True:
                 loss = model.maskedMSELoss(predict=out, target=unstack_data)
             else:

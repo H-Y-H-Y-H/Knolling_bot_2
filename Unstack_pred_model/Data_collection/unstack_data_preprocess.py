@@ -135,15 +135,7 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
 
     import shutil
 
-    # index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
-    # for i in index_list:
-    #     data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
-    #     print(np.round(data, 4))
-    #
-    # print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
-    # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
-
-    for i in range(source_start_index, int(data_num + source_start_index)):
+    for i in tqdm(range(source_start_index, int(data_num + source_start_index))):
         cur_path = source_path + '%012d.txt' % (i)
         tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
@@ -152,21 +144,19 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/MLP_unstack_902/'
-    target_data_path = '../../../knolling_dataset/MLP_unstack_902/'
-    # target_data_path = data_root + 'origin_labels_713_lab/'
+    data_path = '../../../knolling_dataset/MLP_unstack_905/'
+    target_data_path = '../../../knolling_dataset/MLP_unstack_905/'
 
-    data_num = 48000
+    data_num = 160000
     start_index = 0
     target_start_index = 0
     dropout_prob = 0
     data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
-    # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
-    # target_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
+    # source_path = '../../../sim_labels_unstack/'
+    # target_path = '../../../knolling_dataset/MLP_unstack_905/sim_labels_unstack/'
     # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 420000
-    # target_start_index = 420000
-    # num = 100000
+    # source_start_index = 105000
+    # target_start_index = 105000
+    # num = 40000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
