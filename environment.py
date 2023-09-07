@@ -152,14 +152,16 @@ class Arm_env():
                                                   maxNumIterations=200,
                                                   targetOrientation=p.getQuaternionFromEuler(
                                                       self.para_dict['reset_ori']))
-        # for motor_index in range(5):
-        #     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-        #                             targetPosition=ik_angles0[motor_index], maxVelocity=20)
+
+        # after reset the position of the robot arm manually, we should add the force to keep the arm
         for motor_index in range(5):
             p.resetJointState(self.arm_id, motor_index, ik_angles0[motor_index])
-        # for _ in range(int(30)):
-        #     # time.sleep(1/480)
-        #     p.stepSimulation()
+        for motor_index in range(5):
+            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                    targetPosition=ik_angles0[motor_index], maxVelocity=20)
+        for _ in range(int(30)):
+            # time.sleep(1/480)
+            p.stepSimulation()
 
     def create_arm(self):
 

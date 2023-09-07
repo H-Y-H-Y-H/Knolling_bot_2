@@ -16,6 +16,12 @@ class Unstack_env(Arm_env):
         # self.begin_pos = np.array([0.04, 0, 0.12])
         # self.begin_ori = np.array([0, np.pi / 2, 0])
         self.num_rays = 5
+        self.additional_num_rays = 5
+        self.tune_range = [-0.01, 0.01]
+
+        self.offset_low = np.array([0, 0, 0.0])
+        self.offset_high = np.array([0, 0, 0.04])
+
         self.angular_distance = np.pi / 4
         if self.para_dict['real_operate'] == True:
             self.ray_height = 0.015
@@ -270,18 +276,24 @@ class Unstack_env(Arm_env):
         angle_list = np.random.uniform(angle_center_stack - (self.num_rays // 2) * self.angular_distance,
                                        angle_center_stack + (self.num_rays // 2) * self.angular_distance, self.num_rays)
 
-
         x_offset_start = np.cos(angle_list) * radius_start
         y_offset_start = np.sin(angle_list) * radius_start
         x_offset_end = np.cos(angle_list) * radius_end
         y_offset_end = np.sin(angle_list) * radius_end
+
+        angle_list += np.pi / 2
+        large_angle_index = np.where(angle_list > np.pi)[0]
+        angle_list[large_angle_index] -= np.pi
+        small_angle_index = np.where(angle_list < -np.pi)[0]
+        angle_list[small_angle_index] += np.pi
+
         start_pos = np.array([center_list[:, 0] + x_offset_start, center_list[:, 1] + y_offset_start]).T
         end_pos = np.array([center_list[:, 0] - x_offset_end, center_list[:, 1] - y_offset_end]).T
 
         rays = np.concatenate((start_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1) + np.pi / 2,
+                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1),
                                end_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1) + np.pi / 2), axis=1)
+                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1)), axis=1)
         return rays
 
     def gaussian_center(self, stack_center):
@@ -322,6 +334,94 @@ class Unstack_env(Arm_env):
             real_xyz, _ = forward_kinematic(real_motor)
 
             self.img_per_epoch = 0
+
+    def tune_unstack(self, best_ray, best_num, img_index_start, input_data):
+
+        offset = np.random.uniform(self.tune_range[0], self.tune_range[1], size=(4, self.additional_num_rays))
+        new_rays = np.copy(best_ray.reshape(1, -1)).repeat(self.additional_num_rays, axis=0)
+        new_rays[:, 0] += offset[0, :]
+        new_rays[:, 1] += offset[1, :]
+        new_rays[:, 6] += offset[2, :]
+        new_rays[:, 7] += offset[3, :]
+
+        out_times = 0
+
+        for i in range(len(new_rays)):
+
+            trajectory_pos_list = [self.para_dict['reset_pos'], # move to the destination
+                                   [1, 0],  # gripper close!
+                                   self.offset_high + new_rays[i, :3],  # move directly to the above of the target
+                                   self.offset_low + new_rays[i, :3],  # decline slowly
+                                   self.offset_low + new_rays[i, 6:9]] # unstack
+
+            trajectory_ori_list = [self.para_dict['reset_ori'],
+                                   [1, 0],
+                                   self.para_dict['reset_ori'] + new_rays[i, 3:6],
+                                   self.para_dict['reset_ori'] + new_rays[i, 3:6],
+                                   self.para_dict['reset_ori'] + new_rays[i, 9:12]]
+
+            if self.para_dict['real_operate'] == True:
+                last_pos = self.para_dict['reset_pos']
+                last_ori = self.para_dict['reset_ori']
+                left_pos = None
+                right_pos = None
+            else:
+                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+                left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+                right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+
+            move_success_flag = True
+            for j in range(len(trajectory_pos_list)):
+                if len(trajectory_pos_list[j]) == 3:
+                    last_pos, move_success_flag = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
+                    last_ori = np.copy(trajectory_ori_list[j])
+                    if move_success_flag == False:
+                        break
+                elif len(trajectory_pos_list[j]) == 2:
+                    ####################### Dtect whether the gripper is disturbed by other objects during closing the gripper ####################
+                    self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1], left_pos, right_pos, index=j)
+                    ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
+
+            if move_success_flag == True:
+
+                if self.para_dict['real_operate'] == True:
+                    check_flag = True
+                else:
+                    _, check_flag = self.check_bound()
+                if check_flag == False:
+                    print('object out of bound, try another yaw')
+                    out_times += 1
+                else:
+                    self.to_home()
+                    manipulator_before_input, new_lwh_list_input, pred_conf_input, crowded_index, prediction, model_output = self.get_obs(epoch=self.img_per_epoch + img_index_start, sub_index=i + 1)
+                    if self.para_dict['real_operate'] == False:
+                        if len(manipulator_before_input) <= 1 or len(self.boxes_index) == 1:
+                            print('no pile in the environment, try to reset!')
+                            pass
+                            # return self.img_per_epoch
+                        else:
+                            test_grasp_num = len(manipulator_before_input) - len(crowded_index)
+                            if test_grasp_num >= best_num:
+                                max_grasp_num = test_grasp_num
+                                max_grasp_index = i
+                                output_data = new_rays[max_grasp_index].reshape(2, -1)
+                                if self.para_dict['save_img_flag'] == True:
+                                    self.yolo_pose_model.plot_unstack(output_data)
+                                    self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+
+                                np.savetxt(data_root + "sim_labels_unstack/%012d.txt" % (
+                                            img_index_start + self.img_per_epoch), output_data, fmt='%.04f')
+                                np.savetxt(data_root + "sim_labels_box/%012d.txt" % (
+                                        img_index_start + self.img_per_epoch), input_data, fmt='%.04f')
+                                self.img_per_epoch += 1
+
+                            if len(crowded_index) == 0:
+                                print('great')
+                                self.success += 1
+                                break
+            p.restoreState(self.state_id)
+
 
     def try_unstack(self, data_root=None, img_index_start=None):
 
@@ -370,9 +470,7 @@ class Unstack_env(Arm_env):
         self.calculate_gripper()
 
         rays = self.get_ray(manipulator_before_input, new_lwh_list_input)
-        state_id = p.saveState()
-        offset_low = np.array([0, 0, 0.0])
-        offset_high = np.array([0, 0, 0.04])
+        self.state_id = p.saveState()
         max_grasp_num = 0
         max_grasp_index = None
         out_times = 0
@@ -381,9 +479,9 @@ class Unstack_env(Arm_env):
 
             trajectory_pos_list = [self.para_dict['reset_pos'], # move to the destination
                                    [1, 0],  # gripper close!
-                                   offset_high + rays[i, :3],  # move directly to the above of the target
-                                   offset_low + rays[i, :3],  # decline slowly
-                                   offset_low + rays[i, 6:9]] # unstack
+                                   self.offset_high + rays[i, :3],  # move directly to the above of the target
+                                   self.offset_low + rays[i, :3],  # decline slowly
+                                   self.offset_low + rays[i, 6:9]] # unstack
 
             trajectory_ori_list = [self.para_dict['reset_ori'],
                                    [1, 0],
@@ -462,7 +560,7 @@ class Unstack_env(Arm_env):
                                 break
             else:
                 fail_times += 1
-            p.restoreState(state_id)
+            p.restoreState(self.state_id)
 
         if out_times >= len(rays) or fail_times >= len(rays) or max_grasp_num == 0:
             print('all methods fail, abort this epoch!')
@@ -482,6 +580,11 @@ class Unstack_env(Arm_env):
             # if self.save_img_flag == False:
             #     os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
             self.img_per_epoch += 1
+
+            if max_grasp_num >= 2:
+                print('try to tune the unstack in the best ray!')
+                self.tune_unstack(best_ray=output_data, best_num=max_grasp_num, img_index_start=img_index_start, input_data=input_data)
+
             print('this is total num of img after one epoch', self.img_per_epoch + img_index_start)
             return self.img_per_epoch
 
@@ -493,14 +596,14 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 155000, 'end_num': 160000, 'thread': 0,
+    para_dict = {'start_num': 000, 'end_num': 1000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.016]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -508,7 +611,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_905/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_906_intensive/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,

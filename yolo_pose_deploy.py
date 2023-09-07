@@ -513,7 +513,7 @@ class Yolo_pose_model():
         # cv2.imshow('zzz', self.img_output)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        img_path_output = self.img_path + '_pred_grasp.png'
+        img_path_output = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch) + '_pred_grasp.png'
         cv2.imwrite(img_path_output, self.img_output)
         pass
 
