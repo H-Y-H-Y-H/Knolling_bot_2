@@ -1,21 +1,159 @@
-from yolo_pose_deploy import *
+# from models.yolo_pose_deploy import *
 
 from arrangement import *
 # from grasp_model_deploy import *
-from arrange_model_deploy import *
+# from models.arrange_model_deploy import *
+from models.visual_perception_config import *
 from utils import *
 import pybullet as p
 import pybullet_data as pd
 import os
 import numpy as np
 import random
-import math
 import cv2
-from urdfpy import URDF
-from tqdm import tqdm
 import time
-import torch
-# from sklearn.preprocessing import MinMaxScaler
+
+class Sort_objects():
+
+    def __init__(self, para_dict, knolling_para):
+        self.error_rate = 0.05
+        self.para_dict = para_dict
+        self.knolling_para = knolling_para
+    def get_data_virtual(self):
+
+        xyz_list = []
+        length_range = np.round(np.random.uniform(self.para_dict['box_range'][0][0],
+                                                  self.para_dict['box_range'][0][1],
+                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
+        width_range = np.round(np.random.uniform(self.para_dict['box_range'][1][0],
+                                                 np.minimum(length_range, 0.036),
+                                                 size=(self.para_dict['boxes_num'], 1)), decimals=3)
+        height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
+                                                  self.para_dict['box_range'][2][1],
+                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
+        xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
+        return xyz_list
+
+
+    def get_data_real(self, yolo_model, evaluations=1, check='before'):
+
+        os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+        img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
+        # structure of results: x, y, length, width, ori
+        results, pred_conf = yolo_model.yolo_pose_predict(img_path=img_path, real_flag=True)
+
+        item_pos = results[:, :3]
+        item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
+        item_ori = np.concatenate((np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+
+        category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
+        s = item_lw[:, 0] * item_lw[:, 1]
+        s_min, s_max = np.min(s), np.max(s)
+        s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
+        lw_ratio = item_lw[:, 0] / item_lw[:, 1]
+        ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
+
+        # ! initiate the number of items
+        all_index = []
+        new_item_xyz = []
+        new_item_pos = []
+        new_item_ori = []
+        transform_flag = []
+        rest_index = np.arange(len(item_lw))
+        index = 0
+
+        for i in range(self.knolling_para['area_num']):
+            for j in range(self.knolling_para['ratio_num']):
+                kind_index = []
+                for m in range(len(item_lw)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if s_range[i] >= s[m] >= s_range[i + 1]:
+                            if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
+                                transform_flag.append(0)
+                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                                kind_index.append(index)
+                                new_item_xyz.append(item_lw[m])
+                                new_item_pos.append(item_pos[m])
+                                new_item_ori.append(item_ori[m])
+                                index += 1
+                                rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+
+        new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
+        new_item_pos = np.asarray(new_item_pos)
+        new_item_ori = np.asarray(new_item_ori)
+        transform_flag = np.asarray(transform_flag)
+        if len(rest_index) != 0:
+            # we should implement the rest of boxes!
+            rest_xyz = item_lw[rest_index]
+            new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
+            all_index.append(list(np.arange(index, len(item_lw))))
+            transform_flag = np.append(transform_flag, np.zeros(len(item_lw) - index))
+
+        # the sequence of them are based on area and ratio!
+        return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
+
+    def judge(self, item_xyz, pos_before, ori_before, crowded_index):
+        # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
+
+        category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
+        s = item_xyz[:, 0] * item_xyz[:, 1]
+        s_min, s_max = np.min(s), np.max(s)
+        s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
+        lw_ratio = item_xyz[:, 0] / item_xyz[:, 1]
+        ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
+        ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
+        ratio_range_high = np.linspace(ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
+        ratio_range_low = np.linspace(1 / ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
+
+        # ! initiate the number of items
+        all_index = []
+        new_item_xyz = []
+        transform_flag = []
+        new_pos_before = []
+        new_ori_before = []
+        new_crowded_index = []
+        rest_index = np.arange(len(item_xyz))
+        index = 0
+
+        for i in range(self.knolling_para['area_num']):
+            for j in range(self.knolling_para['ratio_num']):
+                kind_index = []
+                for m in range(len(item_xyz)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if s_range[i] >= s[m] >= s_range[i + 1]:
+                            if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
+                                transform_flag.append(0)
+                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                                kind_index.append(index)
+                                new_item_xyz.append(item_xyz[m])
+                                new_pos_before.append(pos_before[m])
+                                new_ori_before.append(ori_before[m])
+                                new_crowded_index.append(crowded_index[m])
+                                index += 1
+                                rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+
+        new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
+        new_pos_before = np.asarray(new_pos_before).reshape(-1, 3)
+        new_ori_before = np.asarray(new_ori_before).reshape(-1, 3)
+        transform_flag = np.asarray(transform_flag)
+        new_crowded_index = np.asarray(new_crowded_index)
+        if len(rest_index) != 0:
+            # we should implement the rest of boxes!
+            rest_xyz = item_xyz[rest_index]
+            new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
+            all_index.append(list(np.arange(index, len(item_xyz))))
+            transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
+
+        return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_crowded_index
 
 class Arm_env():
 
@@ -34,9 +172,6 @@ class Arm_env():
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
         self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
-        # self.yolo_pose_model = Yolo_pose_model(None, None)
-        # self.yolo_pose_model.yolo_pose_test()
-        # self.yolo_seg_model = Yolo_seg_model(para_dict=para_dict)
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
@@ -281,13 +416,45 @@ class Arm_env():
                 if len(delete_index) == 0:
                     break
 
-    def reset(self, epoch=None, manipulator_after=None, lwh_after=None):
+    def recover_objects(self, info_path):
+
+        config_data = np.loadtxt(info_path)
+        pos_data = config_data[:, :3]
+        ori_data = config_data[:, 3:6]
+        lwh_data = config_data[:, 6:9]
+        qua_data = config_data[:, 9:]
+
+        self.boxes_index = []
+        for i in range(len(pos_data)):
+            obj_name = f'object_{i}'
+            create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lwh_data[i])
+            self.boxes_index.append(int(i + 2))
+            r = np.random.uniform(0, 0.9)
+            g = np.random.uniform(0, 0.9)
+            b = np.random.uniform(0, 0.9)
+            p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+
+        for _ in range(int(100)):
+            p.stepSimulation()
+            if self.is_render == True:
+                time.sleep(1 / 96)
+
+        p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
+                         contactDamping=self.para_dict['base_contact_damping'],
+                         contactStiffness=self.para_dict['base_contact_stiffness'])
+
+
+    def reset(self, epoch=None, manipulator_after=None, lwh_after=None, recover_flag=False):
 
         p.resetSimulation()
         self.create_scene()
         self.create_arm()
-        self.create_objects(manipulator_after, lwh_after)
-        self.delete_objects(manipulator_after)
+        if recover_flag == False:
+            self.create_objects(manipulator_after, lwh_after)
+            self.delete_objects(manipulator_after)
+        else:
+            info_path = self.para_dict['dataset_path'] + 'sim_info/%012d.txt' % epoch
+            self.recover_objects(info_path)
         self.img_per_epoch = 0
         # return img_per_epoch_result
 
@@ -522,13 +689,14 @@ class Arm_env():
         if look_flag == True:
             if self.para_dict['real_operate'] == False:
                 img, _ = get_images()
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                img_path = self.para_dict['dataset_path'] + 'sim_images/%012d.png' % (epoch)
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                img_path = self.para_dict['dataset_path'] + 'unstack_images/%012d.png' % (epoch)
                 cv2.imwrite(img_path, img)
+                return img
         else:
             if self.para_dict['real_operate'] == False:
 
@@ -536,7 +704,6 @@ class Arm_env():
 
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                # results, pred_conf = self.yolo_seg_model.yolo_seg_predict(img_path=img_path, img=img)
                 if self.para_dict['use_lstm_model'] == True:
                     manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
                         = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag, sub_index=sub_index)

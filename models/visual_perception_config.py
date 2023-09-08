@@ -1,6 +1,8 @@
 from ultralytics.yolo.engine.results import Results
-from ultralytics.yolo.utils import ops
+from ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops
 from ultralytics.yolo.v8.detect.predict import DetectionPredictor
+import numpy as np
+import torch
 import cv2
 from utils import *
 import pyrealsense2 as rs
@@ -45,6 +47,9 @@ class Yolo_pose_model():
             pass
         else:
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
+
+        self.yolo_device = self.para_dict['device']
+        print('this is yolo device', self.yolo_device)
 
     def find_keypoints(self, xpos, ypos, l, w, ori, mm2px):
 
@@ -135,12 +140,6 @@ class Yolo_pose_model():
         c3 = np.array([-length / (2), width / (2)])
         c4 = np.array([-length / (2), -width / (2)])
         if use_xylw == True:
-            # length = scaled_xylw[2] / 3
-            # width = scaled_xylw[3] / 3
-            # c1 = np.array([length / (2), width / (2)])
-            # c2 = np.array([length / (2), -width / (2)])
-            # c3 = np.array([-length / (2), width / (2)])
-            # c4 = np.array([-length / (2), -width / (2)])
             box_center = np.array([scaled_xylw[0], scaled_xylw[1]])
         else:
             box_center = keypoints_center
@@ -195,7 +194,6 @@ class Yolo_pose_model():
         p1 = np.array([int(box[0] * 640), int(box[1] * 480)])
         # print('this is p1 and p2', p1, p2)
 
-        # cv2.rectangle(self.im, p1, p2, color, thickness=zzz_lw, lineType=cv2.LINE_AA)
         im = cv2.line(im, (int(corn1[1]), int(corn1[0])), (int(corn2[1]), int(corn2[0])), color, 1)
         im = cv2.line(im, (int(corn2[1]), int(corn2[0])), (int(corn4[1]), int(corn4[0])), color, 1)
         im = cv2.line(im, (int(corn4[1]), int(corn4[0])), (int(corn3[1]), int(corn3[0])), color, 1)
@@ -210,7 +208,6 @@ class Yolo_pose_model():
         if label:
             w, h = cv2.getTextSize(label, 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
             outside = p1[1] - h >= 3
-            # cv2.rectangle(self.im, p1, p2, color, 0, cv2.LINE_AA)  # filled
             if truth_flag == True:
                 txt_color = (0, 0, 255)
                 # im = cv2.putText(im, label1, (p1[0] - 50, p1[1] - 32 if outside else p1[1] + h + 2),
@@ -222,9 +219,8 @@ class Yolo_pose_model():
                                  0, zzz_lw / 3, (0, 0, 255), thickness=tf, lineType=cv2.LINE_AA)
                 im = cv2.putText(im, label2, (p1[0] - 50, p1[1] + 32 if outside else p1[1] + h + 12),
                                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
-                m = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
+                im = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
                                 0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
-            # im = cv2.putText(im, label1, (c1[0] - 70, c1[1] - 35), 0, tl / 3, color, thickness=tf, lineType=cv2.LINE_AA)
         ############### zzz plot the box ###############
 
         ############### zzz plot the keypoints ###############
@@ -364,14 +360,18 @@ class Yolo_pose_model():
 
         else:
             model = self.para_dict['yolo_model_path']
-            if first_flag == True:
+
+            if self.para_dict['save_img_flag'] == True and first_flag == True:
                 self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-                cv2.imwrite(self.img_path + '.png', img)
-                img_path_input = self.img_path + '.png'
-            else:
-                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d_%d' % (self.epoch, sub_index)
-                cv2.imwrite(self.img_path + '.png', img)
-            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', origin_img)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                img_path_output = self.img_path + '.png'
+                cv2.imwrite(img_path_output, img)
+
+            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             use_python = True
             if use_python:
                 from ultralytics import YOLO
@@ -430,18 +430,6 @@ class Yolo_pose_model():
                                                              use_xylw=use_xylw, truth_flag=False)
                 pred_result.append(result)
 
-            if test_pile_detection == True:
-                for j in range(len(target)):
-                    tar_xylw = np.copy(target[j, 1:5])
-                    tar_keypoints = np.copy((target[j, 5:]).reshape(-1, 3)[:, :2])
-
-                    # plot target
-                    print('this is tar xylw', tar_xylw)
-                    origin_img, _ = self.plot_and_transform(im=origin_img, box=tar_xylw, label='0: target', color=(255, 255, 0), txt_color=(255, 255, 255),
-                                                            index=j, scaled_xylw=tar_xylw, keypoints=tar_keypoints,
-                                                            cls=0, conf=1,
-                                                            use_xylw=use_xylw, truth_flag=True)
-
             pred_result = np.asarray(pred_result)
             self.img_output = origin_img
             manipulator_before = np.concatenate((pred_result[:, :3], np.zeros((len(pred_result), 2)), pred_result[:, 5].reshape(-1, 1)), axis=1)
@@ -452,44 +440,29 @@ class Yolo_pose_model():
                                                                                 pred_conf)
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)
-                # self.plot_grasp(manipulator_before, prediction, model_output)
-            if self.para_dict['save_img_flag'] == True:
-                # cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
-                # cv2.imshow('zzz', origin_img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                # img_path_output = self.img_path + '_pred.png'
-                # cv2.imwrite(img_path_output, origin_img)
-                pass
 
         if self.para_dict['use_lstm_model'] == True:
             return manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output
         else:
             return manipulator_before, new_lwh_list, pred_conf
 
-    # def yolo_pose_test(self):
-    #
-    #     model = "../../models/830_pile_real_box/weights/best.pt"
-    #     source_pth = '../../../knolling_dataset/MLP_unstack_902/sim_images'
-    #
-    #     model = '/home/ubuntu/Desktop/Knolling_bot_2/models/830_pile_real_box/weights/best.pt'
-    #     source_pth = '/home/ubuntu/Desktop/knolling_dataset/MLP_unstack_902/sim_images'
-    #     # model = "./models/830_pile_real_box/weights/best.pt"
-    #     # source_pth = '../knolling_dataset/MLP_unstack_902/sim_images'
-    #
-    #
-    #     # args = dict(model=model, source=source_pth, conf=self.para_dict['yolo_conf'],
-    #     #             iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-    #     args = dict(model=model, source=source_pth, conf=0.6,
-    #                 iou=0.8, device='cuda:1')
-    #     use_python = True
-    #     if use_python:
-    #         from ultralytics import YOLO
-    #         images = YOLO(model)(**args)
-    #     else:
-    #         predictor = PosePredictor(overrides=args)
-    #         predictor.predict_cli()
+    def plot_unstack(self, success_ray, img=None, epoch=None):
+
+        start_pos = success_ray[0, :2]
+        start_px = [int(start_pos[0] * self.mm2px + 6), int(start_pos[1] * self.mm2px + 320)]
+        end_pos = success_ray[1, :2]
+        end_px = [int(end_pos[0] * self.mm2px + 6), int(end_pos[1] * self.mm2px + 320)]
+
+        if img is None:
+            output_img = self.img_output
+            output_epoch = self.epoch
+        else:
+            output_img = img
+            output_epoch = epoch
+
+        output_img = cv2.line(output_img, (start_px[1], start_px[0]), (end_px[1], end_px[0]), (255, 0, 0), 1)
+        img_path_output = self.para_dict['dataset_path'] + 'unstack_ray/%012d' % (output_epoch) + '_grasp.png'
+        cv2.imwrite(img_path_output, output_img)
 
     def plot_grasp(self, manipulator_before, prediction, model_output):
 
@@ -506,15 +479,9 @@ class Yolo_pose_model():
             self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        if self.para_dict['save_img_flag'] == True:
-            # cv2.namedWindow('zzz', 0)
-            # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', self.img_output)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-            # img_path_output = self.img_path + '_pred_grasp.png'
-            # cv2.imwrite(img_path_output, self.img_output)
-            pass
+        img_path_output = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch) + '_grasp.png'
+        cv2.imwrite(img_path_output, self.img_output)
+        pass
 
 if __name__ == '__main__':
 

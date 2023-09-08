@@ -6,7 +6,7 @@ import torch
 import cv2
 from utils import *
 import pyrealsense2 as rs
-from grasp_model_deploy import *
+from models.grasp_model_deploy import *
 
 class PosePredictor(DetectionPredictor):
 
