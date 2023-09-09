@@ -386,20 +386,37 @@ class Yolo_pose_model():
             one_img = images[0]
 
             pred_result = []
-            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
-            if len(pred_xylws) <= 1: # filter the results no more than 1
-                print('yolo no more than 1')
-                if self.para_dict['use_lstm_model'] == True:
-                    return [], [], [], [], [], []
+            if gt_boxes_num is None:
+                pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
+                if len(pred_xylws) <= 1:  # filter the results no more than 1
+                    print('yolo no more than 1')
+                    if self.para_dict['use_lstm_model'] == True:
+                        return [], [], [], [], [], []
+                    else:
+                        return [], [], []
                 else:
-                    return [], [], []
+                    pred_cls = one_img.boxes.cls.cpu().detach().numpy()
+                    pred_conf = one_img.boxes.conf.cpu().detach().numpy()
+                    pred_keypoints = one_img.keypoints.cpu().detach().numpy()
+                    pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                    pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                    pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
             else:
-                pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
-                pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
-                pred_keypoints = one_img.keypoints.cpu().detach().numpy()[:gt_boxes_num]
-                pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
-                pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
-                pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
+                pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
+                if len(pred_xylws) <= 1: # filter the results no more than 1
+                    print('yolo no more than 1')
+                    if self.para_dict['use_lstm_model'] == True:
+                        return [], [], [], [], [], []
+                    else:
+                        return [], [], []
+                else:
+                    pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
+                    pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
+                    pred_keypoints = one_img.keypoints.cpu().detach().numpy()[:gt_boxes_num]
+                    pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                    pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                    pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
+
 
 
             ######## order based on distance to draw it on the image while deploying the model ########

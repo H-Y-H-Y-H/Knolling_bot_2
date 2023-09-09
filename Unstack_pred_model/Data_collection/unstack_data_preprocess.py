@@ -144,19 +144,19 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/MLP_unstack_905/'
-    target_data_path = '../../../knolling_dataset/MLP_unstack_905/'
+    data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
+    target_data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
 
-    data_num = 160000
+    data_num = 332000
     start_index = 0
     target_start_index = 0
     dropout_prob = 0
     data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
-    # source_path = '../../../sim_labels_unstack/'
-    # target_path = '../../../knolling_dataset/MLP_unstack_905/sim_labels_unstack/'
+    # source_path = '../../../knolling_dataset/MLP_unstack_907_intensive_labdesk/sim_labels_box/'
+    # target_path = '../../../knolling_dataset/MLP_unstack_907_intensive/sim_labels_box/'
     # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 105000
-    # target_start_index = 105000
-    # num = 40000
+    # source_start_index = 0
+    # target_start_index = 204000
+    # num = 128000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
