@@ -13,29 +13,34 @@ class Judge_push():
 
     def pred(self, epoch_index=0):
 
-        eval_index = np.arange(epoch_index, epoch_index + self.num_ray, dtype=np.int32)
+        eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
         origin_img = cv2.imread(self.data_root + 'sim_images/%012d.png' % epoch_index)
-        max_grasp_num = 0
+        max_grasp_num = 1
+        unstack_rays = []
+        origin_info = np.loadtxt(self.data_root + 'sim_info/%012d.txt' % epoch_index)
         for i in range(len(eval_index)):
 
-            img_candidate = cv2.imread(self.data_root + 'unstack_images/%012d.png' % i)
-            ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % i)
+            img_candidate = cv2.imread(self.data_root + 'unstack_images/%012d.png' % eval_index[i])
+            ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % eval_index[i])
+            unstack_rays.append(ray_candidate)
 
             manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output \
-            = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=epoch_index)
+            = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
+            self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output, img=img_candidate, epoch=eval_index[i])
 
             test_grasp_num = len(manipulator_before) - len(crowded_index)
             if test_grasp_num > max_grasp_num:
                 max_grasp_num = test_grasp_num
                 max_grasp_index = i
 
-        if max_grasp_num == 0:
+        if max_grasp_num == 1:
             print('no good push in this epoch, ignore it!')
-            os.remove(self.data_root + 'sim_images/%012d.png' % epoch_index)
+            # os.remove(self.data_root + 'sim_images/%012d.png' % epoch_index)
         else:
             print(f'save the {max_grasp_index} as the best ray!')
-            cv2.imwrite(self.data_root + 'sim_images/%012d.png' % self.output_index, origin_img)
-            np.savetxt(self.data_root + 'sim_labels/%012d.txt' % self.output_index, ray_candidate[max_grasp_index].reshape(-1, 2))
+            cv2.imwrite(self.data_root + 'input_images/%012d.png' % self.output_index, origin_img)
+            np.savetxt(self.data_root + 'input_labels/%012d.txt' % self.output_index, origin_info, fmt='%.04f')
+            np.savetxt(self.data_root + 'output_labels/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(-1, 2), fmt='%.04f')
             self.output_index += 1
 
 
@@ -63,7 +68,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive_test/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
@@ -80,12 +85,13 @@ if __name__ == '__main__':
                  'device': 'cuda:0',
                  'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
 
-    os.makedirs(para_dict['dataset_path'] + 'sim_images/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'input_images/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'input_labels/', exist_ok=True)
     os.makedirs(para_dict['dataset_path'] + 'unstack_images/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'unstack_ray/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'unstack_rays/', exist_ok=True)
     os.makedirs(para_dict['dataset_path'] + 'sim_info/', exist_ok=True)
     os.makedirs(para_dict['dataset_path'] + 'pred_info/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'sim_labels/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'output_labels/', exist_ok=True)
 
     zzz_judge = Judge_push(para_dict=para_dict, lstm_dict=lstm_dict)
 

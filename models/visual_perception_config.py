@@ -478,26 +478,40 @@ class Yolo_pose_model():
             output_epoch = epoch
 
         output_img = cv2.line(output_img, (start_px[1], start_px[0]), (end_px[1], end_px[0]), (255, 0, 0), 1)
-        img_path_output = self.para_dict['dataset_path'] + 'unstack_ray/%012d' % (output_epoch) + '_grasp.png'
+        img_path_output = self.para_dict['dataset_path'] + 'unstack_rays/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
 
-    def plot_grasp(self, manipulator_before, prediction, model_output):
+    def plot_grasp(self, manipulator_before, prediction, model_output, img=None, epoch=None):
 
         x_px_center = manipulator_before[:, 0] * self.mm2px + 6
         y_px_center = manipulator_before[:, 1] * self.mm2px + 320
         zzz_lw = 1
         tf = 1
-        # img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+
+        if img is None:
+            output_img = self.img_output
+            output_epoch = self.epoch
+        else:
+            output_img = img
+            output_epoch = epoch
+
         for i in range(len(manipulator_before)):
             if prediction[i] == 0:
                 label = 'False %.03f' % model_output[i, 1]
             else:
                 label = 'True %.03f' % model_output[i, 1]
-            self.img_output = cv2.putText(self.img_output, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
+            output_img = cv2.putText(output_img, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        img_path_output = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch) + '_grasp.png'
-        cv2.imwrite(img_path_output, self.img_output)
+        # cv2.namedWindow('zzz', 0)
+        # cv2.resizeWindow('zzz', 1280, 960)
+        # cv2.imshow('zzz', output_img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+
+        img_path_output = self.para_dict['dataset_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
+        cv2.imwrite(img_path_output, output_img)
         pass
 
 if __name__ == '__main__':

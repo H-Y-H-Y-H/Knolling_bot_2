@@ -451,7 +451,7 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 00000, 'end_num': 10, 'thread': 0,
+    para_dict = {'start_num': 200000, 'end_num': 240000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
@@ -466,7 +466,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive_test/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
