@@ -61,7 +61,7 @@ class Grasp_env(Arm_env):
             manipulator_before_input = manipulator_before[order]
             new_lwh_list_input = new_lwh_list[order]
             pred_conf_input = pred_conf[order]
-            crowded_index, prediction = self.grasp_model.pred(manipulator_before_input, new_lwh_list_input, pred_conf_input)
+            crowded_index, prediction = self.grasp_model.pred_yolo(manipulator_before_input, new_lwh_list_input, pred_conf_input)
             print('this is crowded_index', crowded_index)
             print('this is prediction', prediction)
             self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction)

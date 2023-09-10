@@ -171,7 +171,7 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+        # self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
@@ -466,7 +466,7 @@ class Arm_env():
             ori_before_input = ori_before.astype(np.float32)
             lwh_list_input = lwh_list.astype(np.float32)
 
-            pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+            pos_after = self.arrange_model.pred_yolo(pos_before_input, ori_before_input, lwh_list_input, input_index)
             print('here')
             manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
             manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), np.zeros((len(input_index), 3))), axis=1)

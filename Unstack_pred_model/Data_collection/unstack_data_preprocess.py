@@ -140,23 +140,32 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
         tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
         shutil.copy(cur_path, tar_path)
 
+def data_delete(source_path, target_path, source_start_index, data_num, target_start_index):
+
+    import shutil
+
+    for i in tqdm(range(source_start_index, int(data_num + source_start_index))):
+        cur_path = source_path + '%012d.txt' % (i)
+        os.remove(cur_path)
+
 if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
-    target_data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
+    # data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
+    # target_data_path = '../../../knolling_dataset/MLP_unstack_907_intensive/'
+    #
+    # data_num = 332000
+    # start_index = 0
+    # target_start_index = 0
+    # dropout_prob = 0
+    # data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
 
-    data_num = 332000
-    start_index = 0
+    source_path = '../../../knolling_dataset/MLP_unstack_908_intensive/pred_info/'
+    target_path = '../../../knolling_dataset/MLP_unstack_908_intensive/pred_info/'
+    os.makedirs(target_path, exist_ok=True)
+    source_start_index = 20000
     target_start_index = 0
-    dropout_prob = 0
-    data_preprocess_np_min_max(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob)
-
-    # source_path = '../../../knolling_dataset/MLP_unstack_907_intensive_labdesk/sim_labels_box/'
-    # target_path = '../../../knolling_dataset/MLP_unstack_907_intensive/sim_labels_box/'
-    # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 0
-    # target_start_index = 204000
-    # num = 128000
+    num = 220000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
+    data_delete(source_path, target_path, source_start_index, num, target_start_index)

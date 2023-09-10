@@ -5,13 +5,48 @@ class Judge_push():
     def __init__(self, para_dict, lstm_dict):
         self.para_dict = para_dict
         self.lstm_dict = lstm_dict
-        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+        if use_yolo == True:
+            self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+        else:
+            self.grasp_pred_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
         self.num_ray = 5
         self.data_root = self.para_dict['dataset_path']
 
         self.output_index = self.para_dict['start_num']
 
-    def pred(self, epoch_index=0):
+    # def pred_yolo(self, epoch_index=0):
+    #
+    #     eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
+    #     origin_img = cv2.imread(self.data_root + 'sim_images/%012d.png' % epoch_index)
+    #     max_grasp_num = 1
+    #     unstack_rays = []
+    #     origin_info = np.loadtxt(self.data_root + 'sim_info/%012d.txt' % epoch_index)
+    #     for i in range(len(eval_index)):
+    #
+    #         img_candidate = cv2.imread(self.data_root + 'unstack_images/%012d.png' % eval_index[i])
+    #         ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % eval_index[i])
+    #         unstack_rays.append(ray_candidate)
+    #
+    #         manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output \
+    #         = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
+    #         self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output, img=img_candidate, epoch=eval_index[i])
+    #
+    #         test_grasp_num = len(manipulator_before) - len(crowded_index)
+    #         if test_grasp_num > max_grasp_num:
+    #             max_grasp_num = test_grasp_num
+    #             max_grasp_index = i
+    #
+    #     if max_grasp_num == 1:
+    #         print('no good push in this epoch, ignore it!')
+    #         # os.remove(self.data_root + 'sim_images/%012d.png' % epoch_index)
+    #     else:
+    #         print(f'save the {max_grasp_index} as the best ray!')
+    #         cv2.imwrite(self.data_root + 'input_images/%012d.png' % self.output_index, origin_img)
+    #         np.savetxt(self.data_root + 'input_boxs/%012d.txt' % self.output_index, origin_info, fmt='%.04f')
+    #         np.savetxt(self.data_root + 'output_rays/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(2, -1), fmt='%.04f')
+    #         self.output_index += 1
+
+    def pred_yolo(self, epoch_index=0):
 
         eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
         origin_img = cv2.imread(self.data_root + 'sim_images/%012d.png' % epoch_index)
@@ -24,9 +59,27 @@ class Judge_push():
             ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % eval_index[i])
             unstack_rays.append(ray_candidate)
 
-            manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output \
-            = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
-            self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output, img=img_candidate, epoch=eval_index[i])
+            manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
+            yolo_temp_info = np.concatenate((manipulator_before, new_lwh_list, pred_conf.reshape(-1, 1)), axis=1)
+
+            np.savetxt(self.data_root + 'yolo_temp_info/%012d.png' % eval_index[i], yolo_temp_info)
+
+    def pred_lstm(self, epoch_index=0):
+
+        eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
+        max_grasp_num = 1
+        unstack_rays = []
+        origin_info = np.loadtxt(self.data_root + 'sim_info/%012d.txt' % epoch_index)
+        for i in range(len(eval_index)):
+
+            yolo_info_candidate = np.loadtxt(self.data_root + 'yolo_temp_info/%012d.txt' % eval_index[i])
+            manipulator_before = yolo_info_candidate[:, 6]
+            new_lwh_list = yolo_info_candidate[:, 6:9]
+            pred_conf = yolo_info_candidate[:, 9:]
+            ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % eval_index[i])
+            unstack_rays.append(ray_candidate)
+
+            crowded_index, prediction, model_output = self.grasp_pred_model.pred(manipulator_before=manipulator_before, lwh_list=new_lwh_list, conf_list=pred_conf)
 
             test_grasp_num = len(manipulator_before) - len(crowded_index)
             if test_grasp_num > max_grasp_num:
@@ -38,9 +91,8 @@ class Judge_push():
             # os.remove(self.data_root + 'sim_images/%012d.png' % epoch_index)
         else:
             print(f'save the {max_grasp_index} as the best ray!')
-            cv2.imwrite(self.data_root + 'input_images/%012d.png' % self.output_index, origin_img)
-            np.savetxt(self.data_root + 'input_labels/%012d.txt' % self.output_index, origin_info, fmt='%.04f')
-            np.savetxt(self.data_root + 'output_labels/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(2, -1), fmt='%.04f')
+            np.savetxt(self.data_root + 'input_boxs/%012d.txt' % self.output_index, origin_info, fmt='%.04f')
+            np.savetxt(self.data_root + 'output_rays/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(2, -1), fmt='%.04f')
             self.output_index += 1
 
 
@@ -52,6 +104,8 @@ if __name__ == '__main__':
 
     # simulation: iou 0.8
     # real world: iou=0.5
+
+    use_yolo = True
 
     para_dict = {'start_num': 00000, 'end_num': 15, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
@@ -72,7 +126,7 @@ if __name__ == '__main__':
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': False, 'use_lstm_model': False}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -86,12 +140,14 @@ if __name__ == '__main__':
                  'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
 
     os.makedirs(para_dict['dataset_path'] + 'input_images/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'input_labels/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'output_labels/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'input_boxs/', exist_ok=True)
+    os.makedirs(para_dict['dataset_path'] + 'output_rays/', exist_ok=True)
+
+    os.makedirs(para_dict['dataset_path'] + 'yolo_temp_info/', exist_ok=True)
 
     zzz_judge = Judge_push(para_dict=para_dict, lstm_dict=lstm_dict)
 
     epoch_index_start = para_dict['start_num']
     epoch_index_end = para_dict['end_num']
     for i in range(epoch_index_start, epoch_index_end):
-        zzz_judge.pred(epoch_index=i)
+        zzz_judge.pred_yolo(epoch_index=i)

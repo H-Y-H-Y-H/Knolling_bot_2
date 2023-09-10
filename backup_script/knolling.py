@@ -344,7 +344,7 @@ class knolling_main:
 
             while True:
                 manipulator_before, self.lwh_list, pred_conf = self.knolling_env.get_obs(self.general_parameters['obs_order'])
-                move_list, knolling_flag = self.grasp_lstm.pred(manipulator_before, self.lwh_list, pred_conf)
+                move_list, knolling_flag = self.grasp_lstm.pred_yolo(manipulator_before, self.lwh_list, pred_conf)
 
                 if knolling_flag == True:
                     break

@@ -334,7 +334,7 @@ class knolling_main(Arm_env):
             manipulator_before = manipulator_before[order]
             new_lwh_list = new_lwh_list[order]
             pred_conf = pred_conf[order]
-            crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+            crowded_index, prediction = self.grasp_model.pred_yolo(manipulator_before, new_lwh_list, pred_conf)
             self.yolo_pose_model.plot_grasp(manipulator_before, prediction)
             ############ Predict the probability of grasp, remember to change the sequence of input #############
 
@@ -490,7 +490,7 @@ class knolling_main(Arm_env):
                 manipulator_before = manipulator_before[order]
                 new_lwh_list = new_lwh_list[order]
                 pred_conf = pred_conf[order]
-                crowded_index, prediction = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+                crowded_index, prediction = self.grasp_model.pred_yolo(manipulator_before, new_lwh_list, pred_conf)
                 self.yolo_pose_model.plot_grasp(manipulator_before, prediction)
             else:
                 print('nothing around the item')
