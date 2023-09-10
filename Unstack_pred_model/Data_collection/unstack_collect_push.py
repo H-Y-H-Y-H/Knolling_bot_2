@@ -22,7 +22,7 @@ class Unstack_env(Arm_env):
         self.offset_low = np.array([0, 0, 0.0])
         self.offset_high = np.array([0, 0, 0.04])
 
-        self.angular_distance = np.pi / 4
+        self.angular_distance = np.pi / 8
         if self.para_dict['real_operate'] == True:
             self.ray_height = 0.015
         else:
@@ -431,6 +431,8 @@ class Unstack_env(Arm_env):
         #     # os.remove(data_root + 'sim_images/%012d.png' % (self.img_per_epoch + img_index_start))
         #     return self.img_per_epoch
 
+        unstack_data_start_index = unstack_data_start_index * self.num_rays
+
         self.calculate_gripper()
         pred_info = np.loadtxt(data_root + 'pred_info/%012d.txt' % data_index)
         manipulator_before_input = pred_info[:, :6]
@@ -438,9 +440,10 @@ class Unstack_env(Arm_env):
         self.state_id = p.saveState()
 
 
+        add_num = self.num_rays
         while True:
 
-            rays = self.get_ray(manipulator_before_input, new_lwh_list_input)
+            rays = self.get_ray(manipulator_before_input, new_lwh_list_input)[:add_num]
             out_times = 0
             fail_times = 0
             for i in range(len(rays)):
@@ -525,7 +528,9 @@ class Unstack_env(Arm_env):
             if out_times == 0 and fail_times == 0:
                 break
             else:
-                print('add additional rays')
+                add_num = fail_times + out_times
+                print('add additional rays', add_num)
+
 
         # rewrite this variable to ensure to load data one by one
         return self.img_per_epoch
@@ -564,7 +569,7 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 000, 'end_num': 10, 'thread': 0,
+    para_dict = {'start_num': 000, 'end_num': 15, 'thread': 0, 'input_output_label_offset': 15,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
@@ -596,8 +601,6 @@ if __name__ == '__main__':
                  'device': 'cuda:0',
                  'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
 
-    startnum = para_dict['start_num']
-
     data_root = para_dict['dataset_path']
     with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
@@ -613,11 +616,15 @@ if __name__ == '__main__':
     os.makedirs(data_root + 'sim_info/', exist_ok=True)
     os.makedirs(data_root + 'pred_info/', exist_ok=True)
 
-    exist_img_num = startnum
+
     if para_dict['real_operate'] == True:
         env.real_world_warmup()
     # while True:
-    for i in range(para_dict['start_num'], para_dict['end_num']):
+    origin_data_start = para_dict['start_num']
+    origin_data_end = para_dict['end_num']
+    exist_img_num = origin_data_start + para_dict['input_output_label_offset']
+
+    for i in range(origin_data_start, origin_data_end):
         if para_dict['real_operate'] == False:
             env.reset(epoch=i, recover_flag=True)
         img_per_epoch = env.try_unstack(data_root=data_root, data_index=i, unstack_data_start_index=exist_img_num)

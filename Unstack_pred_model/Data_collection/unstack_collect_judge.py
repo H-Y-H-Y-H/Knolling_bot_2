@@ -40,7 +40,7 @@ class Judge_push():
             print(f'save the {max_grasp_index} as the best ray!')
             cv2.imwrite(self.data_root + 'input_images/%012d.png' % self.output_index, origin_img)
             np.savetxt(self.data_root + 'input_labels/%012d.txt' % self.output_index, origin_info, fmt='%.04f')
-            np.savetxt(self.data_root + 'output_labels/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(-1, 2), fmt='%.04f')
+            np.savetxt(self.data_root + 'output_labels/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(2, -1), fmt='%.04f')
             self.output_index += 1
 
 
@@ -53,7 +53,7 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 00000, 'end_num': 10, 'thread': 0,
+    para_dict = {'start_num': 00000, 'end_num': 15, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
@@ -87,10 +87,6 @@ if __name__ == '__main__':
 
     os.makedirs(para_dict['dataset_path'] + 'input_images/', exist_ok=True)
     os.makedirs(para_dict['dataset_path'] + 'input_labels/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'unstack_images/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'unstack_rays/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'sim_info/', exist_ok=True)
-    os.makedirs(para_dict['dataset_path'] + 'pred_info/', exist_ok=True)
     os.makedirs(para_dict['dataset_path'] + 'output_labels/', exist_ok=True)
 
     zzz_judge = Judge_push(para_dict=para_dict, lstm_dict=lstm_dict)
