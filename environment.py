@@ -1,8 +1,8 @@
 # from models.yolo_pose_deploy import *
 
-from arrangement import *
+# from arrangement import *
 # from grasp_model_deploy import *
-# from models.arrange_model_deploy import *
+from models.arrange_model_deploy import *
 from models.visual_perception_config import *
 from utils import *
 import pybullet as p
@@ -171,7 +171,7 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        # self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
@@ -312,7 +312,6 @@ class Arm_env():
                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
         self.to_home()
 
-
     def create_objects(self, manipulator_after, lwh_after):
 
         if manipulator_after is None:
@@ -330,10 +329,15 @@ class Arm_env():
                 y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
                 print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
                 rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
+
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
                 # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
-                manipulator_init, lwh_list_init, _ = self.get_obs()
+                if self.para_dict['use_lstm_model'] == True:
+                    manipulator_init, lwh_list_init, pred_conf, crowded_index, prediction, model_output = self.get_obs()
+                else:
+                    manipulator_init, lwh_list_init, pred_conf = self.get_obs()
+
                 rdm_pos = manipulator_init[:, :3]
                 rdm_ori = manipulator_init[:, 3:]
                 self.lwh_list = lwh_list_init
@@ -416,33 +420,49 @@ class Arm_env():
                 if len(delete_index) == 0:
                     break
 
-    def recover_objects(self, info_path):
+    def recover_objects(self, info_path=None, config_data=None):
 
-        config_data = np.loadtxt(info_path)
-        pos_data = config_data[:, :3]
-        ori_data = config_data[:, 3:6]
-        lwh_data = config_data[:, 6:9]
-        qua_data = config_data[:, 9:]
+        if config_data is None:
+            config_data = np.loadtxt(info_path)
+            pos_data = config_data[:, :3]
+            ori_data = config_data[:, 3:6]
+            lwh_data = config_data[:, 6:9]
+            qua_data = config_data[:, 9:]
 
-        self.boxes_index = []
-        for i in range(len(pos_data)):
-            obj_name = f'object_{i}'
-            create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lwh_data[i])
-            self.boxes_index.append(int(i + 2))
-            r = np.random.uniform(0, 0.9)
-            g = np.random.uniform(0, 0.9)
-            b = np.random.uniform(0, 0.9)
-            p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+            self.boxes_index = []
+            for i in range(len(pos_data)):
+                obj_name = f'object_{i}'
+                create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lwh_data[i])
+                self.boxes_index.append(int(i + 2))
+                r = np.random.uniform(0, 0.9)
+                g = np.random.uniform(0, 0.9)
+                b = np.random.uniform(0, 0.9)
+                p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
 
-        for _ in range(int(100)):
-            p.stepSimulation()
-            if self.is_render == True:
-                time.sleep(1 / 96)
+            for _ in range(int(100)):
+                p.stepSimulation()
+                if self.is_render == True:
+                    time.sleep(1 / 96)
 
-        p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                         contactDamping=self.para_dict['base_contact_damping'],
-                         contactStiffness=self.para_dict['base_contact_stiffness'])
+            p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
+                             contactDamping=self.para_dict['base_contact_damping'],
+                             contactStiffness=self.para_dict['base_contact_stiffness'])
+        else:
+            pos_data = config_data[:, :3]
+            ori_data = config_data[:, 3:6]
+            lwh_data = config_data[:, 6:9]
 
+            for i in range(len(self.boxes_index)):
+                p.resetBasePositionAndOrientation(self.boxes_index[i], pos_data[i], p.getQuaternionFromEuler(ori_data[i]))
+
+                # obj_name = f'object_{i}'
+                # create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lwh_data[i])
+                # self.boxes_index.append(int(i + 2))
+                # r = np.random.uniform(0, 0.9)
+                # g = np.random.uniform(0, 0.9)
+                # b = np.random.uniform(0, 0.9)
+                # p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                pass
 
     def reset(self, epoch=None, manipulator_after=None, lwh_after=None, recover_flag=False):
 
@@ -456,23 +476,104 @@ class Arm_env():
             info_path = self.para_dict['dataset_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
         self.img_per_epoch = 0
+
+        self.state_id = p.saveState()
         # return img_per_epoch_result
+
+    def get_candidate_index(self, images):
+
+        num_row = 2
+        num_col = 4
+
+        for i , image in enumerate(images):
+            images[i] = cv2.resize(images[i], dsize=(320, 240), interpolation=cv2.INTER_CUBIC)
+
+        image_height, image_width, _ = images[0].shape
+
+        # Create a canvas to display the images
+        canvas_height = num_row * image_height
+        canvas_width = num_col * image_width
+        canvas = np.zeros((canvas_height, canvas_width, 3), dtype=np.uint8)
+
+        # Paste the images onto the canvas
+        for i, image in enumerate(images):
+            row = i // num_col
+            col = i % num_col
+            canvas[row * image_height:(row + 1) * image_height, col * image_width:(col + 1) * image_width] = image
+
+        # Function to handle mouse clicks
+        selected_image_index = None
+        def mouse_click(event, x, y, flags, param):
+            global selected_image_index
+            if event == cv2.EVENT_LBUTTONDOWN:
+                print('mouse clicked!')
+                col = x // image_width
+                row = y // image_height
+                print('this is col', col)
+                print('this is row', row)
+                selected_image_index = row * num_col + col
+                print(selected_image_index)
+
+        # Create a window and set the mouse callback function
+        cv2.namedWindow('Multiple Images')
+        cv2.setMouseCallback('Multiple Images', mouse_click)
+
+        # Display the canvas with all images
+        cv2.imshow('Multiple Images', canvas)
+
+        while True:
+            key = cv2.waitKey(1) & 0xFF
+            if selected_image_index is not None:
+                break
+
+        # Close the window
+        cv2.destroyAllWindows()
+
+        # Print the selected image index (0-based)
+        if selected_image_index is not None:
+            print(f"Selected image index: {selected_image_index}")
+        else:
+            print("No image selected.")
+
+        return selected_image_index
 
     def get_knolling_data(self, pos_before, ori_before, lwh_list, crowded_index):  # this is main function!!!!!!!!!
 
+        arrangement_num = 8 # provide several candidates to select the best output
+        candidate_img = []
         if self.para_dict['use_knolling_model'] == True:
-            input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
-            pos_before_input = pos_before.astype(np.float32)
-            ori_before_input = ori_before.astype(np.float32)
-            lwh_list_input = lwh_list.astype(np.float32)
 
-            pos_after = self.arrange_model.pred_yolo(pos_before_input, ori_before_input, lwh_list_input, input_index)
-            print('here')
-            manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
-            manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), np.zeros((len(input_index), 3))), axis=1)
-            lwh_list_classify = lwh_list_input[input_index]
-            rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
-            manipulator_after[rotate_index, -1] += np.pi / 2
+            for i in range(arrangement_num):
+                input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
+                pos_before_input = pos_before.astype(np.float32)
+                ori_before_input = ori_before.astype(np.float32)
+                lwh_list_input = lwh_list.astype(np.float32)
+                ori_after = np.zeros((len(input_index), 3))
+
+                #################### exchange the length and width randomly enrich the input ##################
+                for j in range(len(input_index)):
+                    if np.random.random() < 0.5:
+                        temp = lwh_list_input[j, 0]
+                        lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                        lwh_list_input[j, 0] = temp
+                        ori_after[j, 2] += np.pi / 2
+                #################### exchange the length and width randomly enrich the input ##################
+
+                pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+                manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+                manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
+                lwh_list_classify = lwh_list_input[input_index]
+                rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
+                manipulator_after[rotate_index, -1] += np.pi / 2
+
+                recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
+                self.recover_objects(config_data=recover_config)
+                candidate_img.append(self.get_obs(look_flag=True, epoch=i, img_path='here'))
+
+            candidate_index = self.get_candidate_index(candidate_img)
+
+            p.restoreState(self.state_id)
+
         else:
             # determine the center of the tidy configuration
             if len(self.lwh_list) <= 2:
@@ -668,7 +769,7 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False, sub_index=0):
+    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False, sub_index=0, img_path=None):
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
                                                                              height=480,
@@ -687,27 +788,29 @@ class Arm_env():
             return img, top_height
 
         if look_flag == True:
-            if self.para_dict['real_operate'] == False:
-                img, _ = get_images()
-                # cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
-                # cv2.imshow('zzz', img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                img_path = self.para_dict['dataset_path'] + 'unstack_images/%012d.png' % (epoch)
-                cv2.imwrite(img_path, img)
-                return img
+            img, _ = get_images()
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            if img_path is None:
+                output_img_path = self.para_dict['dataset_path'] + 'unstack_images/%012d.png' % (epoch)
+            elif self.para_dict['real_operate'] == False:
+                output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
+            else:
+                output_img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch) + '_after.png'
+            cv2.imwrite(output_img_path, img)
+            return img
         else:
             if self.para_dict['real_operate'] == False:
 
                 img, _ = get_images()
-
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 if self.para_dict['use_lstm_model'] == True:
                     manipulator_before, new_lwh_list, pred_conf, crowded_index, prediction, model_output\
                         = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag, sub_index=sub_index)
-                    # self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
                     # cv2.namedWindow('zzz', 0)
                     # cv2.resizeWindow('zzz', 1280, 960)
                     # cv2.imshow('zzz', self.yolo_pose_model.img_output)
@@ -721,7 +824,6 @@ class Arm_env():
                 ################### the results of object detection has changed the order!!!! ####################
 
             else:
-
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 if self.para_dict['use_lstm_model'] == True:
@@ -729,7 +831,6 @@ class Arm_env():
                         = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
                 else:
                     manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
-
                 ################### the results of object detection has changed the order!!!! ####################
 
             if self.para_dict['use_lstm_model'] == True:

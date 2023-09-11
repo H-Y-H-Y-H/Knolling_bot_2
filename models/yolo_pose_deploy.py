@@ -459,29 +459,6 @@ class Yolo_pose_model():
         else:
             return manipulator_before, new_lwh_list, pred_conf
 
-    # def yolo_pose_test(self):
-    #
-    #     model = "../../models/830_pile_real_box/weights/best.pt"
-    #     source_pth = '../../../knolling_dataset/MLP_unstack_902/sim_images'
-    #
-    #     model = '/home/ubuntu/Desktop/Knolling_bot_2/models/830_pile_real_box/weights/best.pt'
-    #     source_pth = '/home/ubuntu/Desktop/knolling_dataset/MLP_unstack_902/sim_images'
-    #     # model = "./models/830_pile_real_box/weights/best.pt"
-    #     # source_pth = '../knolling_dataset/MLP_unstack_902/sim_images'
-    #
-    #
-    #     # args = dict(model=model, source=source_pth, conf=self.para_dict['yolo_conf'],
-    #     #             iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-    #     args = dict(model=model, source=source_pth, conf=0.6,
-    #                 iou=0.8, device='cuda:1')
-    #     use_python = True
-    #     if use_python:
-    #         from ultralytics import YOLO
-    #         images = YOLO(model)(**args)
-    #     else:
-    #         predictor = PosePredictor(overrides=args)
-    #         predictor.predict_cli()
-
     def plot_unstack(self, success_ray):
 
         start_pos = success_ray[0, :2]

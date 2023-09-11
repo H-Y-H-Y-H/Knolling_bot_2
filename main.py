@@ -401,7 +401,7 @@ class knolling_main(Arm_env):
 
             return
 
-        def knolling(manipulator_before, new_lwh_list, crowded_index):
+        def knolling(manipulator_before=None, new_lwh_list=None, crowded_index=None):
 
             pos_before = manipulator_before[:, :3]
             ori_before = manipulator_before[:, 3:6]
@@ -630,8 +630,8 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
-                 'yolo_model_path': './models/830_pile_real_box/weights/best.pt',
-                 'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
+                 'yolo_model_path': './models/627_pile_pose/weights/best.pt',
+                 'real_operate': False, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True}
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,

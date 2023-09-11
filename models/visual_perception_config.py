@@ -418,7 +418,6 @@ class Yolo_pose_model():
                     pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
 
-
             ######## order based on distance to draw it on the image while deploying the model ########
             # if self.para_dict['data_collection'] == False:
             mm2px = 530 / 0.34
@@ -509,8 +508,9 @@ class Yolo_pose_model():
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
+        img_path_output = self.para_dict['dataset_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
 
-        img_path_output = self.para_dict['dataset_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
+        # img_path_output = self.para_dict['dataset_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
         pass
 

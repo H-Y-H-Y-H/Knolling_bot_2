@@ -20,6 +20,7 @@ class Grasp_model():
                                   set_dropout=self.lstm_dict['set_dropout'])
         self.model.load_state_dict(torch.load(self.lstm_dict['grasp_model_path'], map_location=self.lstm_device))
         self.softmax = nn.Softmax(dim=2)
+        self.model.eval()
 
     def pred(self, manipulator_before, lwh_list, conf_list):
 

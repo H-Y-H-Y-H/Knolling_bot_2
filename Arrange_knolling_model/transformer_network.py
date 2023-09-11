@@ -8,8 +8,8 @@ import math
 import torch.optim as optim
 import torch.nn.functional as F
 
-# device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-# print(device)
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+print('This is transformer device', device)
 
 # input min&max: [0.016, 0.048]
 # label min&max: [-0.14599999962002042, 0.294500007390976]
@@ -18,7 +18,7 @@ import torch.nn.functional as F
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
-    for i in tqdm(range(len(sequences))):
+    for i in range(len(sequences)):
         seq = sequences[i]
         if len(seq) < max_seq_length:
             padding_length = max_seq_length - len(seq)

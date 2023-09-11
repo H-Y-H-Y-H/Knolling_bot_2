@@ -423,25 +423,25 @@ class Unstack_env(Arm_env):
                     epoch=self.img_per_epoch + img_index_start, baseline_flag=True)
                 print('There are some boxes can be grasp, try to take another picture!')
 
-        if len(crowded_index) < len(manipulator_before_input):
-            print('There are some boxes can be grasp, try to reset!')
+        # if len(crowded_index) < len(manipulator_before_input):
+        #     print('There are some boxes can be grasp, try to reset!')
+        #     return self.img_per_epoch
+        #
+        # else:
+        output_data, check_flag = self.check_bound()
+        input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
+
+        # output_data: xyz, rpy, lwh, qua
+        if check_flag == False:
+            print('object out of bound, try another yaw')
             return self.img_per_epoch
-
         else:
-            output_data, check_flag = self.check_bound()
-            input_data = np.concatenate((manipulator_before_input, new_lwh_list_input, pred_conf_input.reshape(-1, 1), model_output), axis=1)
-
-            # output_data: xyz, rpy, lwh, qua
-            if check_flag == False:
-                print('object out of bound, try another yaw')
-                return self.img_per_epoch
-            else:
-                # self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
-                np.savetxt(os.path.join(data_root, "sim_info/%012d.txt" % (img_index_start + self.img_per_epoch)), output_data, fmt='%.04f')
-                np.savetxt(data_root + 'pred_info/%012d.txt' % (img_index_start + self.img_per_epoch), input_data, fmt='%.04f')
-                self.img_per_epoch += 1
-                print('this is total num of img after one epoch', self.img_per_epoch + img_index_start)
-                return self.img_per_epoch
+            # self.yolo_pose_model.plot_grasp(manipulator_before_input, prediction, model_output)
+            np.savetxt(os.path.join(data_root, "sim_info/%012d.txt" % (img_index_start + self.img_per_epoch)), output_data, fmt='%.04f')
+            np.savetxt(data_root + 'pred_info/%012d.txt' % (img_index_start + self.img_per_epoch), input_data, fmt='%.04f')
+            self.img_per_epoch += 1
+            print('this is total num of img after one epoch', self.img_per_epoch + img_index_start)
+            return self.img_per_epoch
 
 if __name__ == '__main__':
 
@@ -451,11 +451,11 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 0, 'end_num': 15, 'thread': 0,
+    para_dict = {'start_num': 0, 'end_num': 100, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
+                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
                  'is_render': False,
@@ -466,7 +466,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive_test/',
+                 'dataset_path': '../../../knolling_dataset/learning_data_910/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
