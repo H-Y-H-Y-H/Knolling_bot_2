@@ -19,10 +19,6 @@ class knolling_main(Arm_env):
         self.success_lwh = []
         self.success_num = 0
 
-    def planning(self, order, conn, real_height, sim_height):
-
-        pass
-
     def clean_grasp(self):
         if self.para_dict['real_operate'] == False:
             gripper_width = 0.024
@@ -238,7 +234,7 @@ class knolling_main(Arm_env):
 
         if gap > 0.5:
             self.keep_obj_width = obj_width + 0.01
-        obj_width += 0.010
+        obj_width += 0.008
         if self.para_dict['real_operate'] == True:
             obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
             motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
@@ -252,9 +248,9 @@ class knolling_main(Arm_env):
             motor_pos = np.poly1d(formula_parameters)
 
         if self.para_dict['real_operate'] == True:
-            if gap > 0.0265:  # close
+            if gap > 0.5:  # close
                 pos_real = np.asarray([[gap, 1600]], dtype=np.float32)
-            elif gap <= 0.0265:  # open
+            elif gap <= 0.5:  # open
                 pos_real = np.asarray([[gap, motor_pos(obj_width)]], dtype=np.float32)
             print('gripper', pos_real)
             self.conn.sendall(pos_real.tobytes())
@@ -284,45 +280,11 @@ class knolling_main(Arm_env):
 
     def move(self, cur_pos, cur_ori, tar_pos, tar_ori, index=None, task=None):
 
-        # add the offset manually
         if self.para_dict['real_operate'] == True:
-            # # automatically add z and x bias
-            d = np.array([0, 0.3])
-            z_bias = np.array([0.002, 0.01])
-            x_bias = np.array([-0.004, 0.000])  # yolo error is +2mm along x axis!
-            y_bias = np.array([0.001, 0.005])
-            z_parameters = np.polyfit(d, z_bias, 1)
-            x_parameters = np.polyfit(d, x_bias, 1)
-            y_parameters = np.polyfit(d, y_bias, 1)
-            new_z_formula = np.poly1d(z_parameters)
-            new_x_formula = np.poly1d(x_parameters)
-            new_y_formula = np.poly1d(y_parameters)
-
-            distance = tar_pos[0]
-            # distance_y = tar_pos[0]
-            tar_pos[2] = tar_pos[2] + new_z_formula(distance)
-            print('this is z add', new_z_formula(distance))
-            # tar_pos[0] = tar_pos[0] + new_x_formula(distance)
-            # print('this is x add', new_x_formula(distance))
-            # if tar_pos[1] > 0:
-            #     tar_pos[1] += (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] + 0.01)), 0, 1) + 0.0015) # 0.003 is manual!
-            # else:
-            #     tar_pos[1] -= (new_y_formula(distance_y) * np.clip((6 * (tar_pos[1] - 0.01)), 0, 1) - 0.0015) # 0.003 is manual!
-            print('this is tar pos after manual', tar_pos)
-
-        if tar_ori[2] > 3.1416 / 2:
-            tar_ori[2] = tar_ori[2] - np.pi
-            print('tar ori is too large')
-        elif tar_ori[2] < -3.1416 / 2:
-            tar_ori[2] = tar_ori[2] + np.pi
-            print('tar ori is too small')
-        # print('this is tar ori', tar_ori)
-
-        if self.para_dict['real_operate'] == True:
-
-            real_height_offset = np.array([0, 0, self.real_table_height])
-            send_data = np.concatenate((cur_pos, cur_ori, tar_pos, tar_ori, real_height_offset), axis=0).reshape(-1, 3)
+            # real_height_offset = np.array([0, 0, real_height])
+            send_data = np.concatenate((cur_pos, cur_ori, tar_pos, tar_ori), axis=0).reshape(-1, 3)
             send_data = send_data.astype(np.float32)
+
             self.conn.sendall(send_data.tobytes())
 
             receive_time = 0
@@ -339,6 +301,7 @@ class knolling_main(Arm_env):
                     break
                 receive_time += 1
             recall_data = recall_data.reshape(-1, 36)
+
             print('this is the shape of final angles real', recall_data.shape)
             cmd_xyz = recall_data[:, :3]
             real_xyz = recall_data[:, 3:6]
@@ -348,12 +311,21 @@ class knolling_main(Arm_env):
             real_motor = recall_data[:, 18:24]
             tar_motor = recall_data[:, 24:30]
             error_motor = recall_data[:, 30:]
+
             cur_pos = real_xyz[-1]
             print('this is cur pos after pid', cur_pos)
-
-            return cmd_xyz[-1]
+            print('this is cmd zzz\n', cmd_xyz[-1])
+            return cmd_xyz[-1]  # return cur pos to let the manipualtor remember the improved pos
 
         else:
+            if tar_ori[2] > 3.1416 / 2:
+                tar_ori[2] = tar_ori[2] - np.pi
+                print('tar ori is too large')
+            elif tar_ori[2] < -3.1416 / 2:
+                tar_ori[2] = tar_ori[2] + np.pi
+                print('tar ori is too small')
+            # print('this is tar ori', tar_ori)
+
             if abs(cur_pos[0] - tar_pos[0]) < 0.001 and abs(cur_pos[1] - tar_pos[1]) < 0.001:
                 # vertical, choose a small slice
                 move_slice = 0.004
@@ -422,9 +394,6 @@ class knolling_main(Arm_env):
                                                                                  ori_before=ori_before,
                                                                                  lwh_list=new_lwh_list,
                                                                                  crowded_index=crowded_index)
-        ########### add the offset of the manipulator to avoid collision ###########
-        manipulator_after[:, 0] += 0.01
-        ########### add the offset of the manipulator to avoid collision ###########
 
         manipulator_before = manipulator_before[self.success_num:]
         manipulator_after = manipulator_after[self.success_num:]
@@ -435,9 +404,9 @@ class knolling_main(Arm_env):
         self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
         self.success_num += len(manipulator_after)
 
-        offset_low = np.array([0, 0, 0.0])
-        offset_low_place = np.array([0, 0, 0.0])
-        offset_high = np.array([0, 0, 0.035])
+        offset_low = np.array([0, 0, 0.005])
+        offset_low_place = np.array([0, 0, 0.007])
+        offset_high = np.array([0, 0, 0.040])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
             trajectory_pos_list = [[0, grasp_width[i]],  # gripper open!
@@ -495,7 +464,7 @@ class knolling_main(Arm_env):
 
     def step(self):
 
-        self.reset() # reset the table
+        manipulator_before_init, lwh_list_init, crowded_index_init = self.reset() # reset the table
         self.boxes_id_recover = np.copy(self.boxes_index)
         # self.manual_knolling() # generate the knolling after data based on manual or the model
         self.calculate_gripper()
@@ -503,7 +472,7 @@ class knolling_main(Arm_env):
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8881  # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8880  # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -533,13 +502,13 @@ class knolling_main(Arm_env):
             self.real_table_height = 0.026
             self.sim_table_height = -0.01
 
-        self.conn = None
-        self.real_table_height = 0.026
-        self.sim_table_height = -0.01
+        # self.conn = None
+        # self.real_table_height = 0.026
+        # self.sim_table_height = -0.01
 
         #######################################################################################
         # 1: clean_grasp + knolling, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
-        self.knolling()
+        self.knolling(manipulator_before_init, lwh_list_init, crowded_index_init)
         #######################################################################################
 
         if self.para_dict['real_operate'] == True:
@@ -558,8 +527,8 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(5, 6),
-                 'is_render': True,
+                 'boxes_num': np.random.randint(10, 11),
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -570,12 +539,12 @@ if __name__ == '__main__':
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'real_image_obj', 'data_collection': False,
+                 'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': False}
     if para_dict['real_operate'] == False:
         para_dict['yolo_model_path'] = './models/627_pile_pose/weights/best.pt'
     else:
-        para_dict['yolo_model_path'] = './models/830_pile_real_box/weights/best.pt'
+        para_dict['yolo_model_path'] = './models/602_real_sundry/weights/best.pt'
 
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
@@ -599,8 +568,8 @@ if __name__ == '__main__':
                  'threshold': 0.6,
                  'grasp_model_path': './models/LSTM_829_1_heavy_dropout0/best_model.pt',}
 
-    arrange_dict = {'running_name': 'avid-water-128',
-                    'transformer_model_path': './models/avid-water-128/',
+    arrange_dict = {'running_name': 'devoted-terrain-29',
+                    'transformer_model_path': './models/devoted-terrain-29',
                     'use_yaml': True}
 
     main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)

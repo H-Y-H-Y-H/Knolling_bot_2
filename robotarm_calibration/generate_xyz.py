@@ -93,8 +93,8 @@ class calibration_main(Arm_env):
 
         def move(cur_pos, cur_ori, tar_pos, tar_ori):
 
-            real_height_offset = np.array([0, 0, real_height])
-            send_data = np.concatenate((cur_pos, cur_ori, tar_pos, tar_ori, real_height_offset), axis=0).reshape(-1, 3)
+            # real_height_offset = np.array([0, 0, real_height])
+            send_data = np.concatenate((cur_pos, cur_ori, tar_pos, tar_ori), axis=0).reshape(-1, 3)
             send_data = send_data.astype(np.float32)
 
             conn.sendall(send_data.tobytes())

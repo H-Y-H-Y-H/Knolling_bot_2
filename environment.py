@@ -368,6 +368,8 @@ class Arm_env():
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
 
+        return manipulator_init, lwh_list_init, []
+
     def delete_objects(self, manipulator_after):
 
         if self.para_dict['real_operate'] == False and manipulator_after is None:
@@ -470,7 +472,7 @@ class Arm_env():
         self.create_scene()
         self.create_arm()
         if recover_flag == False:
-            self.create_objects(manipulator_after, lwh_after)
+            manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
             self.delete_objects(manipulator_after)
         else:
             info_path = self.para_dict['dataset_path'] + 'sim_info/%012d.txt' % epoch
@@ -479,6 +481,8 @@ class Arm_env():
 
         self.state_id = p.saveState()
         # return img_per_epoch_result
+
+        return manipulator_before, lwh_list, crowded_index
 
     def get_candidate_index(self, images):
 
@@ -543,34 +547,52 @@ class Arm_env():
         candidate_img = []
         if self.para_dict['use_knolling_model'] == True:
 
-            for i in range(arrangement_num):
-                input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
-                pos_before_input = pos_before.astype(np.float32)
-                ori_before_input = ori_before.astype(np.float32)
-                lwh_list_input = lwh_list.astype(np.float32)
-                ori_after = np.zeros((len(input_index), 3))
+            demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
+            recover_config = np.concatenate((demo_data[:, :2],
+                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
+                                             np.zeros((len(demo_data), 2)),
+                                             demo_data[:, -1].reshape(len(demo_data), 1),
+                                             demo_data[:, 2:4],
+                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
+            self.recover_objects(config_data=recover_config)
 
-                #################### exchange the length and width randomly enrich the input ##################
-                for j in range(len(input_index)):
-                    if np.random.random() < 0.5:
-                        temp = lwh_list_input[j, 0]
-                        lwh_list_input[j, 1] = lwh_list_input[j, 0]
-                        lwh_list_input[j, 0] = temp
-                        ori_after[j, 2] += np.pi / 2
-                #################### exchange the length and width randomly enrich the input ##################
+            manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
+            manipulator_after = recover_config[:, :6]
+            lwh_list_classify = lwh_list
 
-                pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
-                manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
-                manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
-                lwh_list_classify = lwh_list_input[input_index]
-                rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
-                manipulator_after[rotate_index, -1] += np.pi / 2
-
-                recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
-                self.recover_objects(config_data=recover_config)
-                candidate_img.append(self.get_obs(look_flag=True, epoch=i, img_path='here'))
-
-            candidate_index = self.get_candidate_index(candidate_img)
+            # for i in range(arrangement_num):
+            #     input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
+            #     pos_before_input = pos_before.astype(np.float32)
+            #     ori_before_input = ori_before.astype(np.float32)
+            #     lwh_list_input = lwh_list.astype(np.float32)
+            #     ori_after = np.zeros((len(input_index), 3))
+            #
+            #     #################### exchange the length and width randomly enrich the input ##################
+            #     for j in range(len(input_index)):
+            #         if np.random.random() < 0.5:
+            #             temp = lwh_list_input[j, 0]
+            #             lwh_list_input[j, 1] = lwh_list_input[j, 0]
+            #             lwh_list_input[j, 0] = temp
+            #             ori_after[j, 2] += np.pi / 2
+            #     #################### exchange the length and width randomly enrich the input ##################
+            #
+            #     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+            #     manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+            #     manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
+            #     lwh_list_classify = lwh_list_input[input_index]
+            #     rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
+            #     manipulator_after[rotate_index, -1] += np.pi / 2
+            #
+            #     # ##################### add offset to the knolling data #####################
+            #     # manipulator_after[:, 0] -=
+            #     # ##################### add offset to the knolling data #####################
+            #
+            #
+            #     recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
+            #     self.recover_objects(config_data=recover_config)
+            #     candidate_img.append(self.get_obs(look_flag=True, epoch=i, img_path='here'))
+            #
+            # candidate_index = self.get_candidate_index(candidate_img)
 
             p.restoreState(self.state_id)
 

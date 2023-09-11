@@ -362,9 +362,9 @@ class Arrange_model():
                 self.arrange_dict['dropout_prob'] = read_data['dropout_prob']
                 self.arrange_dict['all_zero_target'] = read_data['all_zero_target']
                 self.arrange_dict['pos_encoding_Flag'] = read_data['pos_encoding_Flag']
-                self.arrange_dict['forwardtype'] = 2
+                self.arrange_dict['forwardtype'] = read_data['forwardtype']
                 self.arrange_dict['high_dim_encoder'] = read_data['high_dim_encoder']
-                self.arrange_dict['all_steps'] = True
+                self.arrange_dict['all_steps'] = read_data['all_steps']
 
             self.model = Knolling_Transformer(input_length=self.arrange_dict['max_seq_length'],
                                               input_size=2,
@@ -379,12 +379,13 @@ class Arrange_model():
                                               high_dim_encoder=self.arrange_dict['high_dim_encoder'],
                                               all_steps=self.arrange_dict['all_steps'],
                                               max_obj_num=5,
-                                              num_gaussians=5)
+                                              num_gaussians=3)
 
             print("Number of parameters:", sum(p.numel() for p in self.model.parameters() if p.requires_grad))
             PATH = './models/%s/%s' % (self.arrange_dict['running_name'], 'best_model.pt')
             checkpoint = torch.load(PATH, map_location=self.para_dict['device'])
             self.model.load_state_dict(checkpoint)
+            pass
 
         else:
             api = wandb.Api()
