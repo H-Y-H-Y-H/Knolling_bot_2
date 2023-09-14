@@ -194,6 +194,7 @@ para_dict = {'decive': 'cuda:1',
              'use_mse': False,
              'use_scaler': False,
              'fine-tuning': True,
+             'load_path': '../Grasp_pred_model/results/LSTM_829_1_heavy_dropout0/',
              'hidden_node_1': 32, 'hidden_node_2': 8}
 
 if __name__ == '__main__':
@@ -258,8 +259,8 @@ if __name__ == '__main__':
 
     ##########################################################################
     if para_dict['fine-tuning'] == True:
-        model_save_path = '../Grasp_pred_model/results/LSTM_829_1_heavy_dropout0/'
-        model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
+        model_load_path = para_dict['load_path']
+        model.load_state_dict(torch.load(model_load_path + 'best_model.pt'))
     else:
         print('not fine-tuning')
     ##########################################################################
