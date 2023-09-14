@@ -148,30 +148,53 @@ class Generate_Dataset(Dataset):
     def __len__(self):
         return len(self.box_data)
 
-# use conf
-para_dict = {'decive': 'cuda:0',
-             'num_img': 520000,
+# para_dict = {'decive': 'cuda:0',
+#              'num_img': 520000,
+#              'ratio': 0.8,
+#              'epoch': 300,
+#              'model_path': '../Grasp_pred_model/results/LSTM_829_3_heavy_dropout0/',
+#              'data_path': '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4/',
+#              'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
+#              'network': 'binary',
+#              'batch_size': 64,
+#              'input_size': 6,
+#              'hidden_size': 16,
+#              'box_one_img': 10,
+#              'num_layers': 8,
+#              'output_size': 2,
+#              'abort_learning': 20,
+#              'set_dropout': 0.1,
+#              'run_name': '829_3_distance_dropout0',
+#              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
+#              'wandb_flag': True,
+#              'use_mse': False,
+#              'use_scaler': False,
+#              'fine-tuning': False,
+#              'hidden_node_1': 16, 'hidden_node_2': 8}
+
+para_dict = {'decive': 'cuda:1',
+             'num_img': 300000,
              'ratio': 0.8,
              'epoch': 300,
-             'model_path': '../Grasp_pred_model/results/LSTM_829_3_heavy_dropout0/',
-             'data_path': '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4/',
-             'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
+             'model_path': '../Grasp_pred_model/results/LSTM_913_tuning_829_0/',
+             'data_path': '../../knolling_dataset/grasp_dataset_730/labels_1/',
+             'learning_rate': 0.0001, 'patience': 10, 'factor': 0.1,
              'network': 'binary',
              'batch_size': 64,
              'input_size': 6,
-             'hidden_size': 16,
+             'hidden_size': 32,
              'box_one_img': 10,
              'num_layers': 8,
              'output_size': 2,
              'abort_learning': 20,
              'set_dropout': 0.1,
-             'run_name': '829_3_distance_dropout0',
+             'run_name': '913_0',
              'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
-             'wandb_flag': True,
+             'wandb_flag': False,
              'use_mse': False,
              'use_scaler': False,
-             'fine-tuning': False,
-             'hidden_node_1': 16, 'hidden_node_2': 8}
+             'fine-tuning': True,
+             'hidden_node_1': 32, 'hidden_node_2': 8}
 
 if __name__ == '__main__':
 
@@ -235,6 +258,7 @@ if __name__ == '__main__':
 
     ##########################################################################
     if para_dict['fine-tuning'] == True:
+        model_save_path = '../Grasp_pred_model/results/LSTM_829_1_heavy_dropout0/'
         model.load_state_dict(torch.load(model_save_path + 'best_model.pt'))
     else:
         print('not fine-tuning')

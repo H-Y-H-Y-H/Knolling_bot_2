@@ -95,8 +95,6 @@ class Judge_push():
             np.savetxt(self.data_root + 'output_rays/%012d.txt' % self.output_index, unstack_rays[max_grasp_index].reshape(2, -1), fmt='%.04f')
             self.output_index += 1
 
-
-
 if __name__ == '__main__':
 
     # np.random.seed(111)
@@ -107,7 +105,7 @@ if __name__ == '__main__':
 
     use_yolo = True
 
-    para_dict = {'start_num': 00000, 'end_num': 15, 'thread': 0,
+    para_dict = {'start_num': 00000, 'end_num': 15, 'thread':        0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
