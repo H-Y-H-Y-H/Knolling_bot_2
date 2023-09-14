@@ -1,3 +1,5 @@
+import cv2
+
 from models.visual_perception_config import *
 
 class Judge_push():
@@ -9,10 +11,10 @@ class Judge_push():
             self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
         else:
             self.grasp_pred_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
-        self.num_ray = 5
+        self.num_ray = self.para_dict['num_rays']
         self.data_root = self.para_dict['dataset_path']
 
-        self.output_index = self.para_dict['start_num']
+        self.output_index = self.para_dict['unstack_start_num']
 
     # def pred_yolo(self, epoch_index=0):
     #
@@ -48,21 +50,21 @@ class Judge_push():
 
     def pred_yolo(self, epoch_index=0):
 
-        eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
-        origin_img = cv2.imread(self.data_root + 'sim_images/%012d.png' % epoch_index)
+        # eval_index = np.arange(epoch_index * self.num_ray, (epoch_index + 1) * self.num_ray, dtype=np.int32)
+        # origin_img = cv2.imread(self.data_root + 'sim_images/%012d.png' % epoch_index)
         max_grasp_num = 1
         unstack_rays = []
-        origin_info = np.loadtxt(self.data_root + 'sim_info/%012d.txt' % epoch_index)
-        for i in range(len(eval_index)):
+        # origin_info = np.loadtxt(self.data_root + 'sim_info/%012d.txt' % epoch_index)
 
-            img_candidate = cv2.imread(self.data_root + 'unstack_images/%012d.png' % eval_index[i])
-            ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % eval_index[i])
-            unstack_rays.append(ray_candidate)
+        img_candidate = cv2.imread(self.data_root + 'unstack_images/%012d.png' % epoch_index)
+        ray_candidate = np.loadtxt(self.data_root + 'unstack_rays/%012d.txt' % epoch_index)
+        unstack_rays.append(ray_candidate)
 
-            manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
-            yolo_temp_info = np.concatenate((manipulator_before, new_lwh_list, pred_conf.reshape(-1, 1)), axis=1)
+        manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img_candidate, epoch=None)
+        yolo_temp_info = np.concatenate((manipulator_before, new_lwh_list, pred_conf.reshape(-1, 1)), axis=1)
 
-            np.savetxt(self.data_root + 'yolo_temp_info/%012d.png' % eval_index[i], yolo_temp_info)
+        cv2.imwrite(self.data_root + 'yolo_temp_info/%012d.png' % epoch_index, img_candidate)
+        np.savetxt(self.data_root + 'yolo_temp_info/%012d.txt' % epoch_index, yolo_temp_info, fmt='%.05f')
 
     def pred_lstm(self, epoch_index=0):
 
@@ -105,8 +107,8 @@ if __name__ == '__main__':
 
     use_yolo = True
 
-    para_dict = {'start_num': 00000, 'end_num': 15, 'thread':        0,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    para_dict = {'unstack_start_num': 100000, 'unstack_end_num': 100005, 'thread': 0, 'input_output_label_offset': 100000, 'num_rays': 5,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
@@ -120,7 +122,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive_test/',
+                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
@@ -145,7 +147,7 @@ if __name__ == '__main__':
 
     zzz_judge = Judge_push(para_dict=para_dict, lstm_dict=lstm_dict)
 
-    epoch_index_start = para_dict['start_num']
-    epoch_index_end = para_dict['end_num']
+    epoch_index_start = para_dict['unstack_start_num']
+    epoch_index_end = para_dict['unstack_end_num']
     for i in range(epoch_index_start, epoch_index_end):
         zzz_judge.pred_yolo(epoch_index=i)

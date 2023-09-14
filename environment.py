@@ -159,6 +159,8 @@ class Arm_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
 
+        self.recover_x_offset = None
+        self.recover_y_offset = None
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
@@ -167,7 +169,6 @@ class Arm_env():
         self.init_pos_range = para_dict['init_pos_range']
         self.init_ori_range = para_dict['init_ori_range']
         self.init_offset_range = para_dict['init_offset_range']
-        self.recover_offset_range = para_dict['recover_offset_range']
         self.urdf_path = para_dict['urdf_path']
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
@@ -430,12 +431,18 @@ class Arm_env():
 
         if config_data is None:
             config_data = np.loadtxt(info_path)
-            x_offset = np.random.uniform(self.recover_offset_range[0][0], self.recover_offset_range[0][1])
-            y_offset = np.random.uniform(self.recover_offset_range[1][0], self.recover_offset_range[1][1])
-            pos_data = np.concatenate(((config_data[:, 0] + x_offset).reshape(len(config_data), 1),
-                                       (config_data[:, 1] + y_offset).reshape(len(config_data), 1),
-                                        config_data[:, 2].reshape(len(config_data), 1)), axis=1)
-            # pos_data = config_data[:, :3]
+            pos_data = config_data[:, :3]
+
+            self.new_center = np.array([np.random.uniform(self.para_dict['recover_center_range'][0][0],
+                                                       self.para_dict['recover_center_range'][0][1]),
+                                    np.random.uniform(self.para_dict['recover_center_range'][1][0],
+                                                      self.para_dict['recover_center_range'][1][1])])
+            print('this is new center', self.new_center)
+            new_center = np.repeat([self.new_center], axis=0, repeats=len(pos_data))
+            distance = pos_data[:, :2] - new_center
+            pos_data[:, 0] -= distance[:, 0]
+            pos_data[:, 1] -= distance[:, 1]
+
             ori_data = config_data[:, 3:6]
             lwh_data = config_data[:, 6:9]
             self.lwh_list = np.copy(lwh_data)
@@ -475,7 +482,7 @@ class Arm_env():
                 # g = np.random.uniform(0, 0.9)
                 # b = np.random.uniform(0, 0.9)
                 # p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
-                pass
+            pass
 
     def reset(self, epoch=None, manipulator_after=None, lwh_after=None, recover_flag=False):
 

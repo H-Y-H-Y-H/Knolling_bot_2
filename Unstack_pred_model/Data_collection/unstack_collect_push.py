@@ -348,6 +348,9 @@ class Unstack_env(Arm_env):
         self.calculate_gripper()
         pred_info = np.loadtxt(data_root + 'pred_info/%012d.txt' % data_index)
         manipulator_before_input = pred_info[:, :6]
+        manipulator_before_input[:, 0] += self.recover_x_offset
+        manipulator_before_input[:, 1] += self.recover_y_offset
+
         new_lwh_list_input = pred_info[:, 6:9]
         self.state_id = p.saveState()
 
@@ -465,8 +468,9 @@ if __name__ == '__main__':
     # simulation: iou 0.8
     # real world: iou=0.5
 
-    para_dict = {'start_num': 0, 'end_num': 20000, 'thread': 0, 'input_output_label_offset': 100000, 'num_rays': 5,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    para_dict = {'start_num': 0, 'end_num': 5, 'thread': 0, 'input_output_label_offset': 20000, 'num_rays': 5,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+                 'recover_center_range': [[0.08, 0.22], [-0.13, 0.13]],
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
