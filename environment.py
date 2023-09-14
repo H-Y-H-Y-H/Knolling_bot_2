@@ -548,6 +548,13 @@ class Arm_env():
         if self.para_dict['use_knolling_model'] == True:
 
             demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
+
+            record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
+            lwh_list_classify = lwh_list
+            # lwh_list_classify = record_data[:, 2:4]
+            # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
+            # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
+
             recover_config = np.concatenate((demo_data[:, :2],
                                              np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
                                              np.zeros((len(demo_data), 2)),
@@ -558,7 +565,6 @@ class Arm_env():
 
             manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
             manipulator_after = recover_config[:, :6]
-            lwh_list_classify = lwh_list
 
             # for i in range(arrangement_num):
             #     input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
@@ -751,7 +757,7 @@ class Arm_env():
     def gripper(self, gap, obj_width, left_pos, right_pos, index=None):
         if index == 4:
             self.keep_obj_width = obj_width + 0.01
-        obj_width += 0.010
+        obj_width += 0.008
         gripper_success_flag = True
         if index == 1:
             num_step = 30

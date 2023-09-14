@@ -234,10 +234,12 @@ class knolling_main(Arm_env):
 
         if gap > 0.5:
             self.keep_obj_width = obj_width + 0.01
-        obj_width += 0.008
+        obj_width += 0.010
         if self.para_dict['real_operate'] == True:
             obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
-            motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
+            # motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
+            motor_pos_range = np.array([2100, 2200, 2250, 2350, 2450, 2550, 2650])
+
             formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
             motor_pos = np.poly1d(formula_parameters)
         else:
@@ -401,7 +403,7 @@ class knolling_main(Arm_env):
         # after knolling model, manipulator before and after only contain boxes which can be grasped!
         start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
         self.success_manipulator_after = np.append(self.success_manipulator_after, manipulator_after).reshape(-1, 6)
-        self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
+        # self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
         self.success_num += len(manipulator_after)
 
         offset_low = np.array([0, 0, 0.005])
@@ -472,7 +474,7 @@ class knolling_main(Arm_env):
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8880  # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881  # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -540,11 +542,11 @@ if __name__ == '__main__':
                  'urdf_path': './urdf/',
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_model': False}
+                 'use_knolling_model': True, 'use_lstm_model': True}
     if para_dict['real_operate'] == False:
         para_dict['yolo_model_path'] = './models/627_pile_pose/weights/best.pt'
     else:
-        para_dict['yolo_model_path'] = './models/602_real_sundry/weights/best.pt'
+        para_dict['yolo_model_path'] = './models/830_pile_real_box/weights/best.pt'
 
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
