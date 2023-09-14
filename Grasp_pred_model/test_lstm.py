@@ -33,7 +33,7 @@ if __name__ == '__main__':
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 520000
         para_dict['model_path'] = '../models/LSTM_829_1_heavy_dropout0/'
-        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
+        para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_726_ratio_multi/labels_4_random_pos/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
         para_dict['num_layers'] = 8
@@ -74,7 +74,7 @@ if __name__ == '__main__':
                                   set_dropout=para_dict['set_dropout'])
 
         ###########################################################################
-        model.load_state_dict(torch.load(para_dict['model_path'] + 'best_model.pt'))
+        model.load_state_dict(torch.load(para_dict['model_path'] + 'best_model.pt', map_location=device))
         ###########################################################################
 
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -194,15 +194,15 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_test.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_4.png')
         plt.show()
 
         np.savetxt(para_dict['model_path'] + 'model_loss.txt', model_loss)
 
         total_evaluate_data = np.concatenate(([model_threshold], [model_pred_recall], [model_pred_precision], [model_pred_accuracy]), axis=0).T
-        np.savetxt(para_dict['model_path'] + 'model_data_labels_test.txt', total_evaluate_data)
+        np.savetxt(para_dict['model_path'] + 'model_data_labels_4.txt', total_evaluate_data)
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_labels_test.txt", "w") as f:
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels_4.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
