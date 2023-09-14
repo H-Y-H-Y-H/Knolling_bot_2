@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+# from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import torch
@@ -138,7 +138,8 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
     for i in tqdm(range(source_start_index, int(data_num + source_start_index))):
         cur_path = source_path + '%012d.txt' % (i)
         tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
-        shutil.copy(cur_path, tar_path)
+        os.rename(cur_path, tar_path)
+        # shutil.copy(cur_path, tar_path)
 
 def data_delete(source_path, target_path, source_start_index, data_num, target_start_index):
 
@@ -164,8 +165,8 @@ if __name__ == '__main__':
     source_path = '../../../knolling_dataset/MLP_unstack_908_intensive/pred_info/'
     target_path = '../../../knolling_dataset/MLP_unstack_908_intensive/pred_info/'
     os.makedirs(target_path, exist_ok=True)
-    source_start_index = 20000
+    source_start_index = 240000
     target_start_index = 0
-    num = 220000
-    # data_move(source_path, target_path, source_start_index, num, target_start_index)
-    data_delete(source_path, target_path, source_start_index, num, target_start_index)
+    num = 160000
+    data_move(source_path, target_path, source_start_index, num, target_start_index)
+    # data_delete(source_path, target_path, source_start_index, num, target_start_index)

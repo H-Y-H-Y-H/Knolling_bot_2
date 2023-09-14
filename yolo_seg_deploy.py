@@ -3,7 +3,7 @@
 import torch
 from utils import *
 import cv2
-import pyrealsense2 as rs
+# import pyrealsense2 as rs
 import numpy as np
 from ultralytics.yolo.engine.results import Results
 from ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops

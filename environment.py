@@ -167,6 +167,7 @@ class Arm_env():
         self.init_pos_range = para_dict['init_pos_range']
         self.init_ori_range = para_dict['init_ori_range']
         self.init_offset_range = para_dict['init_offset_range']
+        self.recover_offset_range = para_dict['recover_offset_range']
         self.urdf_path = para_dict['urdf_path']
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
@@ -312,7 +313,7 @@ class Arm_env():
                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
         self.to_home()
 
-    def create_objects(self, manipulator_after, lwh_after):
+    def create_objects(self, manipulator_after=None, lwh_after=None):
 
         if manipulator_after is None:
             if self.para_dict['real_operate'] == False:
@@ -362,15 +363,18 @@ class Arm_env():
         for _ in range(int(100)):
             p.stepSimulation()
             if self.is_render == True:
-                time.sleep(1/96)
+                pass
+                # time.sleep(1/96)
 
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
+        if self.para_dict['real_operate'] == False:
+            pass
+        else:
+            return manipulator_init, lwh_list_init, []
 
-        return manipulator_init, lwh_list_init, []
-
-    def delete_objects(self, manipulator_after):
+    def delete_objects(self, manipulator_after=None):
 
         if self.para_dict['real_operate'] == False and manipulator_after is None:
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
@@ -426,9 +430,15 @@ class Arm_env():
 
         if config_data is None:
             config_data = np.loadtxt(info_path)
-            pos_data = config_data[:, :3]
+            x_offset = np.random.uniform(self.recover_offset_range[0][0], self.recover_offset_range[0][1])
+            y_offset = np.random.uniform(self.recover_offset_range[1][0], self.recover_offset_range[1][1])
+            pos_data = np.concatenate(((config_data[:, 0] + x_offset).reshape(len(config_data), 1),
+                                       (config_data[:, 1] + y_offset).reshape(len(config_data), 1),
+                                        config_data[:, 2].reshape(len(config_data), 1)), axis=1)
+            # pos_data = config_data[:, :3]
             ori_data = config_data[:, 3:6]
             lwh_data = config_data[:, 6:9]
+            self.lwh_list = np.copy(lwh_data)
             qua_data = config_data[:, 9:]
 
             self.boxes_index = []
@@ -444,7 +454,8 @@ class Arm_env():
             for _ in range(int(100)):
                 p.stepSimulation()
                 if self.is_render == True:
-                    time.sleep(1 / 96)
+                    pass
+                    # time.sleep(1 / 96)
 
             p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                              contactDamping=self.para_dict['base_contact_damping'],
@@ -472,17 +483,22 @@ class Arm_env():
         self.create_scene()
         self.create_arm()
         if recover_flag == False:
-            manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
+            if self.para_dict['real_operate'] == False:
+                self.create_objects()
+            else:
+                manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
             self.delete_objects(manipulator_after)
         else:
             info_path = self.para_dict['dataset_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
+            # self.delete_objects(manipulator_after)
         self.img_per_epoch = 0
 
         self.state_id = p.saveState()
         # return img_per_epoch_result
 
-        return manipulator_before, lwh_list, crowded_index
+        if recover_flag == False and self.para_dict['real_operate'] == True:
+            return manipulator_before, lwh_list, crowded_index
 
     def get_candidate_index(self, images):
 
@@ -730,14 +746,16 @@ class Arm_env():
                     #     break
 
                     if self.is_render:
-                        time.sleep(1 / 720)
+                        pass
+                        # time.sleep(1 / 720)
                 if move_success_flag == False:
                     break
             else:
                 for i in range(10):
                     p.stepSimulation()
                     if self.is_render:
-                        time.sleep(1 / 720)
+                        pass
+                        # time.sleep(1 / 720)
             cur_pos = tar_pos
             cur_ori = tar_ori
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(
@@ -750,15 +768,33 @@ class Arm_env():
             move_success_flag = False
             print('ee can not reach the bottom, fail!')
 
-        gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-        gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-        return cur_pos, gripper_left_pos, gripper_right_pos, move_success_flag
+        self.gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+        self.gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+        return cur_pos, self.gripper_left_pos, self.gripper_right_pos, move_success_flag
 
     def gripper(self, gap, obj_width, left_pos, right_pos, index=None):
+
+        gripper_success_flag = True
         if index == 4:
             self.keep_obj_width = obj_width + 0.01
+            bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
+            gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+            gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+            new_distance_left = np.linalg.norm(bar_pos[:2] - gripper_left_pos[:2])
+            new_distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
+            # if np.abs(self.gripper_left_pos[1] - gripper_left_pos[1]) > self.para_dict['move_threshold'] or \
+            #         np.abs(self.gripper_right_pos[1] - gripper_right_pos[1]) > self.para_dict['move_threshold']:
+            #     gripper_success_flag = False
+            #     print('during moving, fail')
+
+            if np.abs(new_distance_left - self.distance_left) > self.para_dict['gripper_threshold'] or \
+                    np.abs(new_distance_right - self.distance_right) > self.para_dict['gripper_threshold']:
+                gripper_success_flag = False
+                print('gripper is disturbed before grasping, fail')
+                return gripper_success_flag
+
         obj_width += 0.008
-        gripper_success_flag = True
+
         if index == 1:
             num_step = 30
         else:
@@ -780,14 +816,16 @@ class Arm_env():
                     gripper_success_flag = False
                     break
                 if self.is_render:
-                    time.sleep(1 / 48)
+                    pass
+                    # time.sleep(1 / 48)
         else:  # open
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             for i in range(num_step):
                 p.stepSimulation()
                 if self.is_render:
-                    time.sleep(1 / 48)
+                    pass
+                    # time.sleep(1 / 48)
         if index == 1:
             # print('initialize the distance from gripper to bar')
             bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
