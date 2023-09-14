@@ -53,7 +53,7 @@ class Grasp_env(Arm_env):
                     box_pos[2] > 0.06 and \
                     np.linalg.norm(box_pos_before[j, :2] - start_end[:2]) < 0.005:
 
-                    if np.abs(box_ori[0]) > 0.1 or np.abs(box_ori[1]) > 0.1 or np.abs(box_ori[2]) > 0.1:
+                    if np.abs(box_ori[0]) > 0.1 or np.abs(box_ori[1]) > 0.1:
                         print(f'{j} box is grasped, but in wrong ori, grasp fail!')
                         success_grasp_flag = False
                         fail_break_flag = True
@@ -303,7 +303,7 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 240000, 'end_num': 300000, 'thread': 0,
+    para_dict = {'start_num': 300000, 'end_num': 300100, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
@@ -311,7 +311,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.001, 'gripper_sim_step': 10, 'gripper_force': 3,
