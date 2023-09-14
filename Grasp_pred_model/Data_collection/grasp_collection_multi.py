@@ -56,6 +56,7 @@ class Grasp_env(Arm_env):
                     if np.abs(box_ori[0]) > 0.1 or np.abs(box_ori[1]) > 0.1 or np.abs(box_ori[2]) > 0.1:
                         print(f'{j} box is grasped, but in wrong ori, grasp fail!')
                         success_grasp_flag = False
+                        fail_break_flag = True
                         grasp_flag.append(0)
                     else:
                         for m in range(len(self.boxes_index)):
@@ -76,8 +77,8 @@ class Grasp_env(Arm_env):
                                 print('grasp success!')
                                 success_grasp_flag = True
                                 fail_break_flag = False
-                        if success_grasp_flag == True or fail_break_flag == True:
-                            break
+                    if success_grasp_flag == True or fail_break_flag == True:
+                        break
                 elif j == len(self.boxes_index) - 1:
                     print('the target box does not move to the designated pos or in a tilted state, grasp fail!')
                     success_grasp_flag = False
@@ -166,50 +167,50 @@ class Grasp_env(Arm_env):
                     success_grasp_flag = self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1], left_pos, right_pos, index=j)
                     ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
 
-            # self.find_moved_box(success_grasp_flag, grasp_flag, last_pos, box_pos_before, box_ori_before, start_end[i])
-            ###################### Find which box is moved and judge whether the grasp is success ######################
-            if success_grasp_flag == False:
-                # print('fail!')
-                grasp_flag.append(0)
-                pass
-            else:
-                for j in range(len(self.boxes_index)):
-                    success_grasp_flag = False
-                    fail_break_flag = False
-                    box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])
-                    box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[j])[1]))# this is the pos after of the grasped box
-                    if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
-                        np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
-                        if np.abs(box_ori[0]) > 0.1 or np.abs(box_ori[1]) > 0.1 or np.abs(box_ori[2]) > 0.1:
-                            print(f'{j} box is grasped, but in wrong ori, grasp fail!')
-                            success_grasp_flag = False
-                            fail_break_flag = True
-                            grasp_flag.append(0)
-                        else:
-                            for m in range(len(self.boxes_index)):
-                                box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
-                                ori_qua_after = p.getBasePositionAndOrientation(self.boxes_index[m])[1]
-                                box_ori_after = np.asarray(ori_qua_after)
-                                upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
-                                if box_pos_after[2] > 0.06 and m != j:
-                                    print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
-                                    p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
-                                    grasp_flag.append(0)
-                                    fail_break_flag = True
-                                    success_grasp_flag = False
-                                    break
-                                elif m == len(self.boxes_index) - 1:
-                                    grasp_flag.append(1)
-                                    print('grasp success!')
-                                    success_grasp_flag = True
-                                    fail_break_flag = False
-                        if success_grasp_flag == True or fail_break_flag == True:
-                            break
-                    elif j == len(self.boxes_index) - 1:
-                        print('the target box does not move to the designated pos or in a tilted state, grasp fail!')
-                        success_grasp_flag = False
-                        grasp_flag.append(0)
-            ###################### Judge whether the grasp is success ######################
+            self.find_moved_box(success_grasp_flag, grasp_flag, last_pos, box_pos_before, box_ori_before, start_end[i])
+            # ###################### Find which box is moved and judge whether the grasp is success ######################
+            # if success_grasp_flag == False:
+            #     # print('fail!')
+            #     grasp_flag.append(0)
+            #     pass
+            # else:
+            #     for j in range(len(self.boxes_index)):
+            #         success_grasp_flag = False
+            #         fail_break_flag = False
+            #         box_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[j])[0])
+            #         box_ori = np.asarray(p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[j])[1]))# this is the pos after of the grasped box
+            #         if np.abs(box_pos[0] - last_pos[0]) < 0.02 and np.abs(box_pos[1] - last_pos[1]) < 0.02 and box_pos[2] > 0.06 and \
+            #             np.linalg.norm(box_pos_before[j, :2] - start_end[i, :2]) < 0.005:
+            #             if np.abs(box_ori[0]) > 0.1 or np.abs(box_ori[1]) > 0.1 or np.abs(box_ori[2]) > 0.1:
+            #                 print(f'{j} box is grasped, but in wrong ori, grasp fail!')
+            #                 success_grasp_flag = False
+            #                 fail_break_flag = True
+            #                 grasp_flag.append(0)
+            #             else:
+            #                 for m in range(len(self.boxes_index)):
+            #                     box_pos_after = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
+            #                     ori_qua_after = p.getBasePositionAndOrientation(self.boxes_index[m])[1]
+            #                     box_ori_after = np.asarray(ori_qua_after)
+            #                     upper_limit = np.sum(np.abs(box_ori_after + box_ori_before[m]))
+            #                     if box_pos_after[2] > 0.06 and m != j:
+            #                         print(f'The {m} boxes have been disturbed, because it is also grasped accidentally, grasp fail!')
+            #                         p.addUserDebugPoints([box_pos_before[m]], [[0, 1, 0]], pointSize=5)
+            #                         grasp_flag.append(0)
+            #                         fail_break_flag = True
+            #                         success_grasp_flag = False
+            #                         break
+            #                     elif m == len(self.boxes_index) - 1:
+            #                         grasp_flag.append(1)
+            #                         print('grasp success!')
+            #                         success_grasp_flag = True
+            #                         fail_break_flag = False
+            #             if success_grasp_flag == True or fail_break_flag == True:
+            #                 break
+            #         elif j == len(self.boxes_index) - 1:
+            #             print('the target box does not move to the designated pos or in a tilted state, grasp fail!')
+            #             success_grasp_flag = False
+            #             grasp_flag.append(0)
+            # ###################### Judge whether the grasp is success ######################
 
             ########################### Find which box is moved ############################
             box_index = np.argsort(np.linalg.norm(box_pos_before[:, :2] - start_end[i, :2], axis=1))
@@ -302,7 +303,7 @@ if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 0, 'end_num': 100, 'thread': 0,
+    para_dict = {'start_num': 240000, 'end_num': 300000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
@@ -310,7 +311,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.001, 'gripper_sim_step': 10, 'gripper_force': 3,
