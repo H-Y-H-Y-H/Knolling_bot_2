@@ -173,8 +173,9 @@ class Arm_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
+        if self.para_dict['use_yolo_model'] == True:
+            self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
             # self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
@@ -496,7 +497,7 @@ class Arm_env():
                 manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
             self.delete_objects(manipulator_after)
         else:
-            info_path = self.para_dict['dataset_path'] + 'sim_info/%012d.txt' % epoch
+            info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
             # self.delete_objects(manipulator_after)
         self.img_per_epoch = 0

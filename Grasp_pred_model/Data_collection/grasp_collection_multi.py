@@ -85,13 +85,9 @@ class Grasp_env(Arm_env):
                     grasp_flag.append(0)
         ###################### Judge whether the grasp is success ######################
 
-    def try_unstack(self, data_root=None, img_index_start=None):
+    def try_unstack(self, data_source=None, data_tar=None, img_index_start=None):
 
         if self.img_per_epoch + img_index_start >= self.endnum:
-            print('this is TP', self.test_TP)
-            print('this is TN', self.test_TN)
-            print('this is FP', self.test_FP)
-            print('this is FN', self.test_FN)
             print('END!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
             quit()
 
@@ -290,28 +286,28 @@ class Grasp_env(Arm_env):
 
 
         if np.all(grasp_flag == 0):
-            np.savetxt(os.path.join(data_root, "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
+            np.savetxt(data_tar + "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch), yolo_label, fmt='%.04f')
             self.img_per_epoch += 1
             print('this is total num of img after one epoch', self.img_per_epoch)
             return self.img_per_epoch
         else:
-            np.savetxt(os.path.join(data_root, "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch)), yolo_label, fmt='%.04f')
+            np.savetxt(data_tar + "sim_labels/%012d.txt" % (img_index_start + self.img_per_epoch), yolo_label, fmt='%.04f')
             self.img_per_epoch += 1
-            return self.try_unstack(data_root=data_root, img_index_start=img_index_start)
+            return self.try_unstack(data_source=data_source, data_tar=data_tar, img_index_start=img_index_start)
 
 if __name__ == '__main__':
 
     # np.random.seed(185)
     # random.seed(185)
-    para_dict = {'start_num': 300000, 'end_num': 300100, 'thread': 0,
+    para_dict = {'start_num': 0, 'end_num': 5000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'recover_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
+                 'recover_center_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(4, 5),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.001, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -319,11 +315,12 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/grasp_dataset_913/',
+                 'data_source_path': '../../../knolling_dataset/base_dataset_914/',
+                 'data_tar_path': '../../../knolling_dataset/grasp_dataset_913/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
-                 'use_knolling_model': False, 'use_lstm_model': False}
+                 'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': True}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -338,13 +335,14 @@ if __name__ == '__main__':
 
     startnum = para_dict['start_num']
 
-    with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
+    with open(para_dict['data_tar_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
 
-    data_root = '../../../knolling_dataset/grasp_dataset_913/'
-    # data_root = para_dict['dataset_path']
+    # data_root = '../../../knolling_dataset/grasp_dataset_913/'
+    data_root = para_dict['data_source_path']
+    data_tar = para_dict['data_tar_path']
     os.makedirs(data_root, exist_ok=True)
 
     env = Grasp_env(para_dict=para_dict, lstm_dict=lstm_dict)
@@ -354,7 +352,7 @@ if __name__ == '__main__':
     exist_img_num = startnum
     while True:
         num_item = para_dict['boxes_num']
-        env.reset(epoch=exist_img_num, recover_flag=False)
-        img_per_epoch = env.try_unstack(data_root=data_root, img_index_start=exist_img_num)
+        env.reset(epoch=exist_img_num, recover_flag=True)
+        img_per_epoch = env.try_unstack(data_source=data_root, data_tar=data_tar, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch
 
