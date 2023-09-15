@@ -128,6 +128,7 @@ def collate_fn(data):
     box_data_pad = pad_sequence(box_data, batch_first=True, padding_value=0.0)
     grasp_data_pad = pad_sequence(grasp_data, batch_first=True, padding_value=-100.0)
     return box_data_pad, grasp_data_pad, data_length
+
 class Generate_Dataset(Dataset):
     def __init__(self, box_data, grasp_data):
         self.box_data = box_data

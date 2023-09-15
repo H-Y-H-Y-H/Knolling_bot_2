@@ -2,7 +2,7 @@
 
 # from arrangement import *
 # from grasp_model_deploy import *
-from models.arrange_model_deploy import *
+# from models.arrange_model_deploy import *
 from models.visual_perception_config import *
 from utils import *
 import pybullet as p
@@ -816,13 +816,13 @@ class Arm_env():
                 p.stepSimulation()
                 gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
                 gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-                if gripper_left_pos[1] - left_pos[1] > self.para_dict['gripper_threshold'] or right_pos[1] - gripper_right_pos[1] > self.para_dict['gripper_threshold']:
-                    print('during grasp, fail')
-                    gripper_success_flag = False
-                    break
-                if self.is_render:
-                    pass
-                    # time.sleep(1 / 48)
+                # if gripper_left_pos[1] - left_pos[1] > self.para_dict['gripper_threshold'] or right_pos[1] - gripper_right_pos[1] > self.para_dict['gripper_threshold']:
+                #     print('during grasp, fail')
+                #     gripper_success_flag = False
+                #     break
+                # if self.is_render:
+                #     pass
+                #     # time.sleep(1 / 48)
         else:  # open
             p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
             p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL, targetPosition=self.motor_pos(obj_width), force=self.para_dict['gripper_force'])
@@ -867,10 +867,14 @@ class Arm_env():
             # cv2.destroyAllWindows()
             if img_path is None:
                 output_img_path = self.para_dict['data_source_path'] + 'unstack_images/%012d.png' % (epoch)
+            # elif self.para_dict['real_operate'] == False:
+            #     output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
+            # else:
+            #     output_img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch) + '_after.png'
             elif self.para_dict['real_operate'] == False:
-                output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
+                output_img_path = img_path
             else:
-                output_img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (epoch) + '_after.png'
+                output_img_path = img_path
             cv2.imwrite(output_img_path, img)
             return img
         else:
