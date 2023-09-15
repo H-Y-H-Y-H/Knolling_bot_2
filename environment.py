@@ -159,8 +159,6 @@ class Arm_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
 
-        self.recover_x_offset = None
-        self.recover_y_offset = None
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
@@ -440,9 +438,8 @@ class Arm_env():
                                                       self.para_dict['recover_center_range'][1][1])])
             print('this is new center', self.new_center)
             new_center = np.repeat([self.new_center], axis=0, repeats=len(pos_data))
-            distance = pos_data[:, :2] - new_center
-            pos_data[:, 0] -= distance[:, 0]
-            pos_data[:, 1] -= distance[:, 1]
+            pos_data[:, 0] -= new_center[:, 0]
+            pos_data[:, 1] -= new_center[:, 1]
 
             ori_data = config_data[:, 3:6]
             lwh_data = config_data[:, 6:9]
@@ -869,7 +866,7 @@ class Arm_env():
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
             if img_path is None:
-                output_img_path = self.para_dict['dataset_path'] + 'unstack_images/%012d.png' % (epoch)
+                output_img_path = self.para_dict['data_source_path'] + 'unstack_images/%012d.png' % (epoch)
             elif self.para_dict['real_operate'] == False:
                 output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
             else:
