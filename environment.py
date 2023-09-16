@@ -391,7 +391,7 @@ class Arm_env():
                     cur_qua = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1])
                     cur_ori = np.asarray(p.getEulerFromQuaternion(cur_qua))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
-                    self.gt_pos_ori.append(cur_pos)
+                    self.gt_pos_ori.append([cur_pos, cur_ori])
                     self.gt_ori_qua.append(cur_qua)
                     roll_flag = False
                     pitch_flag = False
@@ -401,11 +401,9 @@ class Arm_env():
                             roll_flag = True
                         if np.abs(cur_ori[1] - forbid_range[j]) < 0.1:
                             pitch_flag = True
-                    if roll_flag == True and pitch_flag == True and (
-                            np.abs(cur_ori[0] - 0) > 0.1 or np.abs(cur_ori[1] - 0) > 0.1) or \
-                            cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-                        1] > self.y_high_obs or \
-                            cur_pos[1] < self.y_low_obs:
+                    if roll_flag == True and pitch_flag == True and (np.abs(cur_ori[0] - 0) > 0.1 or np.abs(cur_ori[1] - 0) > 0.1) or \
+                            cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
+                        # if cur_pos[2] > 0.015: # delete the object with large height although it doesn't incline!
                         delete_index.append(i)
                         # print('delete!!!')
                         new_num_item -= 1
@@ -492,11 +490,11 @@ class Arm_env():
                 self.create_objects()
             else:
                 manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
-            self.delete_objects(manipulator_after)
+            # self.delete_objects(manipulator_after)
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
-            # self.delete_objects(manipulator_after)
+            self.delete_objects()
         self.img_per_epoch = 0
 
         self.state_id = p.saveState()
@@ -744,11 +742,11 @@ class Arm_env():
                     #     move_success_flag = False
                     #     print('during moving, fail')
                     #     break
-                    # if np.abs(new_distance_left - self.distance_left) > self.para_dict['move_threshold'] or \
-                    #         np.abs(new_distance_right - self.distance_right) > self.para_dict['move_threshold']:
-                    #     move_success_flag = False
-                    #     print('during moving, fail')
-                    #     break
+                    if np.abs(new_distance_left - self.distance_left) > self.para_dict['gripper_threshold'] or \
+                            np.abs(new_distance_right - self.distance_right) > self.para_dict['gripper_threshold']:
+                        move_success_flag = False
+                        print('during moving, the gripper is disturbed, fail')
+                        break
 
                     if self.is_render:
                         pass
@@ -769,7 +767,7 @@ class Arm_env():
                 target_ori[2] - tar_ori[2]) < 0.001:
                 break
         ee_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-        if ee_pos[2] - target_pos[2] > 0.001 and index == 3 and move_success_flag == True:
+        if ee_pos[2] - target_pos[2] > 0.002 and index == 3 and move_success_flag == True:
             move_success_flag = False
             print('ee can not reach the bottom, fail!')
 
@@ -926,7 +924,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [3 * np.pi / 16, np.pi / 4]],
                  'max_box_num': 2, 'min_box_num': 2,
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
