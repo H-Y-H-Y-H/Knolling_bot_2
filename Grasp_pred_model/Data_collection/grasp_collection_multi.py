@@ -317,7 +317,7 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 200, 'end_num': 400, 'thread': 0, 'output_offset': 00000,
+    para_dict = {'start_num': 160000, 'end_num': 200000, 'thread': 0, 'output_offset': 00000,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
