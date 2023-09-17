@@ -266,35 +266,36 @@ class Grasp_env(Arm_env):
                 # time.sleep(1/96)
                 p.stepSimulation()
 
-            # ##################### after every grasp, check pos and ori of every box which are out of the field ####################
-            # forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
-            # delete_index = []
-            # for m in range(len(self.boxes_index)):
-            #     cur_ori = np.asarray(
-            #         p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[m])[1]))
-            #     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
-            #     roll_flag = False
-            #     pitch_flag = False
-            #     for n in range(len(forbid_range)):
-            #         if np.abs(cur_ori[0] - forbid_range[n]) < 0.01:
-            #             roll_flag = True
-            #         if np.abs(cur_ori[1] - forbid_range[n]) < 0.01:
-            #             pitch_flag = True
-            #     if roll_flag == True and pitch_flag == True and (
-            #             np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
-            #             cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
-            #         1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
-            #         delete_index.append(m)
-            # delete_index.reverse()
-            # for idx in delete_index:
-            #     # print('this is delete index', idx)
-            #     p.removeBody(self.boxes_index[idx])
-            #     self.boxes_index.pop(idx)
-            #     self.lwh_list = np.delete(self.lwh_list, idx, axis=0)
-            # for _ in range(int(50)):
-            #     # time.sleep(1/96)
-            #     p.stepSimulation()
-            # ##################### after every grasp, check pos and ori of every box which are out of the field ####################
+            ##################### after every grasp, check pos and ori of every box which are out of the field ####################
+            forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
+            delete_index = []
+            for m in range(len(self.boxes_index)):
+                cur_ori = np.asarray(
+                    p.getEulerFromQuaternion(p.getBasePositionAndOrientation(self.boxes_index[m])[1]))
+                cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[m])[0])
+                roll_flag = False
+                pitch_flag = False
+                for n in range(len(forbid_range)):
+                    if np.abs(cur_ori[0] - forbid_range[n]) < 0.01:
+                        roll_flag = True
+                    if np.abs(cur_ori[1] - forbid_range[n]) < 0.01:
+                        pitch_flag = True
+                if roll_flag == True and pitch_flag == True and (
+                        np.abs(cur_ori[0] - 0) > 0.01 or np.abs(cur_ori[1] - 0) > 0.01) or \
+                        cur_pos[0] < self.x_low_obs or cur_pos[0] > self.x_high_obs or cur_pos[
+                    1] > self.y_high_obs or cur_pos[1] < self.y_low_obs:
+                    delete_index.append(m)
+            delete_index.reverse()
+            for idx in delete_index:
+                # print('this is delete index', idx)
+                p.removeBody(self.boxes_index[idx])
+                self.boxes_index.pop(idx)
+                self.lwh_list = np.delete(self.lwh_list, idx, axis=0)
+            if len(delete_index) != 0:
+                for _ in range(int(50)):
+                    # time.sleep(1/96)
+                    p.stepSimulation()
+            ##################### after every grasp, check pos and ori of every box which are out of the field ####################
 
         box_data = np.asarray(box_data)
         grasp_flag = np.asarray(grasp_flag).reshape(-1, 1)
@@ -317,8 +318,8 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 275000, 'end_num': 300000, 'thread': 0, 'output_offset': 00000,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+    para_dict = {'start_num': 120000, 'end_num': 160000, 'thread': 0, 'output_offset': 00000,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'recover_center_range': [[-0.0, 0.0], [-0.0, 0.0]],

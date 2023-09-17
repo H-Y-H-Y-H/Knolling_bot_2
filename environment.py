@@ -417,9 +417,10 @@ class Arm_env():
                     self.lwh_list = np.delete(self.lwh_list, i, axis=0)
                     self.gt_pos_ori = np.delete(self.gt_pos_ori, i, axis=0)
                     self.gt_ori_qua = np.delete(self.gt_ori_qua, i, axis=0)
-                for _ in range(int(100)):
-                    # time.sleep(1/96)
-                    p.stepSimulation()
+                if len(delete_index) != 0:
+                    for _ in range(int(50)):
+                        # time.sleep(1/96)
+                        p.stepSimulation()
 
                 if len(delete_index) == 0:
                     break
@@ -490,7 +491,7 @@ class Arm_env():
                 self.create_objects()
             else:
                 manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
-            # self.delete_objects(manipulator_after)
+            self.delete_objects(manipulator_after)
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
