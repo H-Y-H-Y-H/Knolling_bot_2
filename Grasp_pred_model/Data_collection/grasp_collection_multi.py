@@ -317,8 +317,8 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 160000, 'end_num': 200000, 'thread': 0, 'output_offset': 00000,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+    para_dict = {'start_num': 275000, 'end_num': 300000, 'thread': 0, 'output_offset': 00000,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'recover_center_range': [[-0.0, 0.0], [-0.0, 0.0]],
@@ -334,7 +334,7 @@ if __name__ == '__main__':
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': '../../../knolling_dataset/base_dataset_crowded/',
-                 'data_tar_path': '../../../knolling_dataset/grasp_dataset_914/',
+                 'data_tar_path': '../../../knolling_dataset/grasp_dataset_914_crowded/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
@@ -373,7 +373,7 @@ if __name__ == '__main__':
     exist_img_num = startnum
     while True:
         num_item = para_dict['boxes_num']
-        env.reset(epoch=exist_img_num, recover_flag=True)
+        env.reset(epoch=exist_img_num, recover_flag=False)
         img_per_epoch = env.try_unstack(data_source=data_root, data_tar=data_tar, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch
 
