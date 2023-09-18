@@ -7,10 +7,10 @@ show = 'xyz'
 
 if show == 'xyz':
 
-    cmd_xyz = np.loadtxt(data_path + 'cmd_xyz_nn.txt')[35:, :]
-    real_xyz = np.loadtxt(data_path + 'real_xyz_nn.txt')[35:, :]
-    tar_xyz = np.loadtxt(data_path + 'tar_xyz_nn.txt')[35:, :]
-    error_xyz = np.loadtxt(data_path + 'error_xyz_nn.txt')[35:, :]
+    cmd_xyz = np.loadtxt(data_path + 'cmd_xyz_nn.txt')[15:, :]
+    real_xyz = np.loadtxt(data_path + 'real_xyz_nn.txt')[15:, :]
+    tar_xyz = np.loadtxt(data_path + 'tar_xyz_nn.txt')[15:, :]
+    error_xyz = np.loadtxt(data_path + 'error_xyz_nn.txt')[15:, :]
     x = np.arange(len(cmd_xyz))
 
     print(x)
@@ -47,7 +47,7 @@ if show == 'xyz':
     plt.plot(x, error_xyz[:, 2], label='error')
     plt.legend()
 
-    # plt.savefig(data_path + 'xyz_analysis.png')
+    plt.savefig(data_path + 'xyz_analysis.png')
     plt.show()
 
 if show == 'motor':

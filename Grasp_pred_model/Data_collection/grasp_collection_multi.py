@@ -96,7 +96,7 @@ class Grasp_env(Arm_env):
         print('this is img_index start while grasping', img_index_start)
         manipulator_before, new_lwh_list, pred_conf = self.get_obs(epoch=self.img_per_epoch + img_index_start)
 
-        if len(manipulator_before) <= 1 and len(self.boxes_index) == 1:
+        if len(manipulator_before) <= 1 or len(self.boxes_index) <= 1:
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
         ############################## Get the information of boxes #################################
@@ -318,8 +318,8 @@ class Grasp_env(Arm_env):
 
 if __name__ == '__main__':
 
-    para_dict = {'start_num': 120000, 'end_num': 160000, 'thread': 0, 'output_offset': 00000,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:1',
+    para_dict = {'start_num': 290000, 'end_num': 300000, 'thread': 0, 'output_offset': 00000,
+                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'recover_center_range': [[-0.0, 0.0], [-0.0, 0.0]],

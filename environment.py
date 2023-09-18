@@ -2,7 +2,7 @@
 
 # from arrangement import *
 # from grasp_model_deploy import *
-# from models.arrange_model_deploy import *
+from models.arrange_model_deploy import *
 from models.visual_perception_config import *
 from utils import *
 import pybullet as p

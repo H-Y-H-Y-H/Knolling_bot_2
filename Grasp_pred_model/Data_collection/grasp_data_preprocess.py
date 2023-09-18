@@ -208,58 +208,59 @@ def data_analysis_preprocess(path, data_num, start_index=0, target_data_path=Non
     print('this is total num', total_num)
     print('this is num with high conf', conf_low_num)
 
-def data_preprocess_np_standard(path, data_num, start_index, target_data_path=None, target_start_index=None):
-    target_path = target_data_path + 'labels/'
+
+def data_preprocess_mix(source_path_1, data_num_1, start_index_1, source_path_2, data_num_2, start_index_2,
+                        target_data_path=None, target_start_index=None, dropout_prob=None):
+
+    target_path = target_data_path
     os.makedirs(target_path, exist_ok=True)
-    scaler = StandardScaler()
 
-    # print(np.loadtxt(path + 'labels/%012d.txt' % 50000).reshape(-1, 7))
-    # print(np.loadtxt(path + 'labels/%012d.txt' % 60000).reshape(-1, 7))
+    ratio = data_num_1 / data_num_2
 
-    total_array = np.loadtxt(path + 'labels/%012d.txt' % start_index).reshape(-1, 7)
-    # total_array = np.delete(total_array, [3, 6, 7, 8], axis=1)
-    tar_index = np.where(total_array[:, -2] < 0)[0]
-    total_array[tar_index, -2] += np.pi
-    total_len = [total_array.shape[0]]
-    for i in tqdm(range(start_index + 1, data_num + start_index)):
-        origin_data = np.loadtxt(path + 'labels/%012d.txt' % i).reshape(-1, 7)
-        # data = np.delete(origin_data, [3, 6, 7, 8], axis=1)
-        tar_index = np.where(origin_data[:, -2] < 0)[0]
-        origin_data[tar_index, -2] += np.pi
+    index_2 = start_index_2
+    output_index = start_index_1
+    for i in tqdm(range(start_index_1, data_num_1 + start_index_1)):
 
-        total_array = np.concatenate((total_array, origin_data), axis=0)
-        total_len.append(origin_data.shape[0])
+        origin_data_1 = np.loadtxt(source_path_1 + '%012d.txt' % i).reshape(-1, 11)
+        data_1 = np.delete(origin_data_1, [3, 6, 7, 8], axis=1)
 
-    total_array[:, 1:] = scaler.fit_transform(total_array[:, 1:])
+        temp_index = np.where(data_1[:, -2] < 0)[0]
+        data_1[temp_index, -2] += np.pi
+        order_1 = change_sequence(data_1)
+        data_1 = data_1[order_1]
 
-    seg_start_index = 0
-    for i in tqdm(range(start_index, data_num + start_index)):
-        # print('before\n', np.loadtxt(path + 'origin_labels/%012d.txt' % i).reshape(-1, 11))
-        data_after = total_array[seg_start_index:seg_start_index + total_len[i - start_index], :]
-        seg_start_index += total_len[i - start_index]
-        # print('after\n', data_after)
-        np.savetxt(target_path + '%012d.txt' % (i + target_start_index - start_index), data_after, fmt='%.04f')
+        np.savetxt(target_path + '%012d.txt' % (output_index), data_1, fmt='%.04f')
+        output_index += 1
 
-    print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
-    print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
+        if i % ratio == 0:
 
+            origin_data_2 = np.loadtxt(source_path_2 + '%012d.txt' % index_2).reshape(-1, 11)
+            data_2 = np.delete(origin_data_2, [3, 6, 7, 8], axis=1)
+
+            temp_index = np.where(data_2[:, -2] < 0)[0]
+            data_2[temp_index, -2] += np.pi
+            order_2 = change_sequence(data_2)
+            data_2 = data_2[order_2]
+            np.savetxt(target_path + '%012d.txt' % (output_index), data_2, fmt='%.04f')
+            index_2 += 1
+            output_index += 1
 
 def data_move(source_path, target_path, source_start_index, data_num, target_start_index):
 
     import shutil
 
-    # index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
-    # for i in index_list:
-    #     data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
-    #     print(np.round(data, 4))
-    #
-    # print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
-    # print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
+    index_list = np.arange(target_start_index, data_num + target_start_index, 10000)
+    for i in index_list:
+        data = np.loadtxt(target_path + 'labels/%012d.txt' % i).reshape(-1, 7)
+        print(np.round(data, 4))
 
-    for i in range(source_start_index, int(data_num + source_start_index)):
-        cur_path = source_path + '%012d.txt' % (i)
-        tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
-        shutil.copy(cur_path, tar_path)
+    print(np.loadtxt(target_path + '%012d.txt' % 50000).reshape(-1, 7))
+    print(np.loadtxt(target_path + '%012d.txt' % 60000).reshape(-1, 7))
+
+    # for i in tqdm(range(source_start_index, int(data_num + source_start_index))):
+    #     cur_path = source_path + '%012d.txt' % (i)
+    #     tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
+    #     shutil.copy(cur_path, tar_path)
 
 def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_start, threshold_end, valid_num, check_point = 20):
 
@@ -379,29 +380,37 @@ if __name__ == '__main__':
 
     np.set_printoptions(suppress=True)
 
-    data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
-    target_data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
-    # target_data_path = data_root + 'origin_labels_713_lab/'
+    # data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
+    # target_data_path = '../../../knolling_dataset/grasp_dataset_829/labels_1_high_conf/'
+    # # target_data_path = data_root + 'origin_labels_713_lab/'
+    #
+    # data_num = 520000
+    # start_index = 0
+    # target_start_index = 0
+    # dropout_prob = 0
+    # set_conf = 0.95
+    # data_analysis_preprocess(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob, set_conf)
 
-    data_num = 520000
-    start_index = 0
-    target_start_index = 0
-    dropout_prob = 0
-    set_conf = 0.95
-    # data_preprocess_csv(data_path, data_num, start_index)
-    # data_preprocess_np_standard(data_path, data_num, start_index, target_data_path, target_start_index)
-    data_analysis_preprocess(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob, set_conf)
-
-    # # source_path = '/home/zhizhuo/Creative_Machines_Lab/knolling_dataset/grasp_pile_715_lab_add/labels/'
-    # source_path = '../../../knolling_dataset/grasp_dataset_726_laptop_multi/origin_labels/'
-    # target_path = '../../../knolling_dataset/grasp_dataset_726_ratio_multi/origin_labels/'
-    # os.makedirs(target_path, exist_ok=True)
-    # source_start_index = 420000
-    # target_start_index = 420000
-    # num = 100000
-    # data_move(source_path, target_path, source_start_index, num, target_start_index)
+    source_path = '../../../knolling_dataset/grasp_dataset_914_sparse_labdesk/sim_labels/'
+    target_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    os.makedirs(target_path, exist_ok=True)
+    source_start_index = 120000
+    target_start_index = 120000
+    num = 30000
+    data_move(source_path, target_path, source_start_index, num, target_start_index)
 
     # data_path = '../../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
     # analysis_path = '../../models/LSTM_829_1_heavy_dropout0/'
     # valid_num = 20000
     # yolo_accuracy_analysis(path=data_path, total_num=520000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+
+    # source_path_1 = '../../../knolling_dataset/grasp_dataset_914_crowded_lab/sim_labels/'
+    # source_path_2 = '../../../knolling_dataset/grasp_dataset_914_sparse_lab/sim_labels/'
+    # num_1 = 300000
+    # num_2 = 150000
+    # start_index_1 = 0
+    # start_index_2 = 0
+    # target_data_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    # target_start_index = 0
+    # data_preprocess_mix(source_path_1, num_1, start_index_1, source_path_2, num_2, start_index_2,
+    #                     target_data_path, target_start_index, dropout_prob=None)

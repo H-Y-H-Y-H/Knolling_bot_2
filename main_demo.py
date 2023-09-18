@@ -542,7 +542,7 @@ if __name__ == '__main__':
                  'urdf_path': './urdf/',
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_model': True}
+                 'use_knolling_model': True, 'use_lstm_model': True, 'use_yolo_model': True}
     if para_dict['real_operate'] == False:
         para_dict['yolo_model_path'] = './models/627_pile_pose/weights/best.pt'
     else:
@@ -568,7 +568,7 @@ if __name__ == '__main__':
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
                  'threshold': 0.6,
-                 'grasp_model_path': './models/LSTM_829_1_heavy_dropout0/best_model.pt',}
+                 'grasp_model_path': './models/LSTM_918_0/best_model.pt',}
 
     arrange_dict = {'running_name': 'devoted-terrain-29',
                     'transformer_model_path': './models/devoted-terrain-29',
