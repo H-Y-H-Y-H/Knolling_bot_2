@@ -262,6 +262,17 @@ def data_move(source_path, target_path, source_start_index, data_num, target_sta
     #     tar_path = target_path + '%012d.txt' % (i + target_start_index - source_start_index)
     #     shutil.copy(cur_path, tar_path)
 
+def set_yolo_conf(source_path, total_num, target_path, start_index, set_conf=0.6):
+
+    os.makedirs(target_path, exist_ok=True)
+
+    print(np.loadtxt(target_path + '%012d.txt' % 1000).reshape(-1, 7))
+
+    for i in tqdm(range(start_index, total_num + start_index)):
+        origin_data = np.loadtxt(source_path + '%012d.txt' % i).reshape(-1, 7)
+        origin_data[:, -1] = set_conf
+        np.savetxt(target_path + '%012d.txt' % i, origin_data)
+
 def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_start, threshold_end, valid_num, check_point = 20):
 
     criterion = nn.CrossEntropyLoss()
@@ -391,16 +402,22 @@ if __name__ == '__main__':
     # set_conf = 0.95
     # data_analysis_preprocess(data_path, data_num, start_index, target_data_path, target_start_index, dropout_prob, set_conf)
 
-    source_path = '../../../knolling_dataset/grasp_dataset_914_sparse_labdesk/sim_labels/'
-    target_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
-    os.makedirs(target_path, exist_ok=True)
-    source_start_index = 120000
-    target_start_index = 120000
-    num = 30000
-    data_move(source_path, target_path, source_start_index, num, target_start_index)
+    # source_path = '../../../knolling_dataset/grasp_dataset_914_sparse_labdesk/sim_labels/'
+    # target_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    # os.makedirs(target_path, exist_ok=True)
+    # source_start_index = 120000
+    # target_start_index = 120000
+    # num = 30000
+    # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_829/labels_4_rdm_pos/'
-    # analysis_path = '../../models/LSTM_829_1_heavy_dropout0/'
+    source_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    target_path = '../../../knolling_dataset/grasp_dataset_914/labels_2/'
+    total_num = 450000
+    start_index = 0
+    set_yolo_conf(source_path=source_path, total_num=total_num, target_path=target_path, start_index=start_index, set_conf=0.97)
+
+    # data_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    # analysis_path = '../../models/LSTM_918_0/'
     # valid_num = 20000
     # yolo_accuracy_analysis(path=data_path, total_num=520000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
 

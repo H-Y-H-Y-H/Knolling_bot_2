@@ -16,7 +16,9 @@ import torch.nn.functional as F
 from sklearn.preprocessing import StandardScaler
 
 
-def data_split(path, total_num, ratio, max_box, valid_num, test_model=False, use_scaler=False):
+def data_split(path, total_num, ratio, max_box, valid_num, test_model=False, use_scaler=False, set_conf=None):
+
+    print('this is set conf', set_conf)
 
     num_train = int(total_num * ratio)
 
@@ -97,6 +99,8 @@ def data_split(path, total_num, ratio, max_box, valid_num, test_model=False, use
                     else:
                         tar_false_grasp += 1
 
+                if set_conf is not None:
+                    data_test[:, -1] = set_conf
                 box_data_test.append(data_test[:, 1:])
                 grasp_data_test.append(data_test[:, 0].reshape(-1, 1))
             print('total valid data:', int(total_num - num_train))
