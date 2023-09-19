@@ -1,0 +1,63 @@
+----------- Dataset -----------
+valid_num: 20000
+tar_true: 23545
+tar_false: 50111
+threshold_start: 0.0
+threshold_end: 1
+threshold: 0.3877551020408163, max accuracy: 0.9440914521559682
+threshold: 0.9795918367346939, max precision: 0.9902439024390244
+----------- Dataset -----------
+----------- Statistics -----------
+model_loss_mean: 0.6136106585568926
+model_loss_std: 0.05664694703255783
+----------- Statistics -----------
+threshold: 0.000000, recall: 1.0000, precision: 0.3197, accuracy: 0.3197
+threshold: 0.020408, recall: 0.3651, precision: 0.7088, accuracy: 0.8667
+threshold: 0.040816, recall: 0.3519, precision: 0.7554, accuracy: 0.8928
+threshold: 0.061224, recall: 0.3445, precision: 0.7840, accuracy: 0.9066
+threshold: 0.081633, recall: 0.3388, precision: 0.8050, accuracy: 0.9153
+threshold: 0.102041, recall: 0.3345, precision: 0.8221, accuracy: 0.9220
+threshold: 0.122449, recall: 0.3308, precision: 0.8360, accuracy: 0.9267
+threshold: 0.142857, recall: 0.3274, precision: 0.8485, accuracy: 0.9306
+threshold: 0.163265, recall: 0.3244, precision: 0.8595, accuracy: 0.9337
+threshold: 0.183673, recall: 0.3219, precision: 0.8686, accuracy: 0.9361
+threshold: 0.204082, recall: 0.3195, precision: 0.8767, accuracy: 0.9378
+threshold: 0.224490, recall: 0.3175, precision: 0.8840, accuracy: 0.9395
+threshold: 0.244898, recall: 0.3156, precision: 0.8909, accuracy: 0.9409
+threshold: 0.265306, recall: 0.3138, precision: 0.8970, accuracy: 0.9420
+threshold: 0.285714, recall: 0.3119, precision: 0.9026, accuracy: 0.9426
+threshold: 0.306122, recall: 0.3103, precision: 0.9080, accuracy: 0.9434
+threshold: 0.326531, recall: 0.3085, precision: 0.9133, accuracy: 0.9439
+threshold: 0.346939, recall: 0.3070, precision: 0.9169, accuracy: 0.9438
+threshold: 0.367347, recall: 0.3054, precision: 0.9211, accuracy: 0.9440
+threshold: 0.387755, recall: 0.3042, precision: 0.9246, accuracy: 0.9441
+threshold: 0.408163, recall: 0.3025, precision: 0.9284, accuracy: 0.9438
+threshold: 0.428571, recall: 0.3007, precision: 0.9327, accuracy: 0.9436
+threshold: 0.448980, recall: 0.2996, precision: 0.9357, accuracy: 0.9436
+threshold: 0.469388, recall: 0.2982, precision: 0.9391, accuracy: 0.9435
+threshold: 0.489796, recall: 0.2971, precision: 0.9423, accuracy: 0.9435
+threshold: 0.510204, recall: 0.2959, precision: 0.9456, accuracy: 0.9434
+threshold: 0.530612, recall: 0.2947, precision: 0.9479, accuracy: 0.9430
+threshold: 0.551020, recall: 0.2935, precision: 0.9506, accuracy: 0.9426
+threshold: 0.571429, recall: 0.2922, precision: 0.9528, accuracy: 0.9419
+threshold: 0.591837, recall: 0.2910, precision: 0.9553, accuracy: 0.9415
+threshold: 0.612245, recall: 0.2899, precision: 0.9570, accuracy: 0.9408
+threshold: 0.632653, recall: 0.2887, precision: 0.9592, accuracy: 0.9402
+threshold: 0.653061, recall: 0.2875, precision: 0.9607, accuracy: 0.9393
+threshold: 0.673469, recall: 0.2861, precision: 0.9630, accuracy: 0.9385
+threshold: 0.693878, recall: 0.2847, precision: 0.9651, accuracy: 0.9376
+threshold: 0.714286, recall: 0.2834, precision: 0.9665, accuracy: 0.9366
+threshold: 0.734694, recall: 0.2822, precision: 0.9687, accuracy: 0.9359
+threshold: 0.755102, recall: 0.2805, precision: 0.9704, accuracy: 0.9345
+threshold: 0.775510, recall: 0.2786, precision: 0.9724, accuracy: 0.9329
+threshold: 0.795918, recall: 0.2769, precision: 0.9739, accuracy: 0.9313
+threshold: 0.816327, recall: 0.2751, precision: 0.9756, accuracy: 0.9296
+threshold: 0.836735, recall: 0.2731, precision: 0.9767, accuracy: 0.9276
+threshold: 0.857143, recall: 0.2710, precision: 0.9783, accuracy: 0.9257
+threshold: 0.877551, recall: 0.2688, precision: 0.9796, accuracy: 0.9233
+threshold: 0.897959, recall: 0.2659, precision: 0.9814, accuracy: 0.9205
+threshold: 0.918367, recall: 0.2630, precision: 0.9831, accuracy: 0.9175
+threshold: 0.938776, recall: 0.2591, precision: 0.9849, accuracy: 0.9133
+threshold: 0.959184, recall: 0.2526, precision: 0.9872, accuracy: 0.9063
+threshold: 0.979592, recall: 0.2383, precision: 0.9902, accuracy: 0.8905
+threshold: 1.000000, recall: 0.0000, precision: 0.0000, accuracy: 0.6803
