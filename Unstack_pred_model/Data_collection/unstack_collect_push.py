@@ -80,21 +80,21 @@ class Unstack_env(Arm_env):
             print('this is cur pos after pid', cur_pos)
 
             if self.para_dict['data_collection'] == True:
-                with open(file=self.para_dict['dataset_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_xyz)
-                with open(file=self.para_dict['dataset_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_xyz)
-                with open(file=self.para_dict['dataset_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, tar_xyz)
-                with open(file=self.para_dict['dataset_path'] + "error_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "error_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, error_xyz)
-                with open(file=self.para_dict['dataset_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_motor)
-                with open(file=self.para_dict['dataset_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_motor)
-                with open(file=self.para_dict['dataset_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, tar_motor)
-                with open(file=self.para_dict['dataset_path'] + "error_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "error_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, error_motor)
                 pass
 
@@ -484,11 +484,12 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_908_intensive/',
+                 'data_source_path': '../../../knolling_dataset/base_dataset_crowded/',
+                 'data_tar_path': '../../../knolling_dataset/MLP_unstack_919/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': False, 'use_lstm_model': True, 'use_yolo_model': True}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -499,10 +500,10 @@ if __name__ == '__main__':
                  'set_dropout': 0.0,
                  'threshold': 0.6,
                  'device': 'cuda:0',
-                 'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
+                 'grasp_model_path': '../../models/LSTM_918_0/best_model.pt', }
 
-    data_root = para_dict['dataset_path']
-    with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
+    data_root = para_dict['data_tar_path']
+    with open(para_dict['data_tar_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')

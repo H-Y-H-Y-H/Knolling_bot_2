@@ -254,7 +254,7 @@ class Yolo_pose_model():
 
         self.epoch = epoch
         if real_flag == True:
-            self.img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (self.epoch)
+            self.img_path = self.para_dict['data_tar_path'] + 'real_images/%012d' % (self.epoch)
             # os.makedirs(img_path, exist_ok=True)
             model = self.para_dict['yolo_model_path']
             pipeline = rs.pipeline()
@@ -362,7 +362,7 @@ class Yolo_pose_model():
             model = self.para_dict['yolo_model_path']
 
             if self.para_dict['save_img_flag'] == True and first_flag == True:
-                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
+                self.img_path = self.para_dict['data_tar_path'] + 'sim_images/%012d' % (self.epoch)
                 # cv2.namedWindow('zzz', 0)
                 # cv2.resizeWindow('zzz', 1280, 960)
                 # cv2.imshow('zzz', origin_img)
@@ -477,7 +477,7 @@ class Yolo_pose_model():
             output_epoch = epoch
 
         output_img = cv2.line(output_img, (start_px[1], start_px[0]), (end_px[1], end_px[0]), (255, 0, 0), 1)
-        img_path_output = self.para_dict['dataset_path'] + 'unstack_rays/%012d' % (output_epoch) + '_grasp.png'
+        img_path_output = self.para_dict['data_tar_path'] + 'unstack_rays/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
 
     def plot_grasp(self, manipulator_before, prediction, model_output, img=None, epoch=None):
@@ -508,9 +508,9 @@ class Yolo_pose_model():
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        img_path_output = self.para_dict['dataset_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
+        img_path_output = self.para_dict['data_tar_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
 
-        # img_path_output = self.para_dict['dataset_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
+        # img_path_output = self.para_dict['data_tar_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
         pass
 

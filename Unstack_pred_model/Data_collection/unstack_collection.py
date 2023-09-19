@@ -81,21 +81,21 @@ class Unstack_env(Arm_env):
             print('this is cur pos after pid', cur_pos)
 
             if self.para_dict['data_collection'] == True:
-                with open(file=self.para_dict['dataset_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_xyz)
-                with open(file=self.para_dict['dataset_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_xyz)
-                with open(file=self.para_dict['dataset_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "tar_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, tar_xyz)
-                with open(file=self.para_dict['dataset_path'] + "error_xyz_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "error_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, error_xyz)
-                with open(file=self.para_dict['dataset_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "cmd_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_motor)
-                with open(file=self.para_dict['dataset_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "real_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, real_motor)
-                with open(file=self.para_dict['dataset_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "tar_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, tar_motor)
-                with open(file=self.para_dict['dataset_path'] + "error_nn.txt", mode="a", encoding="utf-8") as f:
+                with open(file=self.para_dict['data_tar_path'] + "error_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, error_motor)
                 pass
 
@@ -599,11 +599,11 @@ if __name__ == '__main__':
     para_dict = {'start_num': 204000, 'end_num': 224000, 'thread': 0,
                  'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0.0, 0, 0.10]), 'reset_ori': np.array([0, np.pi / 2, 0]),
-                 'save_img_flag': False,
+                 'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.016]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -611,11 +611,12 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': '../../../knolling_dataset/MLP_unstack_906_intensive/',
+                 'data_source_path': '../../../knolling_dataset/base_dataset_crowded/',
+                 'data_tar_path': '../../../knolling_dataset/MLP_unstack_919/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': False,
-                 'use_knolling_model': False, 'use_lstm_model': True}
+                 'use_knolling_model': False, 'use_lstm_model': True, 'use_yolo_model': True}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -626,12 +627,12 @@ if __name__ == '__main__':
                  'set_dropout': 0.0,
                  'threshold': 0.6,
                  'device': 'cuda:0',
-                 'grasp_model_path': '../../models/LSTM_829_1_heavy_dropout0/best_model.pt', }
+                 'grasp_model_path': '../../models/LSTM_918_0/best_model.pt', }
 
     startnum = para_dict['start_num']
 
-    data_root = para_dict['dataset_path']
-    with open(para_dict['dataset_path'][:-1] + '_readme.txt', "w") as f:
+    data_root = para_dict['data_tar_path']
+    with open(para_dict['data_tar_path'][:-1] + '_readme.txt', "w") as f:
         for key, value in para_dict.items():
             f.write(key + ': ')
             f.write(str(value) + '\n')
@@ -652,7 +653,7 @@ if __name__ == '__main__':
     while True:
         num_item = para_dict['boxes_num']
         if para_dict['real_operate'] == False:
-            env.reset(epoch=exist_img_num)
+            env.reset(epoch=exist_img_num, recover_flag=True)
         img_per_epoch = env.try_unstack(data_root=data_root, img_index_start=exist_img_num)
         exist_img_num += img_per_epoch
 
