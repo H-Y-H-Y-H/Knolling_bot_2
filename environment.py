@@ -865,7 +865,7 @@ class Arm_env():
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
             if img_path is None:
-                output_img_path = self.para_dict['data_source_path'] + 'unstack_images/%012d.png' % (epoch)
+                output_img_path = self.para_dict['data_source_path'] + 'sim_images/%012d.png' % (epoch)
             # elif self.para_dict['real_operate'] == False:
             #     output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
             # else:

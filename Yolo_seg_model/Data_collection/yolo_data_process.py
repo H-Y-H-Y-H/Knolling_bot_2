@@ -4,6 +4,7 @@ import os
 import cv2
 import shutil
 from itertools import combinations, permutations
+from tqdm import tqdm
 
 def yolo_box(img, label):
     # label = [0,x,y,l,w],[0,x,y,l,w],...
@@ -106,9 +107,7 @@ def find_keypoints(xpos, ypos, l, w, ori, mm2px, total_1, total_2):
     return keypoints, total_1, total_2
 
 def pose4keypoints(data_root, target_path, start_num, end_num):
-    os.makedirs(data_root, exist_ok=True)
     os.makedirs(data_root + 'labels/', exist_ok=True)
-    os.makedirs(target_path, exist_ok=True)
     os.makedirs(target_path + 'images/', exist_ok=True)
     os.makedirs(target_path + 'preprocess_labels/', exist_ok=True)
     mm2px = 530 / 0.34  # (1558)
@@ -119,7 +118,7 @@ def pose4keypoints(data_root, target_path, start_num, end_num):
         total_1 = 0
         total_2 = 0
         for i in range(start_num, end_num):
-            real_world_data = np.loadtxt(os.path.join(data_root, "origin_labels/%d.txt") % i)
+            real_world_data = np.loadtxt(os.path.join(data_root, "sim_labels/%012d.txt") % i)
             # real_world_img = cv2.imread(data_root + "origin_images/%012d.png" % i)
             corner_list = []
             label_plot = []
@@ -129,12 +128,13 @@ def pose4keypoints(data_root, target_path, start_num, end_num):
             for j in range(len(real_world_data)):
                 # print(real_world_data[j])
                 # print('this is index if legos', j)
+                grasp_flag = real_world_data[j][0]
                 xpos1, ypos1 = real_world_data[j][1], real_world_data[j][2]
-                l, w = real_world_data[j][3], real_world_data[j][4]
-                yawori = real_world_data[j][5]
+                l, w = real_world_data[j][4], real_world_data[j][5]
+                yawori = real_world_data[j][9]
                 if l < w:
-                    l = real_world_data[j][4]
-                    w = real_world_data[j][3]
+                    l = real_world_data[j][5]
+                    w = real_world_data[j][4]
                     if yawori > np.pi / 2:
                         yawori = yawori - np.pi / 2
                     else:
@@ -148,7 +148,7 @@ def pose4keypoints(data_root, target_path, start_num, end_num):
                 # ensure the yolo sequence!
                 keypoints, total_1, total_2 = find_keypoints(xpos1, ypos1, l, w, yawori, mm2px, total_1, total_2)
 
-                element = np.concatenate(([0], [label_x, label_y], [length, width], keypoints.reshape(-1)))
+                element = np.concatenate(([grasp_flag], [label_x, label_y], [length, width], keypoints.reshape(-1)))
                 # print(label)
 
                 corn1, corn2, corn3, corn4 = find_corner(xpos1, ypos1, l, w, yawori)
@@ -386,31 +386,31 @@ def train_test_split(data_root, target_path, start_num, end_num):
     os.makedirs(target_path + '/images/train', exist_ok=True)
     os.makedirs(target_path + '/images/val', exist_ok=True)
 
-    for i in range(start_num, train_num + start_num):
-        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
+    for i in tqdm(range(start_num, train_num + start_num)):
+        cur_path = os.path.join(data_root, 'sim_images/%012d.png') % (i)
         tar_path = os.path.join(target_path, 'images/train/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'origin_labels/%012d.txt') % (i)
+        cur_path = os.path.join(data_root, 'preprocess_labels/%012d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/train/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
-    for i in range(train_num + start_num, end_num):
-        cur_path = os.path.join(data_root, 'origin_images/%012d.png') % (i)
+    for i in tqdm(range(train_num + start_num, end_num)):
+        cur_path = os.path.join(data_root, 'sim_images/%012d.png') % (i)
         tar_path = os.path.join(target_path, 'images/val/%012d.png') % i
         shutil.copy(cur_path, tar_path)
 
-        cur_path = os.path.join(data_root, 'origin_labels/%012d.txt') % (i)
+        cur_path = os.path.join(data_root, 'preprocess_labels/%012d.txt') % (i)
         tar_path = os.path.join(target_path, 'labels/val/%012d.txt') % i
         shutil.copy(cur_path, tar_path)
 
 if __name__ == '__main__':
 
     start_num = 0
-    end_num = 11008
-    # data_root = '../../../datasets/yolo_pile_820_real_sundry/'
-    # target_path = '../../../datasets/yolo_pile_820_real_sundry/'
-    #
+    end_num = 10000
+    data_root = '../../../knolling_dataset/yolo_grasp_dataset_919/'
+    target_path = '../../../knolling_dataset/yolo_grasp_dataset_919/'
+
     # pose4keypoints(data_root, target_path, start_num, end_num)
 
     # data_root = '../../../knolling_dataset/yolo_segmentation_820/'
@@ -419,7 +419,7 @@ if __name__ == '__main__':
     # end_num = 4000
     # segmentation(data_root, target_path, start_num, end_num, show_flag=False)
 
-    data_root = '../../../knolling_dataset/yolo_pile_830_real_box/'
-    target_path = '../../../knolling_dataset/yolo_pile_830_real_box/'
-
+    # data_root = '../../../knolling_dataset/yolo_pile_830_real_box/'
+    # target_path = '../../../knolling_dataset/yolo_pile_830_real_box/'
+    #
     train_test_split(data_root, target_path, start_num, end_num)
