@@ -43,7 +43,7 @@ class BOTrack(STrack):
             mean_state[6] = 0
             mean_state[7] = 0
 
-        self.mean, self.covariance = self.kalman_filter.yolo_pose_predict(mean_state, self.covariance)
+        self.mean, self.covariance = self.kalman_filter.yolo_grasp_predict(mean_state, self.covariance)
 
     def re_activate(self, new_track, frame_id, new_id=False):
         """Reactivates a track with updated features and optionally assigns a new ID."""

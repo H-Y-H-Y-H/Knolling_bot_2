@@ -700,7 +700,7 @@ class Exporter:
             from PIL import Image
             img = Image.new('RGB', (w, h))  # img(192 width, 320 height)
             # img = torch.zeros((*opt.img_size, 3)).numpy()  # img size(320,192,3) iDetection
-            out = model.yolo_pose_predict({'image': img})
+            out = model.yolo_grasp_predict({'image': img})
             out0_shape = out[out0.name].shape
             out1_shape = out[out1.name].shape
         else:  # linux and windows can not run model.predict(), get sizes from pytorch output y

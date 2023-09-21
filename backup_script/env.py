@@ -518,7 +518,7 @@ class Sort_objects():
         img_path = self.general_parameters['img_save_path'] + 'images_%s_%s' % (evaluations, check)
         # img_path = './learning_data_demo/demo_8/images_before'
         # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolo_pose_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.manual_knolling_parameters['boxes_num'])
+        results, pred_conf = yolo_model.yolo_grasp_predict(img_path=img_path, real_flag=True, target=None, boxes_num=self.manual_knolling_parameters['boxes_num'])
 
         item_pos = results[:, :3]
         item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
