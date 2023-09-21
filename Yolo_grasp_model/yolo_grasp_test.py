@@ -124,22 +124,6 @@ class Yolo_grasp_model():
         my_ori = np.arctan2(lucky_keypoint[1] - keypoints_center[1], lucky_keypoint[0] - keypoints_center[0])
         # In order to grasp, this ori is based on the longest side of the box, not the label ori!
 
-        # randomly exchange the length and width to make the yolo result match the expectation of the knolling model
-
-        # # 不要随便交换长宽，grasp model会寄掉！！！！！！
-        # if np.random.rand() < 0.5:
-        #     # temp = length
-        #     # length = width
-        #     # width = temp
-        #     # if my_ori > np.pi / 2:
-        #     #     return_ori = my_ori - np.pi / 2
-        #     # else:
-        #     #     return_ori = my_ori + np.pi / 2
-        #     pass
-        # else:
-        #     pass
-        # # 不要随便交换长宽，grasp model会寄掉！！！！！！
-
         if my_ori > np.pi:
             my_ori -= np.pi
         elif my_ori < 0:
@@ -215,22 +199,22 @@ class Yolo_grasp_model():
     def calculate_confusion_matrix(self, pred_xylw, tar_xylw, pred_cls, tar_cls, pred_conf):
 
         # pair the tar and pred
-        new_pred_xylw = []
-        new_pred_cls = []
-        for i in range(self.gt_num):
-            best_candidate = np.argmin(np.linalg.norm(pred_xylw - tar_xylw[i], axis=1))
-            new_pred_xylw.append(pred_xylw[best_candidate])
-            new_pred_cls.append(pred_cls[best_candidate])
-        new_pred_xylw = np.asarray(new_pred_xylw)
-        new_pred_cls = np.asarray(new_pred_cls)
+        new_tar_xylw = []
+        new_tar_cls = []
+        for i in range(len(pred_xylw)):
+            best_candidate = np.argmin(np.linalg.norm(pred_xylw[i] - tar_xylw, axis=1))
+            new_tar_xylw.append(tar_xylw[best_candidate])
+            new_tar_cls.append(tar_cls[best_candidate])
+        new_tar_xylw = np.asarray(new_tar_xylw)
+        new_tar_cls = np.asarray(new_tar_cls)
 
-        for i in range(self.gt_num):
-            if tar_cls[i] == 1:
+        for i in range(len(pred_xylw)):
+            if new_tar_cls[i] == 1:
                 if pred_cls[i] == 1:
                     self.pred_TP += 1
                 elif pred_cls[i] == 0:
                     self.pred_TN += 1
-            if tar_cls[i] == 0:
+            if new_tar_cls[i] == 0:
                 if pred_cls[i] == 1:
                     self.pred_FP += 1
                 elif pred_cls[i] == 0:
@@ -265,10 +249,14 @@ class Yolo_grasp_model():
             one_img_result = images[i]
 
             pred_result = []
-            pred_xylws = one_img_result.boxes.xywhn.cpu().detach().numpy()[:self.gt_num]
-            pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()[:self.gt_num]
-            pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()[:self.gt_num]
-            pred_keypoints = one_img_result.keypoints.cpu().detach().numpy()[:self.gt_num]
+            pred_xylws = one_img_result.boxes.xywhn.cpu().detach().numpy()
+            if len(pred_xylws) < self.gt_num:
+                print('pred less that gt', int(self.gt_num - len(pred_xylws)))
+            else:
+                print('pred more that gt', int(len(pred_xylws) - self.gt_num))
+            pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()
+            pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()
+            pred_keypoints = one_img_result.keypoints.cpu().detach().numpy()
             pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
             pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
             pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
@@ -355,7 +343,7 @@ class Yolo_grasp_model():
 
 if __name__ == '__main__':
 
-    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.5, 'yolo_iou': 0.8,
+    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.004, 'yolo_iou': 0.8,
                  'yolo_model_path': '../models/919_grasp/weights/best.pt',
                  'dataset_path': '../../knolling_dataset/yolo_grasp_dataset_919/',
                  'index_begin': 8000}
@@ -367,3 +355,17 @@ if __name__ == '__main__':
     print('this is TN', zzz_yolo.pred_TN)
     print('this is FP', zzz_yolo.pred_FP)
     print('this is FN', zzz_yolo.pred_FN)
+
+    if zzz_yolo.pred_TP + zzz_yolo.pred_FN == 0:
+        recall = 0
+    else:
+        recall = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FN)
+    if zzz_yolo.pred_TP + zzz_yolo.pred_FP == 0:
+        precision = 0
+    else:
+        precision = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FP)
+    accuracy = (zzz_yolo.pred_TP + zzz_yolo.pred_FN) / (zzz_yolo.pred_TP + zzz_yolo.pred_TN + zzz_yolo.pred_FP + zzz_yolo.pred_FN)
+
+    print('this is recall', recall)
+    print('this is precision', precision)
+    print('this is accuracy', accuracy)
