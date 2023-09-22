@@ -543,6 +543,7 @@ if __name__ == '__main__':
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True, 'use_yolo_model': True}
+
     if para_dict['real_operate'] == False:
         para_dict['yolo_model_path'] = './models/627_pile_pose/weights/best.pt'
     else:

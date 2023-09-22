@@ -48,7 +48,7 @@ if __name__ == '__main__':
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num, set_conf=0.95)
+        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num, set_conf=1)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -194,15 +194,15 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_3.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_4.png')
         plt.show()
 
-        np.savetxt(para_dict['model_path'] + 'model_loss_labels_3.txt', model_loss)
+        np.savetxt(para_dict['model_path'] + 'model_loss_labels_4.txt', model_loss)
 
         total_evaluate_data = np.concatenate(([model_threshold], [model_pred_recall], [model_pred_precision], [model_pred_accuracy]), axis=0).T
-        np.savetxt(para_dict['model_path'] + 'model_data_labels_3.txt', total_evaluate_data)
+        np.savetxt(para_dict['model_path'] + 'model_data_labels_4.txt', total_evaluate_data)
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_labels_3.txt", "w") as f:
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels_4.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
