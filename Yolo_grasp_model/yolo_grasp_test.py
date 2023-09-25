@@ -7,6 +7,7 @@ import cv2
 from utils import *
 import pyrealsense2 as rs
 from models.grasp_model_deploy import *
+import matplotlib.pyplot as plt
 
 class PosePredictor(DetectionPredictor):
 
@@ -222,6 +223,11 @@ class Yolo_grasp_model():
 
     def yolo_grasp_predict(self, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
+        self.pred_TP = 0
+        self.pred_TN = 0
+        self.pred_FP = 0
+        self.pred_FN = 0
+
         self.epoch = epoch
 
         model = self.para_dict['yolo_model_path']
@@ -252,14 +258,21 @@ class Yolo_grasp_model():
             pred_xylws = one_img_result.boxes.xywhn.cpu().detach().numpy()
             if len(pred_xylws) < self.gt_num:
                 print('pred less that gt', int(self.gt_num - len(pred_xylws)))
+                pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()
+                pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()
+                pred_keypoints = one_img_result.keypoints.cpu().detach().numpy()
+                pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
             else:
                 print('pred more that gt', int(len(pred_xylws) - self.gt_num))
-            pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()
-            pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()
-            pred_keypoints = one_img_result.keypoints.cpu().detach().numpy()
-            pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
-            pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
-            pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
+                pred_xylws = pred_xylws[:self.gt_num]
+                pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()[:self.gt_num]
+                pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()[:self.gt_num]
+                pred_keypoints = one_img_result.keypoints.cpu().detach().numpy()[:self.gt_num]
+                pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
+                pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
+                pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
             ######## order based on distance to draw it on the image while deploying the model ########
             mm2px = 530 / 0.34
@@ -348,24 +361,75 @@ if __name__ == '__main__':
                  'dataset_path': '../../knolling_dataset/yolo_grasp_dataset_919/',
                  'index_begin': 8000}
 
+    log_save_path = '../models/919_grasp/'
+
+    model_threshold_start = 0.5
+    model_threshold_end = 0.6
+    check_point = 2
+    valid_num = 20000
+    model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
+
     zzz_yolo = Yolo_grasp_model(para_dict= para_dict)
-    zzz_yolo.yolo_grasp_predict()
+    total_recall = []
+    total_precision = []
+    total_accuracy = []
+    max_precision = -np.inf
+    max_accuracy = -np.inf
+    for i in model_threshold:
+        zzz_yolo.para_dict['yolo_conf'] = i
+        zzz_yolo.yolo_grasp_predict()
 
-    print('this is TP', zzz_yolo.pred_TP)
-    print('this is TN', zzz_yolo.pred_TN)
-    print('this is FP', zzz_yolo.pred_FP)
-    print('this is FN', zzz_yolo.pred_FN)
+        print('this is TP', zzz_yolo.pred_TP)
+        print('this is TN', zzz_yolo.pred_TN)
+        print('this is FP', zzz_yolo.pred_FP)
+        print('this is FN', zzz_yolo.pred_FN)
 
-    if zzz_yolo.pred_TP + zzz_yolo.pred_FN == 0:
-        recall = 0
-    else:
-        recall = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FN)
-    if zzz_yolo.pred_TP + zzz_yolo.pred_FP == 0:
-        precision = 0
-    else:
-        precision = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FP)
-    accuracy = (zzz_yolo.pred_TP + zzz_yolo.pred_FN) / (zzz_yolo.pred_TP + zzz_yolo.pred_TN + zzz_yolo.pred_FP + zzz_yolo.pred_FN)
+        if zzz_yolo.pred_TP + zzz_yolo.pred_FN == 0:
+            recall = 0
+        else:
+            recall = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FN)
+        total_recall.append(recall)
+        if zzz_yolo.pred_TP + zzz_yolo.pred_FP == 0:
+            precision = 0
+        else:
+            precision = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FP)
+        total_precision.append(precision)
+        accuracy = (zzz_yolo.pred_TP + zzz_yolo.pred_FN) / (zzz_yolo.pred_TP + zzz_yolo.pred_TN + zzz_yolo.pred_FP + zzz_yolo.pred_FN)
+        total_accuracy.append(accuracy)
 
-    print('this is recall', recall)
-    print('this is precision', precision)
-    print('this is accuracy', accuracy)
+        if precision > max_precision:
+            max_precision_threshold = i
+            max_precision = precision
+        if accuracy > max_accuracy:
+            max_accuracy_threshold = i
+            max_accuracy = accuracy
+
+    total_recall = np.asarray(total_recall)
+    total_precision = np.asarray(total_precision)
+    total_accuracy = np.asarray(total_accuracy)
+
+    print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
+    print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
+
+    plt.plot(model_threshold, total_recall, label='model_pred_recall')
+    plt.plot(model_threshold, total_precision, label='model_pred_precision')
+    plt.plot(model_threshold, total_accuracy, label='model_pred_accuracy')
+    plt.xlabel('model_threshold')
+    plt.title('analysis of model prediction')
+    plt.legend()
+    plt.savefig(log_save_path + 'yolo_analysis.png')
+    plt.show()
+
+    total_evaluate_data = np.concatenate(([model_threshold], [total_recall], [total_precision], [total_accuracy]), axis=0).T
+    np.savetxt(log_save_path + 'yolo_analysis.txt', total_evaluate_data)
+
+    with open(log_save_path + "model_pred_anlysis_labels_4.txt", "w") as f:
+        f.write('----------- Dataset -----------\n')
+        f.write(f'threshold_start: {model_threshold_start}\n')
+        f.write(f'threshold_end: {model_threshold_end}\n')
+        f.write(f'threshold: {max_accuracy_threshold}, max accuracy: {max_accuracy}\n')
+        f.write(f'threshold: {max_precision_threshold}, max precision: {max_precision}\n')
+        f.write('----------- Dataset -----------\n')
+
+        for i in range(len(model_threshold)):
+            f.write(f'threshold: {model_threshold[i]:.6f}, recall: {total_recall[i]:.4f}, precision: {total_precision[i]:.4f}, accuracy: {total_accuracy[i]:.4f}\n')

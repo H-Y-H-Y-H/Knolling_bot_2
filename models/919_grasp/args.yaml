@@ -2,7 +2,7 @@ task: pose
 mode: train
 model: yolov8n-pose.yaml
 data: knolling_grasp.yaml
-epochs: 50
+epochs: 200
 patience: 300
 batch: 16
 imgsz: 640
@@ -93,4 +93,4 @@ copy_paste: 0.0
 cfg: null
 v5loader: false
 tracker: botsort.yaml
-save_dir: /home/zhizhuo/Creative_Machines_Lab/YOLOv8/runs/pose/919_grasp
+save_dir: C:\Users\24356\Desktop\YOLOv8\runs\pose\919_grasp

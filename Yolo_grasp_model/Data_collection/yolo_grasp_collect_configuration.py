@@ -9,7 +9,7 @@ from utils import *
 
 class Unstack_env(Arm_env):
 
-    def __init__(self, para_dict=None, lstm_dict=None):
+    def __init__(self, para_dict=None, lstm_dict=None, aaa=1):
 
         super(Unstack_env, self).__init__(para_dict=para_dict, lstm_dict=lstm_dict)
         self.table_center = np.array([0.15, 0])
