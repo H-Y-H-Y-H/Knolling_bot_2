@@ -83,7 +83,7 @@ def find_corner(x, y, l, w, yaw):
 
 total_1 = 0
 total_2 = 0
-def find_keypoints(xpos, ypos, l, w, ori, mm2px, total_1, total_2):
+def find_keypoints(xpos, ypos, l, w, ori, mm2px):
 
     gamma = ori
     rot_z = [[np.cos(gamma), -np.sin(gamma)],
@@ -112,7 +112,7 @@ def find_keypoints(xpos, ypos, l, w, ori, mm2px, total_1, total_2):
                                 (((keypoints[:, 0] + xpos) * mm2px + 6) / 480).reshape(-1, 1),
                                 np.ones((4, 1))), axis=1).reshape(-1, 3)
 
-    return keypoints, total_1, total_2
+    return keypoints
 
 def pose4keypoints(data_root, target_path, start_num, end_num):
     os.makedirs(data_root + 'labels/', exist_ok=True)
@@ -276,7 +276,8 @@ def data_preprocess_mix(source_path_1, data_num_1, start_index_1, source_path_2,
     mm2px = 530 / 0.34  # (1558)
     target_label_path = target_data_path + 'preprocess_labels/'
     target_image_path = target_data_path + 'sim_images/'
-    os.makedirs(target_path, exist_ok=True)
+    os.makedirs(target_label_path, exist_ok=True)
+    os.makedirs(target_image_path, exist_ok=True)
 
     ratio = data_num_1 / data_num_2
 
@@ -310,7 +311,7 @@ def data_preprocess_mix(source_path_1, data_num_1, start_index_1, source_path_2,
             length = l * 3
             width = w * 3
             # ensure the yolo sequence!
-            keypoints, total_1, total_2 = find_keypoints(xpos1, ypos1, l, w, yawori, mm2px, total_1, total_2)
+            keypoints = find_keypoints(xpos1, ypos1, l, w, yawori, mm2px)
 
             element = np.concatenate(([grasp_flag], [label_x, label_y], [length, width], keypoints.reshape(-1)))
             # print(label)
@@ -400,7 +401,7 @@ def data_preprocess_mix(source_path_1, data_num_1, start_index_1, source_path_2,
                 length = l * 3
                 width = w * 3
                 # ensure the yolo sequence!
-                keypoints, total_1, total_2 = find_keypoints(xpos2, ypos2, l, w, yawori, mm2px, total_1, total_2)
+                keypoints = find_keypoints(xpos2, ypos2, l, w, yawori, mm2px)
 
                 element = np.concatenate(([grasp_flag], [label_x, label_y], [length, width], keypoints.reshape(-1)))
                 # print(label)
@@ -498,12 +499,6 @@ def train_test_split(data_root, target_path, start_num, end_num):
 
 if __name__ == '__main__':
 
-    start_num = 0
-    end_num = 10000
-    data_root = '../../../knolling_dataset/yolo_grasp_dataset_919/'
-    target_path = '../../../knolling_dataset/yolo_grasp_dataset_919/'
-
-    # pose4keypoints(data_root, target_path, start_num, end_num)
 
     # data_root = '../../../knolling_dataset/yolo_segmentation_820/'
     # target_path = '../../../knolling_dataset/yolo_segmentation_820/'
@@ -514,15 +509,20 @@ if __name__ == '__main__':
     # data_root = '../../../knolling_dataset/yolo_pile_830_real_box/'
     # target_path = '../../../knolling_dataset/yolo_pile_830_real_box/'
     #
-    train_test_split(data_root, target_path, start_num, end_num)
 
-    source_path_1 = '../../../knolling_dataset/grasp_dataset_914_crowded_lab/'
-    source_path_2 = '../../../knolling_dataset/grasp_dataset_914_sparse_lab/'
-    num_1 = 300000
-    num_2 = 150000
+    source_path_1 = '../../../knolling_dataset/yolo_grasp_dataset_919_crowded/'
+    source_path_2 = '../../../knolling_dataset/yolo_grasp_dataset_919_sparse/'
+    num_1 = 50000
+    num_2 = 25000
     start_index_1 = 0
-    start_index_2 = 0
-    target_data_path = '../../../knolling_dataset/grasp_dataset_914/'
+    start_index_2 = 000
+    target_data_path = '../../../knolling_dataset/yolo_grasp_dataset_924/'
     target_start_index = 0
     data_preprocess_mix(source_path_1, num_1, start_index_1, source_path_2, num_2, start_index_2,
                         target_data_path, target_start_index, dropout_prob=None)
+
+    start_num = 0
+    end_num = 75000
+    data_root = '../../../knolling_dataset/yolo_grasp_dataset_924/'
+    target_path = '../../../knolling_dataset/yolo_grasp_dataset_924/'
+    train_test_split(data_root, target_path, start_num, end_num)

@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import cv2
 from utils import *
-import pyrealsense2 as rs
+# import pyrealsense2 as rs
 from models.grasp_model_deploy import *
 
 class PosePredictor(DetectionPredictor):
@@ -369,7 +369,7 @@ class Yolo_pose_model():
                 # cv2.waitKey(0)
                 # cv2.destroyAllWindows()
                 img_path_output = self.img_path + '.png'
-                cv2.imwrite(img_path_output, img)
+                # cv2.imwrite(img_path_output, img)
 
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             use_python = True
