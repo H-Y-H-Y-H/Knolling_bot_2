@@ -38,15 +38,11 @@ class PosePredictor(DetectionPredictor):
 
 class Yolo_grasp_model():
 
-    def __init__(self, para_dict, lstm_dict=False, use_lstm=False):
+    def __init__(self, para_dict):
 
         self.mm2px = 530 / 0.34
         self.px2mm = 0.34 / 530
         self.para_dict = para_dict
-        if use_lstm == False:
-            pass
-        else:
-            self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
 
         self.yolo_device = self.para_dict['device']
         print('this is yolo device', self.yolo_device)
@@ -220,7 +216,7 @@ class Yolo_grasp_model():
 
         return im, result
 
-    def yolo_grasp_predict(self, first_flag=False, sub_index=0, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
+    def grasp_predict(self, first_flag=False, sub_index=0, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
         self.epoch = epoch
         # img = cv2.imread(self.para_dict['dataset_path'] + 'images/val_mini/%012d.png' % int(self.para_dict['index_begin']))

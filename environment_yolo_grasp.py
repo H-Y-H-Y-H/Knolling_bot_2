@@ -1,7 +1,5 @@
-# from models.yolo_pose_deploy import *
 
 # from arrangement import *
-# from grasp_model_deploy import *
 from models.arrange_model_deploy import *
 from models.visual_perception_config import *
 from models.yolo_grasp_deploy import *
@@ -174,10 +172,11 @@ class Arm_env():
         self.save_img_flag = para_dict['save_img_flag']
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
         if self.para_dict['use_yolo_model'] == True:
-            self.yolo_pose_model = Yolo_grasp_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=self.para_dict['use_lstm_model'])
+            self.yolo_pose_model = Yolo_grasp_model(para_dict=para_dict)
         if self.para_dict['use_lstm_model'] == True:
             self.lstm_dict = lstm_dict
-            # self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
+            self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
+                                                    use_lstm=self.para_dict['use_lstm_model'])
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict)
@@ -195,6 +194,7 @@ class Arm_env():
         self.y_grasp_interval = (self.y_high_obs - self.y_low_obs) * y_grasp_accuracy
         self.z_grasp_interval = (self.z_high_obs - self.z_low_obs) * z_grasp_accuracy
         self.table_boundary = 0.03
+        self.table_center = np.array([(self.x_low_obs + self.x_high_obs) / 2, (self.y_low_obs + self.y_high_obs) / 2])
 
         if self.para_dict['real_operate'] == False:
             self.gripper_width = 0.024
@@ -239,6 +239,18 @@ class Arm_env():
         p.setAdditionalSearchPath(pd.getDataPath())
         # p.setPhysicsEngineParameter(numSolverIterations=10)
         p.setTimeStep(1. / 120.)
+
+        self.grid_size = 5
+        self.x_range = (-0.001, 0.001)
+        self.y_range = (-0.001, 0.001)
+        x_center = 0
+        y_center = 0
+        x_offset_values = np.linspace(self.x_range[0], self.x_range[1], self.grid_size)
+        y_offset_values = np.linspace(self.y_range[0], self.y_range[1], self.grid_size)
+        xx, yy = np.meshgrid(x_offset_values, y_offset_values)
+        sigma = 0.01
+        kernel = np.exp(-((xx - x_center) ** 2 + (yy - y_center) ** 2) / (2 * sigma ** 2)) / (2 * np.pi * sigma ** 2)
+        self.kernel = kernel / np.sum(kernel)
 
     def create_scene(self):
 
@@ -355,7 +367,7 @@ class Arm_env():
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
                 # self.lwh_list, rdm_pos, rdm_ori, self.all_index, self.transform_flag = self.boxes_sort.get_data_real(self.yolo_model, self.para_dict['evaluations'])
-                manipulator_init, lwh_list_init, pred_conf = self.get_obs()
+                manipulator_init, lwh_list_init, pred_cls, pred_conf = self.get_obs()
 
                 rdm_pos = manipulator_init[:, :3]
                 rdm_ori = manipulator_init[:, 3:]
@@ -387,10 +399,8 @@ class Arm_env():
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
-        if self.para_dict['real_operate'] == False:
-            pass
-        else:
-            return manipulator_init, lwh_list_init, []
+
+        return manipulator_init, lwh_list_init, pred_cls, pred_conf
 
     def delete_objects(self, manipulator_after=None):
 
@@ -499,16 +509,72 @@ class Arm_env():
                 # p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
             pass
 
+    def gaussian_center(self, stack_center):
+
+        x_blured = stack_center[0] + np.linspace(self.x_range[0], self.x_range[1], self.grid_size ** 2)
+        y_blured = stack_center[1] + np.linspace(self.y_range[0], self.y_range[1], self.grid_size ** 2)
+        flattened_prob = self.kernel.flatten()
+        selected_indices = np.random.choice(len(flattened_prob), self.num_rays, p=flattened_prob)
+        selected_x = x_blured[selected_indices].reshape(-1, 1)
+        selected_y = y_blured[selected_indices].reshape(-1, 1)
+        center_list = np.concatenate((selected_x, selected_y), axis=1)
+
+        return center_list
+
+    def get_ray(self, pos_ori, lwh):
+
+        self.angular_distance = np.pi / 8
+        self.num_rays = 1
+        if self.para_dict['real_operate'] == True:
+            self.ray_height = 0.015
+        else:
+            self.ray_height = 0.01
+
+        stack_center = np.mean(pos_ori[:, :2], axis=0)
+        far_box_index = np.argmax(np.linalg.norm(pos_ori[:, :2] - stack_center, axis=1))
+        far_box_pos = pos_ori[far_box_index, :2]
+        # radius_start = (np.linalg.norm(stack_center - far_box_pos) +
+        #           np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
+        #           np.linalg.norm([self.gripper_width, self.gripper_height]) / 2 +
+        #           self.gripper_interval)
+        radius_end = (np.linalg.norm(stack_center - far_box_pos))
+        radius_start = (np.linalg.norm(stack_center - far_box_pos) +
+                        np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
+                        self.gripper_width / 2)
+        # radius_end = 0
+        center_list = self.gaussian_center(stack_center)
+        angle_center_stack = np.arctan2(stack_center[1] - self.table_center[1], stack_center[0] - self.table_center[0])
+        # angle_list = np.random.uniform(-np.pi, np.pi, self.num_rays)
+        angle_list = np.random.uniform(angle_center_stack - (self.num_rays // 2) * self.angular_distance,
+                                       angle_center_stack + (self.num_rays // 2) * self.angular_distance, self.num_rays)
+
+        x_offset_start = np.cos(angle_list) * radius_start
+        y_offset_start = np.sin(angle_list) * radius_start
+        x_offset_end = np.cos(angle_list) * radius_end
+        y_offset_end = np.sin(angle_list) * radius_end
+
+        angle_list += np.pi / 2
+        large_angle_index = np.where(angle_list > np.pi)[0]
+        angle_list[large_angle_index] -= np.pi
+        small_angle_index = np.where(angle_list < -np.pi)[0]
+        angle_list[small_angle_index] += np.pi
+
+        start_pos = np.array([center_list[:, 0] + x_offset_start, center_list[:, 1] + y_offset_start]).T
+        end_pos = np.array([center_list[:, 0] - x_offset_end, center_list[:, 1] - y_offset_end]).T
+
+        rays = np.concatenate((start_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
+                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1),
+                               end_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
+                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1)), axis=1)
+        return rays
+
     def reset(self, epoch=None, manipulator_after=None, lwh_after=None, recover_flag=False):
 
         p.resetSimulation()
         self.create_scene()
         self.create_arm()
         if recover_flag == False:
-            if self.para_dict['real_operate'] == False:
-                self.create_objects()
-            else:
-                manipulator_before, lwh_list, crowded_index = self.create_objects(manipulator_after, lwh_after)
+            manipulator_before, lwh_list, pred_cls, pred_conf = self.create_objects(manipulator_after, lwh_after)
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.recover_objects(info_path)
@@ -518,8 +584,8 @@ class Arm_env():
         self.state_id = p.saveState()
         # return img_per_epoch_result
 
-        if recover_flag == False and self.para_dict['real_operate'] == True:
-            return manipulator_before, lwh_list, crowded_index
+        if recover_flag == False:
+            return manipulator_before, lwh_list, pred_cls, pred_conf
         else:
             pass
 
@@ -901,13 +967,13 @@ class Arm_env():
                 img, _ = get_images()
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.yolo_grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
                 ################### the results of object detection has changed the order!!!! ####################
 
             else:
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.yolo_grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
+                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
                 ################### the results of object detection has changed the order!!!! ####################
 
             return manipulator_before, new_lwh_list, pred_cls, pred_conf

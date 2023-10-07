@@ -357,7 +357,7 @@ class calibration_main(Arm_env):
 
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
-            HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
+            HOST = "192.168.0.244"  # Standard loopback interface address (localhost)
             PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
@@ -431,7 +431,7 @@ if __name__ == '__main__':
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,
-                 'use_knolling_model': False, 'use_lstm_model': False}
+                 'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': False}
 
     generate_dict = {'real_time_flag': False, 'erase_flag': True, 'collect_num': 50, 'max_plot_num': 250,
                      'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True,

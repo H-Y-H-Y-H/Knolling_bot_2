@@ -250,7 +250,7 @@ class Yolo_pose_model():
 
         return im, result
 
-    def yolo_pose_predict(self, first_flag=False, sub_index=0, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
+    def grasp_predict(self, first_flag=False, sub_index=0, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
         self.epoch = epoch
         if real_flag == True:

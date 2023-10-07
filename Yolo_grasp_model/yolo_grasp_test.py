@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import cv2
 from utils import *
-# import pyrealsense2 as rs
+import pyrealsense2 as rs
 from models.grasp_model_deploy import *
 import matplotlib.pyplot as plt
 
@@ -371,7 +371,7 @@ if __name__ == '__main__':
     para_dict = {'device': 'cuda:0', 'yolo_conf': 0.004, 'yolo_iou': 0.8,
                  'yolo_model_path': '../models/919_grasp/weights/best.pt',
                  'dataset_path': '../../knolling_dataset/yolo_grasp_dataset_919/',
-                 'index_begin': 36000}
+                 'index_begin': 44000}
 
     log_save_path = '../models/919_grasp/'
 

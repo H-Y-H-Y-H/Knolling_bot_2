@@ -1,0 +1,16 @@
+----------- Dataset -----------
+threshold_start: 0.3
+threshold_end: 0.8
+threshold: 0.8, max accuracy: 0.9814004376367614
+threshold: 0.8, max precision: 0.9646098003629764
+----------- Dataset -----------
+threshold: 0.300000, recall: 0.2922, precision: 0.9463, accuracy: 0.9706
+threshold: 0.355556, recall: 0.2923, precision: 0.9463, accuracy: 0.9706
+threshold: 0.411111, recall: 0.2924, precision: 0.9463, accuracy: 0.9706
+threshold: 0.466667, recall: 0.2925, precision: 0.9462, accuracy: 0.9706
+threshold: 0.522222, recall: 0.2927, precision: 0.9487, accuracy: 0.9713
+threshold: 0.577778, recall: 0.2931, precision: 0.9503, accuracy: 0.9723
+threshold: 0.633333, recall: 0.2930, precision: 0.9559, accuracy: 0.9745
+threshold: 0.688889, recall: 0.2929, precision: 0.9591, accuracy: 0.9767
+threshold: 0.744444, recall: 0.2939, precision: 0.9623, accuracy: 0.9801
+threshold: 0.800000, recall: 0.2963, precision: 0.9646, accuracy: 0.9814

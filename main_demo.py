@@ -529,8 +529,8 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(10, 11),
-                 'is_render': False,
+                 'boxes_num': np.random.randint(5, 6),
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -541,7 +541,7 @@ if __name__ == '__main__':
                  'dataset_path': './knolling_box/',
                  'urdf_path': './urdf/',
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
-                 'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': False,
+                 'real_operate': False, 'obs_order': 'real_image_obj', 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_model': True, 'use_yolo_model': True}
 
     if para_dict['real_operate'] == False:

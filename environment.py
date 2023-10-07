@@ -330,6 +330,10 @@ class Arm_env():
                 y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
                 print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
                 rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
+                if self.para_dict['use_lstm_model'] == True:
+                    manipulator_init, lwh_list_init, pred_conf, crowded_index, prediction, model_output = self.get_obs()
+                else:
+                    manipulator_init, lwh_list_init, pred_conf = self.get_obs()
 
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
@@ -369,10 +373,8 @@ class Arm_env():
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
-        if self.para_dict['real_operate'] == False:
-            pass
-        else:
-            return manipulator_init, lwh_list_init, []
+
+        return manipulator_init, lwh_list_init, []
 
     def delete_objects(self, manipulator_after=None):
 
