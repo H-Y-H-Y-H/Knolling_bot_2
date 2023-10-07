@@ -19,6 +19,208 @@ class knolling_main(Arm_env):
         self.success_lwh = []
         self.success_num = 0
 
+    # def clean_grasp(self):
+    #     if self.para_dict['real_operate'] == False:
+    #         gripper_width = 0.024
+    #         gripper_height = 0.034
+    #     else:
+    #         gripper_width = 0.018
+    #         gripper_height = 0.04
+    #     workbench_center = np.array([(self.x_high_obs + self.x_low_obs) / 2,
+    #                                  (self.y_high_obs + self.y_low_obs) / 2])
+    #
+    #     offset_low = np.array([0, 0, 0.005])
+    #     offset_high = np.array([0, 0, 0.04])
+    #
+    #     tar_success = np.copy(len(self.manipulator_before))
+    #     crowded_index = np.where(self.pred_cls == 0)[0]
+    #
+    #     restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
+    #     gripper_box_gap = 0.006
+    #
+    #     while True:
+    #
+    #         ####### knolling only if the number of boxes we can grasp is more than 2 #######
+    #         if len(manipulator_before) - len(crowded_index) >= 1:
+    #             self.knolling(manipulator_before=manipulator_before, new_lwh_list=new_lwh_list, crowded_index=crowded_index)
+    #             ############## exclude boxes which have been knolling ##############
+    #             manipulator_before = manipulator_before[len(self.success_manipulator_after):]
+    #             new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
+    #             crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
+    #             ############## exclude boxes which have been knolling ##############
+    #
+    #             if len(self.success_manipulator_after) >= tar_success:
+    #                 self.get_obs(look_flag=True)
+    #                 break
+    #         ####### knolling only if the number of boxes we can grasp is more than 2 #######
+    #
+    #         crowded_pos = manipulator_before[:, :3]
+    #         crowded_ori = manipulator_before[:, 3:6]
+    #         theta = manipulator_before[:, -1]
+    #         length_box = new_lwh_list[:, 0]
+    #         width_box = new_lwh_list[:, 1]
+    #
+    #         trajectory_pos_list = []
+    #         trajectory_ori_list = []
+    #         for i in range(len(crowded_index)):
+    #             break_flag = False
+    #             once_flag = False
+    #             if length_box[i] < width_box[i]:
+    #                 theta[i] += np.pi / 2
+    #             matrix = np.array([[np.cos(theta[i]), -np.sin(theta[i])],
+    #                                [np.sin(theta[i]), np.cos(theta[i])]])
+    #             target_point = np.array([[(length_box[i] + gripper_height + gripper_box_gap) / 2,
+    #                                       (width_box[i] + gripper_width + gripper_box_gap) / 2],
+    #                                      [-(length_box[i] + gripper_height + gripper_box_gap) / 2,
+    #                                       (width_box[i] + gripper_width + gripper_box_gap) / 2],
+    #                                      [-(length_box[i] + gripper_height + gripper_box_gap) / 2,
+    #                                       -(width_box[i] + gripper_width + gripper_box_gap) / 2],
+    #                                      [(length_box[i] + gripper_height + gripper_box_gap) / 2,
+    #                                       -(width_box[i] + gripper_width + gripper_box_gap) / 2]])
+    #             target_point_rotate = (matrix.dot(target_point.T)).T
+    #             print('this is target point rotate\n', target_point_rotate)
+    #             sequence_point = np.concatenate((target_point_rotate, np.zeros((4, 1))), axis=1)
+    #
+    #             t = 0
+    #             for j in range(len(sequence_point)):
+    #                 vertex_break_flag = False
+    #                 for k in range(len(manipulator_before)):
+    #                     # exclude itself
+    #                     if np.linalg.norm(crowded_pos[i] - manipulator_before[k][:3]) < 0.001:
+    #                         continue
+    #                     restrict_item_k = np.sqrt((new_lwh_list[k][0]) ** 2 + (new_lwh_list[k][1]) ** 2)
+    #                     if 0.001 < np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][
+    #                                                                                    :3]) < restrict_item_k / 2 + restrict_gripper_diagonal / 2 + 0.001:
+    #                         print(np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]))
+    #                         p.addUserDebugPoints([sequence_point[0] + crowded_pos[i]], [[0.1, 0, 0]], pointSize=5)
+    #                         p.addUserDebugPoints([manipulator_before[k][:3]], [[0, 1, 0]], pointSize=5)
+    #                         print("this vertex doesn't work")
+    #                         vertex_break_flag = True
+    #                         break
+    #                 if vertex_break_flag == False:
+    #                     print("this vertex is ok")
+    #                     print(break_flag)
+    #                     once_flag = True
+    #                     break
+    #                 else:
+    #                     # should change the vertex and try again
+    #                     sequence_point = np.roll(sequence_point, -1, axis=0)
+    #                     print(sequence_point)
+    #                     t += 1
+    #                 if t == len(sequence_point):
+    #                     # all vertex of this cube fail, should change the cube
+    #                     break_flag = True
+    #
+    #             # problem, change another crowded cube
+    #             if break_flag == True:
+    #                 if i == len(crowded_index) - 1:
+    #                     print('cannot find any proper vertices to insert, we should unpack the heap!!!')
+    #                     x_high = np.max(self.manipulator_after[:, 0])
+    #                     x_low = np.min(self.manipulator_after[:, 0])
+    #                     y_high = np.max(self.manipulator_after[:, 1])
+    #                     y_low = np.min(self.manipulator_after[:, 1])
+    #                     crowded_x_high = np.max(crowded_pos[:, 0])
+    #                     crowded_x_low = np.min(crowded_pos[:, 0])
+    #                     crowded_y_high = np.max(crowded_pos[:, 1])
+    #                     crowded_y_low = np.min(crowded_pos[:, 1])
+    #
+    #                     trajectory_pos_list.append([1, 0])
+    #                     trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_high[2]])
+    #                     trajectory_pos_list.append([(x_high + x_low) / 2, (y_high + y_low) / 2, offset_low[2]])
+    #                     trajectory_pos_list.append(
+    #                         [(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2,
+    #                          offset_low[2]])
+    #                     trajectory_pos_list.append(
+    #                         [(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2,
+    #                          offset_high[2]])
+    #                     trajectory_pos_list.append(self.para_dict['reset_pos'])
+    #
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                     trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                 else:
+    #                     pass
+    #             else:
+    #                 trajectory_pos_list.append([1, 0])
+    #                 print('this is crowded pos', crowded_pos[i])
+    #                 print('this is sequence point', sequence_point)
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[1])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[2])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[3])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
+    #                 trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
+    #                 # reset the manipulator to read the image
+    #                 trajectory_pos_list.append(self.para_dict['reset_pos'])
+    #
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+    #                 # reset the manipulator to read the image
+    #                 trajectory_ori_list.append([0, math.pi / 2, 0])
+    #
+    #             # only once!
+    #             if once_flag == True:
+    #                 break
+    #         last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+    #         last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+    #         # trajectory_pos_list = np.asarray(trajectory_pos_list)
+    #         # trajectory_ori_list = np.asarray(trajectory_ori_list)
+    #
+    #         ######################### add the debug lines for visualization ####################
+    #         line_id = []
+    #         four_points = trajectory_pos_list[2:6]
+    #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[0], lineToXYZ=four_points[1]))
+    #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[1], lineToXYZ=four_points[2]))
+    #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[2], lineToXYZ=four_points[3]))
+    #         line_id.append(p.addUserDebugLine(lineFromXYZ=four_points[3], lineToXYZ=four_points[0]))
+    #         ######################### add the debug line for visualization ####################
+    #
+    #         for j in range(len(trajectory_pos_list)):
+    #             if len(trajectory_pos_list[j]) == 3:
+    #                 last_pos = self.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j])
+    #                 last_ori = np.copy(trajectory_ori_list[j])
+    #             elif len(trajectory_pos_list[j]) == 2:
+    #                 self.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+    #
+    #         ######################### remove the debug lines after moving ######################
+    #         for i in line_id:
+    #             p.removeUserDebugItem(i)
+    #         ######################### remove the debug lines after moving ######################
+    #
+    #         ################### Check the results to determine whether to clean again #####################
+    #         manipulator_before, new_lwh_list, pred_conf = self.get_obs()
+    #         order = change_sequence(manipulator_before)
+    #         manipulator_before = manipulator_before[order]
+    #         new_lwh_list = new_lwh_list[order]
+    #         pred_conf = pred_conf[order]
+    #         crowded_index, prediction, model_output = self.grasp_model.pred_yolo(manipulator_before, new_lwh_list,
+    #                                                                              pred_conf)
+    #         ############## exclude boxes which have been knolling ##############
+    #         manipulator_before = manipulator_before[len(self.success_manipulator_after):]
+    #         prediction = prediction[len(self.success_manipulator_after):]
+    #         new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
+    #         crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
+    #         model_output = model_output[len(self.success_manipulator_after):]
+    #         ############## exclude boxes which have been knolling ##############
+    #         self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
+    #         ################### Check the results to determine whether to clean again #####################
+    #         print('here')
+    #
+    #         manipulator_before = np.concatenate((self.success_manipulator_after, manipulator_before), axis=0)
+    #         new_lwh_list = np.concatenate((self.success_lwh, new_lwh_list), axis=0)
+    #
+    #     return
+
     def clean_grasp(self):
         if self.para_dict['real_operate'] == False:
             gripper_width = 0.024
@@ -26,28 +228,19 @@ class knolling_main(Arm_env):
         else:
             gripper_width = 0.018
             gripper_height = 0.04
+
         workbench_center = np.array([(self.x_high_obs + self.x_low_obs) / 2,
                                      (self.y_high_obs + self.y_low_obs) / 2])
-
         offset_low = np.array([0, 0, 0.005])
-        offset_high = np.array([0, 0, 0.035])
+        offset_high = np.array([0, 0, 0.04])
 
-        ############ Predict the probability of grasp, remember to change the sequence of input #############
-        manipulator_before, new_lwh_list, pred_conf = self.get_obs()
-        order = change_sequence(manipulator_before)
-        manipulator_before = manipulator_before[order]
-        new_lwh_list = new_lwh_list[order]
-        pred_conf = pred_conf[order]
-        crowded_index, prediction, model_output = self.grasp_model.pred_yolo(manipulator_before, new_lwh_list,
-                                                                             pred_conf)
-        self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
-        ############ Predict the probability of grasp, remember to change the sequence of input #############
-        tar_success = np.copy(len(manipulator_before))
+        tar_success = np.copy(len(self.manipulator_before))
+        crowded_index = np.where(self.pred_cls == 0)[0]
 
         restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
         gripper_box_gap = 0.006
 
-        while True:
+        while len(self.manipulator_before) > len(crowded_index):
 
             ####### knolling only if the number of boxes we can grasp is more than 2 #######
             if len(manipulator_before) - len(crowded_index) >= 1:
