@@ -333,7 +333,8 @@ class Arm_env():
                 if self.para_dict['use_lstm_model'] == True:
                     manipulator_init, lwh_list_init, pred_conf, crowded_index, prediction, model_output = self.get_obs()
                 else:
-                    manipulator_init, lwh_list_init, pred_conf = self.get_obs()
+                    # manipulator_init, lwh_list_init, pred_conf = self.get_obs()
+                    pass
 
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
@@ -374,7 +375,7 @@ class Arm_env():
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
 
-        return manipulator_init, lwh_list_init, []
+        # return manipulator_init, lwh_list_init, []
 
     def delete_objects(self, manipulator_after=None):
 
@@ -897,7 +898,7 @@ class Arm_env():
                     #     # cv2.imwrite(img_path_output, origin_img)
                     #     break
                 else:
-                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.yolo_pose_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
                 ################### the results of object detection has changed the order!!!! ####################
 
             else:
