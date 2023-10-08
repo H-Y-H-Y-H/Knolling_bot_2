@@ -72,5 +72,35 @@ class LSTMRegressor(nn.Module):
         return loss
 
 if __name__ == '__main__':
-    model = LSTMRegressor()
+
+    para_dict = {'device': 'cuda:0',
+                 'num_img': 450000,
+                 'ratio': 0.8,
+                 'epoch': 300,
+                 'model_path': '../Grasp_pred_model/results/LSTM_918_0/',
+                 'data_path': '../../knolling_dataset/grasp_dataset_914/labels_1/',
+                 'learning_rate': 0.001, 'patience': 10, 'factor': 0.1,
+                 'network': 'binary',
+                 'batch_size': 64,
+                 'input_size': 6,
+                 'hidden_size': 32,
+                 'box_one_img': 10,
+                 'num_layers': 8,
+                 'output_size': 2,
+                 'abort_learning': 20,
+                 'set_dropout': 0.1,
+                 'run_name': '918_0',
+                 'project_name': 'zzz_LSTM_cross_no_scaler_heavy',
+                 'wandb_flag': False,
+                 'use_mse': False,
+                 'use_scaler': False,
+                 'fine-tuning': False,
+                 'load_path': '../Grasp_pred_model/results/LSTM_829_1_heavy_dropout0/',
+                 'hidden_node_1': 32, 'hidden_node_2': 8}
+
+    model = LSTMRegressor(input_dim=para_dict['input_size'], hidden_dim=para_dict['hidden_size'], output_dim=para_dict['output_size'],
+                          num_layers=para_dict['num_layers'], hidden_node_1=para_dict['hidden_node_1'],
+                          hidden_node_2=para_dict['hidden_node_2'],
+                          batch_size=para_dict['batch_size'], device=para_dict['device'], criterion=nn.CrossEntropyLoss(),
+                          set_dropout=para_dict['set_dropout'])
     print(model)
