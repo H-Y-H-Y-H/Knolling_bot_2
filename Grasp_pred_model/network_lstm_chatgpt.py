@@ -70,3 +70,7 @@ class LSTMRegressor(nn.Module):
         loss = self.criterion(pred_mask, tar_mask.long())
 
         return loss
+
+if __name__ == '__main__':
+    model = LSTMRegressor()
+    print(model)
