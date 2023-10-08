@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import cv2
 from utils import *
-# import pyrealsense2 as rs
+import pyrealsense2 as rs
 from models.grasp_model_deploy import *
 
 class PosePredictor(DetectionPredictor):
@@ -254,7 +254,7 @@ class Yolo_pose_model():
 
         self.epoch = epoch
         if real_flag == True:
-            self.img_path = self.para_dict['data_tar_path'] + 'real_images/%012d' % (self.epoch)
+            self.img_path = self.para_dict['data_source_path'] + 'real_images/%012d' % (self.epoch)
             # os.makedirs(img_path, exist_ok=True)
             model = self.para_dict['yolo_model_path']
             pipeline = rs.pipeline()
@@ -305,14 +305,14 @@ class Yolo_pose_model():
                 one_img = images[0]
 
                 pred_result = []
-                pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
+                pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
                 if len(pred_xylws) == 0:
                     continue
-                pred_keypoints = one_img.keypoints.cpu().detach().numpy()
+                pred_keypoints = one_img.keypoints.cpu().detach().numpy()[:gt_boxes_num]
                 pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
                 pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
-                pred_cls = one_img.boxes.cls.cpu().detach().numpy()
-                pred_conf = one_img.boxes.conf.cpu().detach().numpy()
+                pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
+                pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
                 pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
 
                 ######## order based on distance to draw it on the image!!!
@@ -345,6 +345,9 @@ class Yolo_pose_model():
 
                 if self.para_dict['use_lstm_model'] == True:
                     crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+                    yolo_baseline_threshold = 0.92
+                    prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
+                    model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
                     print('this is crowded_index', crowded_index)
                     print('this is prediction', prediction)
                     self.plot_grasp(manipulator_before, prediction, model_output)
@@ -454,6 +457,7 @@ class Yolo_pose_model():
             if self.para_dict['use_lstm_model'] == True:
                 crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list,
                                                                                 pred_conf)
+
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)
                 self.plot_grasp(manipulator_before, prediction, model_output)
@@ -503,11 +507,11 @@ class Yolo_pose_model():
             output_img = cv2.putText(output_img, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        cv2.namedWindow('zzz', 0)
-        cv2.resizeWindow('zzz', 1280, 960)
-        cv2.imshow('zzz', output_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.namedWindow('zzz', 0)
+        # cv2.resizeWindow('zzz', 1280, 960)
+        # cv2.imshow('zzz', output_img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
         # img_path_output = self.para_dict['data_tar_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
         #

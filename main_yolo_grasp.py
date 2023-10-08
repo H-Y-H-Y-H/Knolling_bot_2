@@ -226,12 +226,12 @@ class knolling_main(Arm_env):
             gripper_width = 0.024
             gripper_height = 0.034
         else:
-            gripper_width = 0.018
+            gripper_width = 0.024
             gripper_height = 0.04
 
         workbench_center = np.array([(self.x_high_obs + self.x_low_obs) / 2,
                                      (self.y_high_obs + self.y_low_obs) / 2])
-        offset_low = np.array([0, 0, 0.005])
+        offset_low = np.array([0, 0, 0.01])
         offset_high = np.array([0, 0, 0.04])
 
         tar_success = np.copy(len(self.manipulator_before))
@@ -240,27 +240,13 @@ class knolling_main(Arm_env):
         restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
         gripper_box_gap = 0.006
 
-        while len(self.manipulator_before) > len(crowded_index):
+        while len(crowded_index) > 0:
 
-            ####### knolling only if the number of boxes we can grasp is more than 2 #######
-            if len(manipulator_before) - len(crowded_index) >= 1:
-                self.knolling(manipulator_before=manipulator_before, new_lwh_list=new_lwh_list, crowded_index=crowded_index)
-                ############## exclude boxes which have been knolling ##############
-                manipulator_before = manipulator_before[len(self.success_manipulator_after):]
-                new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
-                crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
-                ############## exclude boxes which have been knolling ##############
-
-                if len(self.success_manipulator_after) >= tar_success:
-                    self.get_obs(look_flag=True)
-                    break
-            ####### knolling only if the number of boxes we can grasp is more than 2 #######
-
-            crowded_pos = manipulator_before[:, :3]
-            crowded_ori = manipulator_before[:, 3:6]
-            theta = manipulator_before[:, -1]
-            length_box = new_lwh_list[:, 0]
-            width_box = new_lwh_list[:, 1]
+            crowded_pos = self.manipulator_before[crowded_index, :3]
+            crowded_ori = self.manipulator_before[crowded_index, 3:6]
+            theta = self.manipulator_before[crowded_index, -1]
+            length_box = self.lwh_list[crowded_index, 0]
+            width_box = self.lwh_list[crowded_index, 1]
 
             trajectory_pos_list = []
             trajectory_ori_list = []
@@ -286,22 +272,21 @@ class knolling_main(Arm_env):
                 t = 0
                 for j in range(len(sequence_point)):
                     vertex_break_flag = False
-                    for k in range(len(manipulator_before)):
+                    for k in range(len(self.manipulator_before)):
                         # exclude itself
-                        if np.linalg.norm(crowded_pos[i] - manipulator_before[k][:3]) < 0.001:
+                        if np.linalg.norm(crowded_pos[i] - self.manipulator_before[k][:3]) < 0.001:
                             continue
-                        restrict_item_k = np.sqrt((new_lwh_list[k][0]) ** 2 + (new_lwh_list[k][1]) ** 2)
-                        if 0.001 < np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][
+                        restrict_item_k = np.sqrt((self.lwh_list[k][0]) ** 2 + (self.lwh_list[k][1]) ** 2)
+                        if 0.001 < np.linalg.norm(sequence_point[0] + crowded_pos[i] - self.manipulator_before[k][
                                                                                        :3]) < restrict_item_k / 2 + restrict_gripper_diagonal / 2 + 0.001:
-                            print(np.linalg.norm(sequence_point[0] + crowded_pos[i] - manipulator_before[k][:3]))
+                            print(np.linalg.norm(sequence_point[0] + crowded_pos[i] - self.manipulator_before[k][:3]))
                             p.addUserDebugPoints([sequence_point[0] + crowded_pos[i]], [[0.1, 0, 0]], pointSize=5)
-                            p.addUserDebugPoints([manipulator_before[k][:3]], [[0, 1, 0]], pointSize=5)
+                            p.addUserDebugPoints([self.manipulator_before[k][:3]], [[0, 1, 0]], pointSize=5)
                             print("this vertex doesn't work")
                             vertex_break_flag = True
                             break
                     if vertex_break_flag == False:
                         print("this vertex is ok")
-                        print(break_flag)
                         once_flag = True
                         break
                     else:
@@ -400,33 +385,28 @@ class knolling_main(Arm_env):
             ######################### remove the debug lines after moving ######################
 
             ################### Check the results to determine whether to clean again #####################
-            manipulator_before, new_lwh_list, pred_conf = self.get_obs()
-            order = change_sequence(manipulator_before)
-            manipulator_before = manipulator_before[order]
-            new_lwh_list = new_lwh_list[order]
-            pred_conf = pred_conf[order]
-            crowded_index, prediction, model_output = self.grasp_model.pred_yolo(manipulator_before, new_lwh_list,
-                                                                                 pred_conf)
-            ############## exclude boxes which have been knolling ##############
-            manipulator_before = manipulator_before[len(self.success_manipulator_after):]
-            prediction = prediction[len(self.success_manipulator_after):]
-            new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
-            crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
-            model_output = model_output[len(self.success_manipulator_after):]
-            ############## exclude boxes which have been knolling ##############
-            self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
-            ################### Check the results to determine whether to clean again #####################
-            print('here')
+            self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.get_obs()
+            crowded_index = np.where(self.pred_cls == 0)[0]
+            # ############## exclude boxes which have been knolling ##############
+            # manipulator_before = manipulator_before[len(self.success_manipulator_after):]
+            # prediction = prediction[len(self.success_manipulator_after):]
+            # new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
+            # crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
+            # model_output = model_output[len(self.success_manipulator_after):]
+            # ############## exclude boxes which have been knolling ##############
+            # self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
 
-            manipulator_before = np.concatenate((self.success_manipulator_after, manipulator_before), axis=0)
-            new_lwh_list = np.concatenate((self.success_lwh, new_lwh_list), axis=0)
+            ################### Check the results to determine whether to clean again #####################
+
+            # manipulator_before = np.concatenate((self.success_manipulator_after, manipulator_before), axis=0)
+            # new_lwh_list = np.concatenate((self.success_lwh, new_lwh_list), axis=0)
 
         return
 
     def gripper(self, gap, obj_width):
 
         if gap > 0.5:
-            self.keep_obj_width = obj_width + 0.01
+            self.keep_obj_width = obj_width + 0.010
         obj_width += 0.010
         if self.para_dict['real_operate'] == True:
             obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
@@ -644,7 +624,8 @@ class knolling_main(Arm_env):
         manipulator_before, manipulator_after, lwh_list = self.get_knolling_data(pos_before=pos_before,
                                                                                  ori_before=ori_before,
                                                                                  lwh_list=self.lwh_list,
-                                                                                 crowded_index=crowded_index)
+                                                                                 crowded_index=crowded_index,
+                                                                                 offline_flag=False)
 
         manipulator_before = manipulator_before[self.success_num:]
         manipulator_after = manipulator_after[self.success_num:]
@@ -657,7 +638,7 @@ class knolling_main(Arm_env):
 
         offset_low = np.array([0, 0, 0.005])
         offset_low_place = np.array([0, 0, 0.007])
-        offset_high = np.array([0, 0, 0.040])
+        offset_high = np.array([0, 0, 0.04])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
             trajectory_pos_list = [[0, grasp_width[i]],  # gripper open!
@@ -711,7 +692,7 @@ class knolling_main(Arm_env):
             # time.sleep(1 / 48)
         ############### Back to the reset pos and ori ###############
 
-        self.get_obs(look_flag=True, img_path='main_knolling')
+        self.get_obs(look_flag=True, img_path=self.para_dict['data_source_path'] + 'real_images/after.png')
 
     def step(self):
 
@@ -722,8 +703,8 @@ class knolling_main(Arm_env):
 
         if self.para_dict['real_operate'] == True:
 
-            HOST = "192.168.0.186"  # Standard loopback interface address (localhost)
-            PORT = 8881  # Port to listen on (non-privileged ports are > 1023)
+            HOST = "192.168.0.187"  # Standard loopback interface address (localhost)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -751,7 +732,7 @@ class knolling_main(Arm_env):
         else:
             self.conn = None
             self.real_table_height = 0.026
-            self.sim_table_height = -0.01
+            self.sim_table_height = -0.012
 
         # self.conn = None
         # self.real_table_height = 0.026
@@ -759,8 +740,9 @@ class knolling_main(Arm_env):
 
         #######################################################################################
         # 1: clean_grasp + knolling, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
-        self.unstack()
-        # self.knolling()
+        self.clean_grasp()
+        # self.unstack()
+        self.knolling()
         #######################################################################################
 
         if self.para_dict['real_operate'] == True:
@@ -780,7 +762,7 @@ if __name__ == '__main__':
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': True,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -788,16 +770,16 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'dataset_path': './knolling_box/',
+                 'data_source_path': './knolling_box/',
                  'urdf_path': './urdf/',
                  'yolo_model_path': './models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_model': False, 'use_yolo_model': True}
+                 'real_operate': True, 'obs_order': 'sim_image_obj', 'data_collection': False,
+                 'use_knolling_model': True, 'use_lstm_model': True, 'use_yolo_model': False}
 
-    if para_dict['real_operate'] == False:
-        para_dict['yolo_model_path'] = './models/924_grasp/weights/best.pt'
-    else:
+    if para_dict['real_operate'] == True:
         para_dict['yolo_model_path'] = './models/830_pile_real_box/weights/best.pt'
+    if para_dict['use_yolo_model'] == True:
+        para_dict['yolo_model_path'] = './models/924_grasp/weights/best.pt'
 
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
@@ -821,9 +803,11 @@ if __name__ == '__main__':
                  'threshold': 0.50,
                  'grasp_model_path': './models/LSTM_918_0/best_model.pt',}
 
-    arrange_dict = {'running_name': 'devoted-terrain-29',
-                    'transformer_model_path': './models/devoted-terrain-29',
-                    'use_yaml': True}
+    arrange_dict = {'running_name': 'autumn-meadow-16',
+                    'transformer_model_path': './models/autumn-meadow-16',
+                    'use_yaml': False,
+                    'arrange_x_offset': 0.03,
+                    'arrange_y_offset': 0.0}
 
     main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
 

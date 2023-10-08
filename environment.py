@@ -754,7 +754,7 @@ class Arm_env():
 
                     if self.is_render:
                         pass
-                        # time.sleep(1 / 720)
+                        time.sleep(1 / 720)
                 if move_success_flag == False:
                     break
             else:
@@ -762,7 +762,7 @@ class Arm_env():
                     p.stepSimulation()
                     if self.is_render:
                         pass
-                        # time.sleep(1 / 720)
+                        time.sleep(1 / 720)
             cur_pos = tar_pos
             cur_ori = tar_ori
             if abs(target_pos[0] - tar_pos[0]) < 0.001 and abs(target_pos[1] - tar_pos[1]) < 0.001 and abs(

@@ -73,7 +73,7 @@ def capture_video():
 
     # Define the codec and create VideoWriter object
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter('sundry_box_4.avi', fourcc, fps, (w, h))
+    out = cv2.VideoWriter('real_box_4.avi', fourcc, fps, (w, h))
 
     recording = False
     print('To start recording, please press "s"')
@@ -109,7 +109,7 @@ def capture_video():
 
 def show_save_video(output_path):
 
-    cap = cv2.VideoCapture('sundry_box_4.avi')
+    cap = cv2.VideoCapture('real_box_4.avi')
     frame_read = 0
     num = 9252
     while (cap.isOpened()):
@@ -145,5 +145,5 @@ if __name__ == '__main__':
 
     output_path = '../../knolling_dataset/yolo_pile_830_real_box/origin_images/'
     os.makedirs(output_path, exist_ok=True)
-    # capture_video()
-    show_save_video(output_path)
+    capture_video()
+    # show_save_video(output_path)

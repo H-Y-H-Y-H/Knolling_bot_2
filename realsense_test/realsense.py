@@ -30,8 +30,8 @@ if not found_rgb:
     print("The demo requires Depth camera with Color sensor")
     exit(0)
 
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-# config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+# config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 # config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 6)
 # Start streaming
 pipeline.start(config)
@@ -42,9 +42,7 @@ try:
     while True:
         # Wait for a coherent pair of frames: depth and color
         frames = pipeline.wait_for_frames()
-
         color_frame = frames.get_color_frame()
-
         color_image = np.asanyarray(color_frame.get_data())
 
         color_colormap_dim = color_image.shape
@@ -54,13 +52,14 @@ try:
         #### add line
 
 
-        # ratio = 34 / 30
-        # x_ratio = 0.975
-        # y_ratio = 480 * x_ratio * ratio / 640
-        # first_point = int((640 - 640 * y_ratio) / 2), int((480 - 480 * x_ratio) / 2)
-        # second_point = int((640 - 640 * y_ratio) / 2 + int(640 * y_ratio)), int((480 - 480 * x_ratio) / 2) + int(480 * x_ratio)
-        # print(first_point)
-        # print(second_point)
+        ratio = 34 / 30
+        x_ratio = 0.975
+        y_ratio = 480 * x_ratio * ratio / 640
+        first_point = int((640 - 640 * y_ratio) / 2), int((480 - 480 * x_ratio) / 2)
+        second_point = int((640 - 640 * y_ratio) / 2 + int(640 * y_ratio)), int((480 - 480 * x_ratio) / 2) + int(480 * x_ratio)
+        print(first_point)
+        print(second_point)
+        resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
 
         resized_color_image = cv2.line(resized_color_image, (320, 0), (320, 480), (255, 255, 0), 1)
         resized_color_image = cv2.line(resized_color_image, (0, 240), (640, 240), (255, 255, 0), 1)

@@ -252,6 +252,8 @@ class Arm_env():
         kernel = np.exp(-((xx - x_center) ** 2 + (yy - y_center) ** 2) / (2 * sigma ** 2)) / (2 * np.pi * sigma ** 2)
         self.kernel = kernel / np.sum(kernel)
 
+        self.main_demo_epoch = 0
+
     def create_scene(self):
 
         if random.uniform(0, 1) > 0.5:
@@ -360,8 +362,8 @@ class Arm_env():
                         pass
                         # time.sleep(1/96)
 
-                # delete the object extend to the edge
-                self.delete_objects(manipulator_after)
+                # # delete the object extend to the edge
+                # self.delete_objects(manipulator_after)
                 manipulator_init, lwh_list_init, pred_cls, pred_conf = self.get_obs()
 
             else:
@@ -611,17 +613,18 @@ class Arm_env():
             canvas[row * image_height:(row + 1) * image_height, col * image_width:(col + 1) * image_width] = image
 
         # Function to handle mouse clicks
-        selected_image_index = None
+        # selected_image_index = 0
         def mouse_click(event, x, y, flags, param):
-            global selected_image_index
+            # global selected_image_index
             if event == cv2.EVENT_LBUTTONDOWN:
                 print('mouse clicked!')
                 col = x // image_width
                 row = y // image_height
                 print('this is col', col)
                 print('this is row', row)
-                selected_image_index = row * num_col + col
-                print(selected_image_index)
+                self.selected_image_index = row * num_col + col
+                # print(self.selected_image_index)
+                # return selected_image_index
 
         # Create a window and set the mouse callback function
         cv2.namedWindow('Multiple Images')
@@ -629,83 +632,95 @@ class Arm_env():
 
         # Display the canvas with all images
         cv2.imshow('Multiple Images', canvas)
+        # while True:
+        #     # key = cv2.waitKey(1) & 0xFF
+        if cv2.waitKey(0):
 
-        while True:
-            key = cv2.waitKey(1) & 0xFF
-            if selected_image_index is not None:
-                break
+            print('this is selected index', self.selected_image_index)
+            # Close the window
+            cv2.destroyAllWindows()
 
-        # Close the window
-        cv2.destroyAllWindows()
+            # Print the selected image index (0-based)
+            if self.selected_image_index is not None:
+                print(f"Selected image index: {self.selected_image_index}")
+            else:
+                print("No image selected.")
 
-        # Print the selected image index (0-based)
-        if selected_image_index is not None:
-            print(f"Selected image index: {selected_image_index}")
-        else:
-            print("No image selected.")
+            return self.selected_image_index
 
-        return selected_image_index
+    def get_knolling_data(self, pos_before, ori_before, lwh_list, crowded_index, offline_flag=True):  # this is main function!!!!!!!!!
 
-    def get_knolling_data(self, pos_before, ori_before, lwh_list, crowded_index):  # this is main function!!!!!!!!!
-
-        arrangement_num = 8 # provide several candidates to select the best output
-        candidate_img = []
         if self.para_dict['use_knolling_model'] == True:
 
-            demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
+            if offline_flag == True:
 
-            record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
-            lwh_list_classify = lwh_list
-            # lwh_list_classify = record_data[:, 2:4]
-            # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
-            # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
+                demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
+                record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
+                lwh_list_classify = lwh_list
+                # lwh_list_classify = record_data[:, 2:4]
+                # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
+                # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
 
-            recover_config = np.concatenate((demo_data[:, :2],
-                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
-                                             np.zeros((len(demo_data), 2)),
-                                             demo_data[:, -1].reshape(len(demo_data), 1),
-                                             demo_data[:, 2:4],
-                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
-            self.recover_objects(config_data=recover_config)
+                recover_config = np.concatenate((demo_data[:, :2],
+                                                 np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
+                                                 np.zeros((len(demo_data), 2)),
+                                                 demo_data[:, -1].reshape(len(demo_data), 1),
+                                                 demo_data[:, 2:4],
+                                                 np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
+                self.recover_objects(config_data=recover_config)
 
-            manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
-            manipulator_after = recover_config[:, :6]
+                manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
+                manipulator_after = recover_config[:, :6]
 
-            # for i in range(arrangement_num):
-            #     input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
-            #     pos_before_input = pos_before.astype(np.float32)
-            #     ori_before_input = ori_before.astype(np.float32)
-            #     lwh_list_input = lwh_list.astype(np.float32)
-            #     ori_after = np.zeros((len(input_index), 3))
-            #
-            #     #################### exchange the length and width randomly enrich the input ##################
-            #     for j in range(len(input_index)):
-            #         if np.random.random() < 0.5:
-            #             temp = lwh_list_input[j, 0]
-            #             lwh_list_input[j, 1] = lwh_list_input[j, 0]
-            #             lwh_list_input[j, 0] = temp
-            #             ori_after[j, 2] += np.pi / 2
-            #     #################### exchange the length and width randomly enrich the input ##################
-            #
-            #     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
-            #     manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
-            #     manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
-            #     lwh_list_classify = lwh_list_input[input_index]
-            #     rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
-            #     manipulator_after[rotate_index, -1] += np.pi / 2
-            #
-            #     # ##################### add offset to the knolling data #####################
-            #     # manipulator_after[:, 0] -=
-            #     # ##################### add offset to the knolling data #####################
-            #
-            #
-            #     recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
-            #     self.recover_objects(config_data=recover_config)
-            #     candidate_img.append(self.get_obs(look_flag=True, epoch=i, img_path='here'))
-            #
-            # candidate_index = self.get_candidate_index(candidate_img)
+            else:
+                arrangement_num = 8  # provide several candidates to select the best output
+                candidate_img = []
+                candidate_after = []
+                candidate_before = []
+                candidate_lwh = []
+                self.before_arrange_state = p.saveState()
+                for i in range(arrangement_num):
+                    input_index = np.setdiff1d(np.arange(len(pos_before)), crowded_index)
+                    pos_before_input = pos_before.astype(np.float32)
+                    ori_before_input = ori_before.astype(np.float32)
+                    lwh_list_input = lwh_list.astype(np.float32)
+                    ori_after = np.zeros((len(input_index), 3))
 
-            p.restoreState(self.state_id)
+                    #################### exchange the length and width randomly enrich the input ##################
+                    for j in range(len(input_index)):
+                        if np.random.random() < 0.5:
+                            temp = lwh_list_input[j, 1]
+                            lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                            lwh_list_input[j, 0] = temp
+                            ori_after[j, 2] += np.pi / 2
+                    #################### exchange the length and width randomly enrich the input ##################
+
+                    pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+                    manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+                    manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
+                    lwh_list_classify = lwh_list_input[input_index]
+                    rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
+                    manipulator_after[rotate_index, -1] += np.pi / 2
+
+                    # ##################### add offset to the knolling data #####################
+                    manipulator_after[:, 0] += self.arrange_dict['arrange_x_offset']
+                    manipulator_after[:, 1] += self.arrange_dict['arrange_y_offset']
+                    # ##################### add offset to the knolling data #####################
+
+                    recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
+                    self.recover_objects(config_data=recover_config)
+                    candidate_img.append(self.get_obs(look_flag=True, epoch=i, img_path=None))
+                    candidate_before.append(manipulator_before)
+                    candidate_after.append(manipulator_after)
+                    candidate_lwh.append(lwh_list_classify)
+
+                candidate_index = self.get_candidate_index(candidate_img)
+                manipulator_before = candidate_before[candidate_index]
+                manipulator_after = candidate_after[candidate_index]
+                lwh_list_classify = candidate_lwh[candidate_index]
+
+
+            p.restoreState(self.before_arrange_state)
 
         else:
             # determine the center of the tidy configuration
@@ -924,7 +939,11 @@ class Arm_env():
             self.distance_right = np.linalg.norm(bar_pos[:2] - gripper_right_pos[:2])
         return gripper_success_flag
 
-    def get_obs(self, epoch=0, look_flag=False, baseline_flag=False, sub_index=0, img_path=None):
+    def get_obs(self, epoch=None, look_flag=False, baseline_flag=False, sub_index=0, img_path=None):
+
+        if epoch is None:
+            epoch = self.main_demo_epoch
+
         def get_images():
             (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
                                                                              height=480,
@@ -963,17 +982,17 @@ class Arm_env():
             return img
         else:
             if self.para_dict['real_operate'] == False:
-
                 img, _ = get_images()
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
-
             else:
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch)
+                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
+                self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
 
             return manipulator_before, new_lwh_list, pred_cls, pred_conf

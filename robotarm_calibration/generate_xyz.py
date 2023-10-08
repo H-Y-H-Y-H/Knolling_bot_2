@@ -289,10 +289,10 @@ class calibration_main(Arm_env):
                         if len(trajectory_pos_list[j]) == 3:
                             last_pos = RL_dynamics(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                             if trajectory_pos_list[j, 2] > 0.01:
-                                time.sleep(5)
+                                time.sleep(2)
                                 pass
                             else:
-                                time.sleep(5)
+                                time.sleep(2)
                                 pass
                             last_ori = np.copy(rest_ori)
                         elif len(trajectory_pos_list[j]) == 2:
@@ -357,7 +357,7 @@ class calibration_main(Arm_env):
 
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
-            HOST = "192.168.0.244"  # Standard loopback interface address (localhost)
+            HOST = "192.168.0.187"  # Standard loopback interface address (localhost)
             PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))

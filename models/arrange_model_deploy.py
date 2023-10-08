@@ -1,6 +1,6 @@
 from Arrange_knolling_model.transformer_network import *
 import os
-# import wandb
+import wandb
 import argparse
 from utils import *
 import yaml
@@ -348,8 +348,6 @@ class Arrange_model():
         self.arrange_dict = arrange_dict
         self.shift_data = 50
         self.scale_data = 100
-
-
 
         if self.arrange_dict['use_yaml'] == True:
             with open(self.arrange_dict['transformer_model_path'] + '/config-' + self.arrange_dict['running_name'] + '.yaml', 'r') as file:

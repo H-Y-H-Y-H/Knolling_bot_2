@@ -292,6 +292,10 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     max_precision = -np.inf
     max_accuracy = -np.inf
     total_loss = []
+    total_TP = []
+    total_TN = []
+    total_FP = []
+    total_FN = []
     for i in range(len(yolo_threshold)):
         yolo_pred_P = np.where((data[:, -1] >= yolo_threshold[i]))[0]
         yolo_pred_N = np.where((data[:, -1] < yolo_threshold[i]))[0]
@@ -338,6 +342,10 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         print('this is yolo pred TN', yolo_pred_TN)
         print('this is yolo pred FP', yolo_pred_FP)
         print('this is yolo pred FN', yolo_pred_FN)
+        total_TP.append(yolo_pred_TP)
+        total_TN.append(yolo_pred_TN)
+        total_FP.append(yolo_pred_FP)
+        total_FN.append(yolo_pred_FN)
         print('Accuracy (TP + FN) / all: %.04f' % accuracy)
         if (yolo_pred_TP + yolo_pred_FN) == 0:
             print('Recall (TP / (TP + FN)) 0')
@@ -356,6 +364,10 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     yolo_loss = np.asarray(total_loss)
     yolo_loss_mean = np.mean(yolo_loss)
     yolo_loss_std = np.std(yolo_loss)
+    total_TP = np.asarray(total_TP)
+    total_TN = np.asarray(total_TN)
+    total_FP = np.asarray(total_FP)
+    total_FN = np.asarray(total_FN)
 
     print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
     print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
@@ -369,6 +381,9 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
     plt.savefig(analysis_path + 'yolo_pred_analysis.png')
     plt.show()
 
+    total_evaluate_data = np.concatenate(([yolo_threshold], [yolo_pred_recall], [yolo_pred_precision], [yolo_pred_accuracy],
+                                                [total_TP], [total_TN], [total_FP], [total_FN]), axis=0).T
+    np.savetxt(analysis_path + 'yolo_data.txt', total_evaluate_data)
     np.savetxt(analysis_path + 'yolo_loss.txt', yolo_loss)
 
     with open(analysis_path + "yolo_pred_anlysis.txt", "w") as f:
@@ -386,6 +401,10 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         f.write(f'yolo_loss_mean: {yolo_loss_mean}\n')
         f.write(f'yolo_loss_std: {yolo_loss_std}\n')
         f.write('----------- Statistics -----------\n')
+
+        for i in range(len(yolo_threshold)):
+            f.write(f'threshold: {yolo_threshold[i]:.6f}, recall: {yolo_pred_recall[i]:.4f}, precision: {yolo_pred_precision[i]:.4f}, accuracy: {yolo_pred_accuracy[i]:.4f},'
+                f'TP: {total_TP[i]}, TN: {total_TN[i]}, FP: {total_FP[i]}, FN: {total_FN[i]}\n')
 
 if __name__ == '__main__':
 
@@ -410,16 +429,16 @@ if __name__ == '__main__':
     # num = 30000
     # data_move(source_path, target_path, source_start_index, num, target_start_index)
 
-    source_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
-    target_path = '../../../knolling_dataset/grasp_dataset_914/labels_2/'
-    total_num = 450000
-    start_index = 0
-    set_yolo_conf(source_path=source_path, total_num=total_num, target_path=target_path, start_index=start_index, set_conf=0.97)
+    # source_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    # target_path = '../../../knolling_dataset/grasp_dataset_914/labels_2/'
+    # total_num = 450000
+    # start_index = 0
+    # set_yolo_conf(source_path=source_path, total_num=total_num, target_path=target_path, start_index=start_index, set_conf=0.97)
 
-    # data_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
-    # analysis_path = '../../models/LSTM_918_0/'
-    # valid_num = 20000
-    # yolo_accuracy_analysis(path=data_path, total_num=520000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    data_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
+    analysis_path = '../../models/LSTM_918_0/'
+    valid_num = 20000
+    yolo_accuracy_analysis(path=data_path, total_num=450000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
 
     # source_path_1 = '../../../knolling_dataset/grasp_dataset_914_crowded_lab/sim_labels/'
     # source_path_2 = '../../../knolling_dataset/grasp_dataset_914_sparse_lab/sim_labels/'

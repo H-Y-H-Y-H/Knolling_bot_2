@@ -48,7 +48,7 @@ if __name__ == '__main__':
         ratio = para_dict['ratio']
         box_one_img = para_dict['box_one_img']
         data_path = para_dict['data_path']
-        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num, set_conf=1)
+        box_test, grasp_test = data_split(data_path, num_img, ratio, box_one_img, test_model=True, valid_num=valid_num, set_conf=None)
 
         # create the train dataset and test dataset
         batch_size = para_dict['batch_size']
@@ -86,6 +86,10 @@ if __name__ == '__main__':
         model_pred_precision = []
         model_pred_accuracy = []
         model_loss = []
+        total_TP = []
+        total_TN = []
+        total_FP = []
+        total_FN = []
         max_precision = -np.inf
         max_accuracy = -np.inf
         for i in range(len(model_threshold)):
@@ -150,6 +154,10 @@ if __name__ == '__main__':
             print('TN:', TN)
             print('FP:', FP)
             print('FN:', FN)
+            total_TP.append(TP)
+            total_TN.append(TN)
+            total_FP.append(FP)
+            total_FN.append(FN)
             print('Accuracy (TP + FN) / all: %.04f' % ((TP + FN) / (tar_true + tar_false)))
             if (TP + FN) == 0:
                 print('Recall (TP / (TP + FN)) 0')
@@ -184,6 +192,10 @@ if __name__ == '__main__':
         model_loss = np.asarray(model_loss)
         model_loss_mean = np.mean(model_loss)
         model_loss_std = np.std(model_loss)
+        total_TP = np.asarray(total_TP)
+        total_TN = np.asarray(total_TN)
+        total_FP = np.asarray(total_FP)
+        total_FN = np.asarray(total_FN)
 
         print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
         print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
@@ -194,15 +206,16 @@ if __name__ == '__main__':
         plt.xlabel('model_threshold')
         plt.title('analysis of model prediction')
         plt.legend()
-        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_4.png')
+        plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_1.png')
         plt.show()
 
-        np.savetxt(para_dict['model_path'] + 'model_loss_labels_4.txt', model_loss)
+        np.savetxt(para_dict['model_path'] + 'model_loss_labels_1.txt', model_loss)
 
-        total_evaluate_data = np.concatenate(([model_threshold], [model_pred_recall], [model_pred_precision], [model_pred_accuracy]), axis=0).T
-        np.savetxt(para_dict['model_path'] + 'model_data_labels_4.txt', total_evaluate_data)
+        total_evaluate_data = np.concatenate(([model_threshold], [model_pred_recall], [model_pred_precision], [model_pred_accuracy],
+                                              [total_TP], [total_TN], [total_FP], [total_FN]), axis=0).T
+        np.savetxt(para_dict['model_path'] + 'model_data_labels_1.txt', total_evaluate_data)
 
-        with open(para_dict['model_path'] + "model_pred_anlysis_labels_4.txt", "w") as f:
+        with open(para_dict['model_path'] + "model_pred_anlysis_labels_1.txt", "w") as f:
             f.write('----------- Dataset -----------\n')
             f.write(f'valid_num: {valid_num}\n')
             f.write(f'tar_true: {tar_true}\n')
@@ -216,10 +229,11 @@ if __name__ == '__main__':
             f.write('----------- Statistics -----------\n')
             f.write(f'model_loss_mean: {model_loss_mean}\n')
             f.write(f'model_loss_std: {model_loss_std}\n')
-            f.write('----------- Statistics -----------\n')
+            f.write('----------- Statistics sundry_box_4-----------\n')
 
             for i in range(len(model_threshold)):
-                f.write(f'threshold: {model_threshold[i]:.6f}, recall: {model_pred_recall[i]:.4f}, precision: {model_pred_precision[i]:.4f}, accuracy: {model_pred_accuracy[i]:.4f}\n')
+                f.write(f'threshold: {model_threshold[i]:.6f}, recall: {model_pred_recall[i]:.4f}, precision: {model_pred_precision[i]:.4f}, accuracy: {model_pred_accuracy[i]:.4f},'
+                        f'TP: {total_TP[i]}, TN: {total_TN[i]}, FP: {total_FP[i]}, FN: {total_FN[i]}\n')
 
 
     else:
