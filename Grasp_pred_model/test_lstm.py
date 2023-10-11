@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
         model_threshold_start = 0.0
         model_threshold_end = 1
-        check_point = 50
+        check_point = 51
         valid_num = 20000
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
@@ -200,11 +200,11 @@ if __name__ == '__main__':
         print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
         print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
 
-        plt.plot(model_threshold, model_pred_recall, label='model_pred_recall')
-        plt.plot(model_threshold, model_pred_precision, label='model_pred_precision')
-        plt.plot(model_threshold, model_pred_accuracy, label='model_pred_accuracy')
+        plt.plot(model_threshold, model_pred_recall, label='LSTM_pred_recall')
+        plt.plot(model_threshold, model_pred_precision, label='LSTM_pred_precision')
+        plt.plot(model_threshold, model_pred_accuracy, label='LSTM_pred_accuracy')
         plt.xlabel('model_threshold')
-        plt.title('analysis of model prediction')
+        plt.title('analysis of LSTM prediction')
         plt.legend()
         plt.savefig(para_dict['model_path'] + 'model_pred_analysis_labels_1.png')
         plt.show()

@@ -438,7 +438,7 @@ if __name__ == '__main__':
     data_path = '../../../knolling_dataset/grasp_dataset_914/labels_1/'
     analysis_path = '../../models/LSTM_918_0/'
     valid_num = 20000
-    yolo_accuracy_analysis(path=data_path, total_num=450000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=50, valid_num=valid_num, analysis_path=analysis_path)
+    yolo_accuracy_analysis(path=data_path, total_num=450000, ratio=0.8, threshold_start=0.0, threshold_end=1, check_point=51, valid_num=valid_num, analysis_path=analysis_path)
 
     # source_path_1 = '../../../knolling_dataset/grasp_dataset_914_crowded_lab/sim_labels/'
     # source_path_2 = '../../../knolling_dataset/grasp_dataset_914_sparse_lab/sim_labels/'

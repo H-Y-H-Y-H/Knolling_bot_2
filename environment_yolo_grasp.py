@@ -1,5 +1,4 @@
-
-# from arrangement import *
+from arrangement import *
 from models.arrange_model_deploy import *
 from models.visual_perception_config import *
 from models.yolo_grasp_deploy import *
@@ -18,6 +17,7 @@ class Sort_objects():
         self.error_rate = 0.05
         self.para_dict = para_dict
         self.knolling_para = knolling_para
+
     def get_data_virtual(self):
 
         xyz_list = []
@@ -33,68 +33,67 @@ class Sort_objects():
         xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
         return xyz_list
 
-
-    def get_data_real(self, yolo_model, evaluations=1, check='before'):
-
-        os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
-        img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
-        # structure of results: x, y, length, width, ori
-        results, pred_conf = yolo_model.yolo_grasp_predict(img_path=img_path, real_flag=True)
-
-        item_pos = results[:, :3]
-        item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
-        item_ori = np.concatenate((np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
-
-        category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
-        s = item_lw[:, 0] * item_lw[:, 1]
-        s_min, s_max = np.min(s), np.max(s)
-        s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
-        lw_ratio = item_lw[:, 0] / item_lw[:, 1]
-        ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
-        ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
-
-        # ! initiate the number of items
-        all_index = []
-        new_item_xyz = []
-        new_item_pos = []
-        new_item_ori = []
-        transform_flag = []
-        rest_index = np.arange(len(item_lw))
-        index = 0
-
-        for i in range(self.knolling_para['area_num']):
-            for j in range(self.knolling_para['ratio_num']):
-                kind_index = []
-                for m in range(len(item_lw)):
-                    if m not in rest_index:
-                        continue
-                    else:
-                        if s_range[i] >= s[m] >= s_range[i + 1]:
-                            if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
-                                transform_flag.append(0)
-                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
-                                kind_index.append(index)
-                                new_item_xyz.append(item_lw[m])
-                                new_item_pos.append(item_pos[m])
-                                new_item_ori.append(item_ori[m])
-                                index += 1
-                                rest_index = np.delete(rest_index, np.where(rest_index == m))
-                if len(kind_index) != 0:
-                    all_index.append(kind_index)
-
-        new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
-        new_item_pos = np.asarray(new_item_pos)
-        new_item_ori = np.asarray(new_item_ori)
-        transform_flag = np.asarray(transform_flag)
-        if len(rest_index) != 0:
-            # we should implement the rest of boxes!
-            rest_xyz = item_lw[rest_index]
-            new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
-            all_index.append(list(np.arange(index, len(item_lw))))
-            transform_flag = np.append(transform_flag, np.zeros(len(item_lw) - index))
-
-        # the sequence of them are based on area and ratio!
-        return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
+    # def get_data_real(self, yolo_model, evaluations=1, check='before'):
+    #
+    #     os.makedirs(self.para_dict['dataset_path'] + 'real_images/', exist_ok=True)
+    #     img_path = self.para_dict['dataset_path'] + 'real_images/%012d' % (evaluations)
+    #     # structure of results: x, y, length, width, ori
+    #     results, pred_conf = yolo_model.yolo_grasp_predict(img_path=img_path, real_flag=True)
+    #
+    #     item_pos = results[:, :3]
+    #     item_lw = np.concatenate((results[:, 3:5], (np.ones(len(results)) * 0.016).reshape(-1, 1)), axis=1)
+    #     item_ori = np.concatenate((np.zeros((len(results), 2)), results[:, 5].reshape(-1, 1)), axis=1)
+    #
+    #     category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
+    #     s = item_lw[:, 0] * item_lw[:, 1]
+    #     s_min, s_max = np.min(s), np.max(s)
+    #     s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
+    #     lw_ratio = item_lw[:, 0] / item_lw[:, 1]
+    #     ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
+    #     ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
+    #
+    #     # ! initiate the number of items
+    #     all_index = []
+    #     new_item_xyz = []
+    #     new_item_pos = []
+    #     new_item_ori = []
+    #     transform_flag = []
+    #     rest_index = np.arange(len(item_lw))
+    #     index = 0
+    #
+    #     for i in range(self.knolling_para['area_num']):
+    #         for j in range(self.knolling_para['ratio_num']):
+    #             kind_index = []
+    #             for m in range(len(item_lw)):
+    #                 if m not in rest_index:
+    #                     continue
+    #                 else:
+    #                     if s_range[i] >= s[m] >= s_range[i + 1]:
+    #                         if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
+    #                             transform_flag.append(0)
+    #                             # print(f'boxes{m} matches in area{i}, ratio{j}!')
+    #                             kind_index.append(index)
+    #                             new_item_xyz.append(item_lw[m])
+    #                             new_item_pos.append(item_pos[m])
+    #                             new_item_ori.append(item_ori[m])
+    #                             index += 1
+    #                             rest_index = np.delete(rest_index, np.where(rest_index == m))
+    #             if len(kind_index) != 0:
+    #                 all_index.append(kind_index)
+    #
+    #     new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
+    #     new_item_pos = np.asarray(new_item_pos)
+    #     new_item_ori = np.asarray(new_item_ori)
+    #     transform_flag = np.asarray(transform_flag)
+    #     if len(rest_index) != 0:
+    #         # we should implement the rest of boxes!
+    #         rest_xyz = item_lw[rest_index]
+    #         new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
+    #         all_index.append(list(np.arange(index, len(item_lw))))
+    #         transform_flag = np.append(transform_flag, np.zeros(len(item_lw) - index))
+    #
+    #     # the sequence of them are based on area and ratio!
+    #     return new_item_xyz, new_item_pos, new_item_ori, all_index, transform_flag
 
     def judge(self, item_xyz, pos_before, ori_before, crowded_index):
         # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
@@ -700,7 +699,7 @@ class Arm_env():
                     manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
                     lwh_list_classify = lwh_list_input[input_index]
                     rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
-                    manipulator_after[rotate_index, -1] += np.pi / 2
+                    # manipulator_after[rotate_index, -1] += np.pi / 2
 
                     # ##################### add offset to the knolling data #####################
                     manipulator_after[:, 0] += self.arrange_dict['arrange_x_offset']

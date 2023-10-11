@@ -345,9 +345,9 @@ class Yolo_pose_model():
 
                 if self.para_dict['use_lstm_model'] == True:
                     crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
-                    yolo_baseline_threshold = 0.92
-                    prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
-                    model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
+                    # yolo_baseline_threshold = 0.92
+                    # prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
+                    # model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
                     print('this is crowded_index', crowded_index)
                     print('this is prediction', prediction)
                     self.plot_grasp(manipulator_before, prediction, model_output)

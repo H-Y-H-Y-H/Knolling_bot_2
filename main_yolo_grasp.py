@@ -554,7 +554,7 @@ class knolling_main(Arm_env):
 
     def unstack(self):
 
-        self.offset_low = np.array([0, 0, 0.0])
+        self.offset_low = np.array([0, 0, 0.003])
         self.offset_high = np.array([0, 0, 0.04])
         while True:
             crowded_index = np.where(self.pred_cls == 0)[0]
@@ -636,8 +636,8 @@ class knolling_main(Arm_env):
         # self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
         self.success_num += len(manipulator_after)
 
-        offset_low = np.array([0, 0, 0.005])
-        offset_low_place = np.array([0, 0, 0.007])
+        offset_low = np.array([0, 0, 0.00])
+        offset_low_place = np.array([0, 0, 0.005])
         offset_high = np.array([0, 0, 0.04])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
@@ -704,7 +704,7 @@ class knolling_main(Arm_env):
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.187"  # Standard loopback interface address (localhost)
-            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -756,7 +756,7 @@ if __name__ == '__main__':
 
     np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'yolo_conf': 0.3, 'yolo_iou': 0.8, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
@@ -777,7 +777,7 @@ if __name__ == '__main__':
                  'use_knolling_model': True, 'use_lstm_model': True, 'use_yolo_model': False}
 
     if para_dict['real_operate'] == True:
-        para_dict['yolo_model_path'] = './models/830_pile_real_box/weights/best.pt'
+        para_dict['yolo_model_path'] = './models/1007_pile_sundry/weights/best.pt'
     if para_dict['use_yolo_model'] == True:
         para_dict['yolo_model_path'] = './models/924_grasp/weights/best.pt'
 
@@ -800,7 +800,7 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'threshold': 0.50,
+                 'threshold': 0.45,
                  'grasp_model_path': './models/LSTM_918_0/best_model.pt',}
 
     arrange_dict = {'running_name': 'autumn-meadow-16',
