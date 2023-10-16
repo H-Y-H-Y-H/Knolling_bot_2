@@ -28,7 +28,14 @@ class Sort_objects():
         s = item_xyz[:, 0] * item_xyz[:, 1]
         s_min, s_max = np.min(s), np.max(s)
         s_range = np.linspace(s_max, s_min, int(area_num + 1))
-        lw_ratio = item_xyz[:, 0] / item_xyz[:, 1]
+
+        item_xyz_temp = np.copy(item_xyz)
+        convert_index = np.where(item_xyz_temp[:, 0] < item_xyz_temp[:, 1])[0]
+        temp = item_xyz_temp[convert_index, 0]
+        item_xyz_temp[convert_index, 0] = item_xyz_temp[convert_index, 1]
+        item_xyz_temp[convert_index, 1] = temp
+
+        lw_ratio = item_xyz_temp[:, 0] / item_xyz_temp[:, 1]
         ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
         ratio_range = np.linspace(ratio_max, ratio_min, int(ratio_num + 1))
 
