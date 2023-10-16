@@ -1,12 +1,9 @@
-from ultralytics.yolo.engine.results import Results
-from ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops
-from ultralytics.yolo.v8.detect.predict import DetectionPredictor
-import numpy as np
-import torch
+from ASSET.ultralytics.yolo.engine.results import Results
+from ASSET.ultralytics.yolo.utils import ops
+from ASSET.ultralytics.yolo.v8.detect.predict import DetectionPredictor
 import cv2
 from utils import *
-import pyrealsense2 as rs
-from models.grasp_model_deploy import *
+from ASSET.grasp_model_deploy import *
 import matplotlib.pyplot as plt
 
 class PosePredictor(DetectionPredictor):
@@ -238,7 +235,7 @@ class Yolo_grasp_model():
         args = dict(model=model, source=source, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
         use_python = True
         if use_python:
-            from ultralytics import YOLO
+            from ASSET.ultralytics import YOLO
             images = YOLO(model)(**args)
         else:
             predictor = PosePredictor(overrides=args)
@@ -373,7 +370,7 @@ if __name__ == '__main__':
                  'dataset_path': '../../knolling_dataset/yolo_grasp_dataset_919/',
                  'index_begin': 44000}
 
-    log_save_path = '../models/919_grasp/'
+    log_save_path = '../ASSET/models/919_grasp/'
 
     model_threshold_start = 0.3
     model_threshold_end = 0.8

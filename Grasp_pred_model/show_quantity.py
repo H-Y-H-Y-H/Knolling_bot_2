@@ -1,6 +1,6 @@
 import numpy as np
 
-PATH = '../models/LSTM_918_0/'
+PATH = '../ASSET/models/LSTM_918_0/'
 
 lstm_loss = np.loadtxt(PATH + 'valid_loss_LSTM.txt')
 yolo_loss = np.loadtxt(PATH + 'yolo_loss.txt')

@@ -1,7 +1,7 @@
 from arrangement import *
-from models.arrange_model_deploy import *
-from models.visual_perception_config import *
-from models.yolo_grasp_deploy import *
+from ASSET.arrange_model_deploy import *
+from ASSET.visual_perception import *
+from ASSET.yolo_grasp_deploy import *
 from utils import *
 import pybullet as p
 import pybullet_data as pd
@@ -9,12 +9,11 @@ import os
 import numpy as np
 import random
 import cv2
-import time
+
 
 class Sort_objects():
 
     def __init__(self, para_dict, knolling_para):
-        self.error_rate = 0.05
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
@@ -728,7 +727,7 @@ class Arm_env():
             lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, crowded_index_classify = self.boxes_sort.judge(
                 lwh_list, pos_before, ori_before, crowded_index)
 
-            calculate_reorder = configuration_zzz(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
+            calculate_reorder = Manual_config(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
             pos_after_classify, ori_after_classify = calculate_reorder.calculate_block()
             # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
             # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!

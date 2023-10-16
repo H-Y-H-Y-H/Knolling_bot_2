@@ -7,7 +7,7 @@ tn = 7797
 fp = 9167
 fn = 41031
 
-path = '../models/LSTM_918_0/'
+path = '../ASSET/models/LSTM_918_0/'
 # Create the confusion matrix
 confusion_matrix = np.array([[tn, fp], [fn, tp]])
 

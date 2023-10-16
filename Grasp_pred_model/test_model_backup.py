@@ -249,7 +249,7 @@ if __name__ == '__main__':
 
         # np.random.seed(150)
         # random.seed(150)
-        urdf_path = '../urdf/'
+        urdf_path = '../ASSET/urdf/'
         if use_grasp_model == True:
 
             if torch.cuda.is_available():

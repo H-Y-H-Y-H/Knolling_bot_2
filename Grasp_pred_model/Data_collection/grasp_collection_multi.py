@@ -336,9 +336,9 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': '../../../knolling_dataset/base_dataset_crowded/',
                  'data_tar_path': '../../../knolling_dataset/grasp_dataset_1007/',
-                 'urdf_path': '../../urdf/',
-                 'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True,
+                 'urdf_path': '../../ASSET/urdf/',
+                 'yolo_model_path': '../../ASSET/models/627_pile_pose/weights/best.pt',
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'Data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': True}
 
     lstm_dict = {'input_size': 6,

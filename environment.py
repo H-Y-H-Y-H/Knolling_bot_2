@@ -2,8 +2,8 @@
 
 # from arrangement import *
 # from grasp_model_deploy import *
-from models.arrange_model_deploy import *
-from models.visual_perception_config import *
+from ASSET.arrange_model_deploy import *
+from ASSET.visual_perception import *
 from utils import *
 import pybullet as p
 import pybullet_data as pd
@@ -632,7 +632,7 @@ class Arm_env():
             lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, crowded_index_classify = self.boxes_sort.judge(
                 lwh_list, pos_before, ori_before, crowded_index)
 
-            calculate_reorder = configuration_zzz(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
+            calculate_reorder = Manual_config(lwh_list_classify, all_index_classify, transform_flag_classify, self.knolling_para)
             pos_after_classify, ori_after_classify = calculate_reorder.calculate_block()
             # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
             # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!

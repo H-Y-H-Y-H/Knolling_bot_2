@@ -200,7 +200,7 @@ class calibration_main(Arm_env):
                 plt.suptitle('Motor Data Analysis')
                 plt.pause(1)
 
-            if self.para_dict['data_collection'] == True:
+            if self.para_dict['Data_collection'] == True:
                 with open(file=self.para_dict['dataset_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_xyz)
                 with open(file=self.para_dict['dataset_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
@@ -273,7 +273,7 @@ class calibration_main(Arm_env):
             last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
             last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
 
-            if self.para_dict['data_collection'] == True:
+            if self.para_dict['Data_collection'] == True:
 
                 trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
                                                 [0.25, 0.14, 0.04],
@@ -430,7 +430,7 @@ if __name__ == '__main__':
                  'dataset_path': '../../knolling_dataset/data_903/',
                  'urdf_path': '../urdf/',
                  'yolo_model_path': './627_pile_pose/weights/best.pt',
-                 'real_operate': True, 'obs_order': 'real_image_obj', 'data_collection': True,
+                 'real_operate': True, 'obs_order': 'real_image_obj', 'Data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': False}
 
     generate_dict = {'real_time_flag': False, 'erase_flag': True, 'collect_num': 50, 'max_plot_num': 250,

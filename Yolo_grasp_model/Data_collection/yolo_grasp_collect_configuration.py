@@ -400,7 +400,7 @@ if __name__ == '__main__':
                  'data_tar_path': '../../../knolling_dataset/yolo_grasp_dataset_1007/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'Data_collection': True, 'rl_configuration': True,
                  'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': False}
 
     lstm_dict = {'input_size': 6,
