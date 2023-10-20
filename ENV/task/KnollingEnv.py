@@ -1,7 +1,7 @@
 # from arrangement import *
 from ASSET.arrange_model_deploy import *
 from ASSET.visual_perception import *
-# from ASSET.yolo_grasp_deploy import *
+from ASSET.yolo_grasp_deploy import *
 from utils import *
 import pybullet as p
 import pybullet_data as pd
@@ -557,17 +557,17 @@ class knolling_env():
                 img, _ = get_images()
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
             else:
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls, pred_conf = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
+                manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
 
-            return manipulator_before, new_lwh_list, pred_cls, pred_conf
+            return manipulator_before, new_lwh_list, pred_cls, None
 
 
 if __name__ == '__main__':

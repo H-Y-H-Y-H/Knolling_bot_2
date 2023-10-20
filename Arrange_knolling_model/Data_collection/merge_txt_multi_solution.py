@@ -7,8 +7,8 @@ configuration = [[2, 1],
 num = 30
 
 start_evaluations = 0
-end_evaluations =   50
-step_num = 10
+end_evaluations =   5000
+step_num = 1
 solution_num = 4 * len(configuration)
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -46,7 +46,7 @@ def merge():
 
     for m in range(solution_num):
 
-        target_path = '../../../knolling_dataset/learning_data_1015/'
+        target_path = '../../../knolling_dataset/learning_data_1019/'
         before_path = target_path + 'labels_before_0/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
@@ -55,7 +55,7 @@ def merge():
         for s in save_point:
             data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
             total_data.append(data)
-        total_data = np.asarray(total_data).reshape(-1, num * 5)
+        total_data = np.asarray(total_data).reshape(-1, num * 6)
         np.savetxt(output_path, total_data)
         # if m == 0:
         #     total_data = []

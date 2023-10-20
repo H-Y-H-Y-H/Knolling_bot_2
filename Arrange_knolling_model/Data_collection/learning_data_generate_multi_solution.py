@@ -95,7 +95,7 @@ class Arm:
 
     def change_sequence(self, pos, flag=None):
         if flag == 'distance':
-            origin_point = np.array([0, -0.2])
+            origin_point = np.array([0, 0])
             delete_index = np.where(pos == 0)[0]
             distance = np.linalg.norm(pos[:, :2] - origin_point, axis=1)
             order = np.argsort(distance)
@@ -152,12 +152,18 @@ class Arm:
     def label2image(self, labels_data, img_index, save_urdf_path):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
-        labels_data = labels_data.reshape(-1, 5)
+
+        total_offset = [0.016, -0.17 + 0.016, 0]
+
+        labels_data = labels_data.reshape(-1, 6)
         pos_data = labels_data[:, :2]
         pos_data = np.concatenate((pos_data, np.zeros(len(pos_data)).reshape(-1, 1)), axis=1)
+        pos_data[:, 0] += total_offset[0]
+        pos_data[:, 1] += total_offset[1]
         lw_data = labels_data[:, 2:4]
         ori_data = labels_data[:, 4]
         ori_data = np.concatenate((np.zeros((len(ori_data), 2)), ori_data.reshape(-1, 1)), axis=1)
+        cls_data = labels_data[:, 5]
 
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
@@ -234,70 +240,6 @@ class Arm:
 
         return self.get_obs('images', None)
 
-    def reset(self):
-
-        # # get the standard xyz and corresponding index from files in the computer
-        # items_sort = Sort_objects()
-        # self.obj_idx = []
-        # if self.real_operate == False:
-        #     self.xyz_list, _, _, self.all_index, self.transform_flag = items_sort.get_data_virtual(self.area_num,
-        #                                                                                            self.ratio_num,
-        #                                                                                            self.num_list,
-        #                                                                                            self.boxes_index)
-        #     restrict = np.max(self.xyz_list)
-        #     gripper_height = 0.012
-        #     last_pos = np.array([[0, 0, 1]])
-        #
-        #     ############## collect ori and pos to calculate the error of detection ##############
-        #     collect_ori = []
-        #     collect_pos = []
-        #     ############## collect ori and pos to calculate the error of detection ##############
-        #
-        #     for i in range(len(self.all_index)):
-        #         for j in range(len(self.all_index[i])):
-        #             #         pass
-        #             # for i in range(len(self.grasp_order)):
-        #             #     for j in range(self.num_list[self.grasp_order[i]]):
-        #
-        #             rdm_pos = np.array([random.uniform(self.x_low_obs, self.x_high_obs),
-        #                                 random.uniform(self.y_low_obs, self.y_high_obs), 0.0])
-        #             ori = [0, 0, random.uniform(0, np.pi)]
-        #             # ori = [0, 0, 0]
-        #             collect_ori.append(ori)
-        #             check_list = np.zeros(last_pos.shape[0])
-        #
-        #             while 0 in check_list:
-        #                 rdm_pos = [random.uniform(self.x_low_obs, self.x_high_obs),
-        #                            random.uniform(self.y_low_obs, self.y_high_obs), 0.0]
-        #                 for z in range(last_pos.shape[0]):
-        #                     if np.linalg.norm(last_pos[z] - rdm_pos) < restrict + gripper_height:
-        #                         check_list[z] = 0
-        #                     else:
-        #                         check_list[z] = 1
-        #             collect_pos.append(rdm_pos)
-        #
-        #             last_pos = np.append(last_pos, [rdm_pos], axis=0)
-        #
-        #     collect_ori = np.asarray(collect_ori)
-        #     collect_pos = np.asarray(collect_pos)
-        #     self.check_ori = collect_ori[:, 2]
-        #     self.check_pos = collect_pos[:, :2]
-        # for i in range(60):
-        #     p.stepSimulation()
-        # # return self.get_obs('images', None)
-        #
-        # ################# change the sequence of data based on the max area of single box #####################
-        # box_order = np.argsort(self.xyz_list[:, 0] * self.xyz_list[:, 1])[::-1]
-        # self.check_pos = self.check_pos[box_order]
-        # self.check_ori = self.check_ori[box_order]
-        # self.xyz_list = self.xyz_list[box_order]
-        # ################# change the sequence of data based on the max area of single box #####################
-        #
-        #
-        # return self.check_pos, self.check_ori, self.xyz_list[:, :2], self.transform_flag
-
-        pass
-
     def change_config(self):  # this is main function!!!!!!!!!
 
         # get the standard xyz and corresponding index from files in the computer
@@ -308,17 +250,15 @@ class Arm:
         pos_list_epoch = []
         ori_list_epoch = []
         lwh_list_epoch = []
+        cls_list_epoch = []
 
         for cfg in range(len(self.area_ratio)):
 
             times = 0
             while True:
-                self.xyz_list, self.all_index, self.transform_flag = items_sort.judge(lwh_list, self.area_ratio[cfg][0], self.area_ratio[cfg][1])
-                calculate_reorder = configuration_zzz(self.xyz_list, self.all_index, self.gap_item, self.gap_block,
-                                                      self.transform_flag,
-                                                      self.item_odd_prevent, self.block_odd_prevent,
-                                                      self.upper_left_max,
-                                                      self.forced_rotate_box, self.iteration_time)
+                self.xyz_list, self.all_index, self.all_cls = items_sort.judge(lwh_list, self.area_ratio[cfg][0], self.area_ratio[cfg][1])
+                calculate_reorder = configuration_zzz(self.xyz_list, self.all_index, self.gap_item, self.gap_block, self.all_cls,
+                                                      self.item_odd_prevent, self.block_odd_prevent, self.upper_left_max, self.forced_rotate_box, self.iteration_time)
                 self.items_pos_list, self.items_ori_list = calculate_reorder.calculate_block()
 
                 # the sequence of self.items_pos_list, self.items_ori_list are the same as those in self.xyz_list
@@ -388,7 +328,7 @@ class Arm:
                 pos_list_epoch.append(self.items_pos_list[:, :2])
                 ori_list_epoch.append(self.items_ori_list[:, 2])
                 lwh_list_epoch.append(self.xyz_list[:, :2])
-
+                cls_list_epoch.append(self.all_cls)
 
                 times += 1
                 if times >= int(self.solution_num / len(self.area_ratio)):
@@ -396,17 +336,17 @@ class Arm:
 
         # return self.items_pos_list[:, :2], self.items_ori_list[:, 2], self.xyz_list[:, :2], self.transform_flag
 
-        return pos_list_epoch, ori_list_epoch, lwh_list_epoch, None
+        return pos_list_epoch, ori_list_epoch, lwh_list_epoch, cls_list_epoch
 
 
 if __name__ == '__main__':
 
-    command = 'recover'
+    command = 'knolling'
     before_after = 'after'
 
-    iteration_time = 100
-    start_evaluations = 0
-    end_evaluations =   50
+    iteration_time = 10
+    start_evaluations = 140000
+    end_evaluations =   150000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -418,7 +358,7 @@ if __name__ == '__main__':
 
     config_dict = [[2, 1],
                    [1, 2],
-                   [1, 1]]
+                    [1, 1]]
 
     solution_num = 4 * len(config_dict)
 
@@ -429,7 +369,7 @@ if __name__ == '__main__':
     upper_left_max = False
     forced_rotate_box = False
 
-    target_path = '../../../knolling_dataset/learning_data_1015/'
+    target_path = '../../../knolling_dataset/learning_data_1019/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
@@ -460,7 +400,7 @@ if __name__ == '__main__':
             env.get_parameters(box_num=boxes_num)
             for m in range(solution_num):
                 print(f'this is data {j}')
-                one_img_data = names['data_' + str(m)][j].reshape(-1, 5)
+                one_img_data = names['data_' + str(m)][j].reshape(-1, 6)
                 # one_img_index_flag = index_flag[j].reshape(2, -1)
                 box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
                 one_img_data = one_img_data[box_order].reshape(-1, )
@@ -525,7 +465,8 @@ if __name__ == '__main__':
         index_point = 0
 
         while change_cfg_flag == False:
-            total_offset = [0.016, -0.17 + 0.016, 0]
+            total_offset = [0.0, 0, 0]
+            # total_offset = [0.016, -0.17 + 0.016, 0]
             gap_item = 0.015
             gap_block = 0.015
             random_offset = False
@@ -544,7 +485,7 @@ if __name__ == '__main__':
                                item_odd_prevent=item_odd_prevent, block_odd_prevent = block_odd_prevent,
                                upper_left_max = upper_left_max, forced_rotate_box=forced_rotate_box,
                                iteration_time=iteration_time)
-            pos_after_epoch, ori_after_epoch, xy_after_epoch, transform_after = env.change_config()
+            pos_after_epoch, ori_after_epoch, xy_after_epoch, cls_after_epoch = env.change_config()
 
             if j + start_evaluations == int(save_point[-1]):
                 print('over!!!!!!!!!!!!')
@@ -580,15 +521,17 @@ if __name__ == '__main__':
                     pos_after = pos_after_epoch[m]
                     ori_after = ori_after_epoch[m]
                     xy_after = xy_after_epoch[m]
+                    cls_after = cls_after_epoch[m]
                     order = env.change_sequence(pos_after, flag='distance')
                     pos_after = pos_after[order]
                     ori_after = ori_after[order]
                     xy_after = xy_after[order]
+                    cls_after = cls_after[order]
                     # if m == 0:
                     #     pos_before = pos_before_epoch[order]
                     #     ori_before = ori_before_epoch[order]
 
-                    names['data_after_' + str(m)].append(np.concatenate((pos_after, xy_after, ori_after.reshape(-1, 1)), axis=1).reshape(-1))
+                    names['data_after_' + str(m)].append(np.concatenate((pos_after, xy_after, ori_after.reshape(-1, 1), cls_after.reshape(-1, 1)), axis=1).reshape(-1))
                     # if m == 0:
                     #     data_before_0.append(np.concatenate((pos_before, xy_after, ori_before.reshape(-1, 1)), axis=1).reshape(-1))
                     # data_after.append(np.concatenate((pos_after, xy_after, ori_after.reshape(-1, 1)), axis=1).reshape(-1))

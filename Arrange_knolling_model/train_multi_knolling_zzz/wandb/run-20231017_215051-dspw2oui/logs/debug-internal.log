@@ -1,0 +1,123 @@
+2023-10-17 21:50:51,729 INFO    StreamThr :16510 [internal.py:wandb_internal():86] W&B internal server running at pid: 16510, started at: 2023-10-17 21:50:51.729253
+2023-10-17 21:50:51,731 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status
+2023-10-17 21:50:51,735 INFO    WriterThread:16510 [datastore.py:open_for_write():85] open: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/run-dspw2oui.wandb
+2023-10-17 21:50:51,736 DEBUG   SenderThread:16510 [sender.py:send():369] send: header
+2023-10-17 21:50:51,742 DEBUG   SenderThread:16510 [sender.py:send():369] send: run
+2023-10-17 21:50:52,074 INFO    SenderThread:16510 [dir_watcher.py:__init__():211] watching files in: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files
+2023-10-17 21:50:52,074 INFO    SenderThread:16510 [sender.py:_start_run_threads():1100] run started: dspw2oui with start time 1697593851.728966
+2023-10-17 21:50:52,077 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: summary_record
+2023-10-17 21:50:52,077 INFO    SenderThread:16510 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-10-17 21:50:52,085 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: check_version
+2023-10-17 21:50:52,086 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: check_version
+2023-10-17 21:50:52,168 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: run_start
+2023-10-17 21:50:52,172 DEBUG   HandlerThread:16510 [system_info.py:__init__():31] System info init
+2023-10-17 21:50:52,172 DEBUG   HandlerThread:16510 [system_info.py:__init__():46] System info init done
+2023-10-17 21:50:52,172 INFO    HandlerThread:16510 [system_monitor.py:start():181] Starting system monitor
+2023-10-17 21:50:52,173 INFO    SystemMonitor:16510 [system_monitor.py:_start():145] Starting system asset monitoring threads
+2023-10-17 21:50:52,175 INFO    HandlerThread:16510 [system_monitor.py:probe():201] Collecting system info
+2023-10-17 21:50:52,176 INFO    SystemMonitor:16510 [interfaces.py:start():190] Started cpu monitoring
+2023-10-17 21:50:52,178 INFO    SystemMonitor:16510 [interfaces.py:start():190] Started disk monitoring
+2023-10-17 21:50:52,181 INFO    SystemMonitor:16510 [interfaces.py:start():190] Started gpu monitoring
+2023-10-17 21:50:52,182 INFO    SystemMonitor:16510 [interfaces.py:start():190] Started memory monitoring
+2023-10-17 21:50:52,183 INFO    SystemMonitor:16510 [interfaces.py:start():190] Started network monitoring
+2023-10-17 21:50:52,191 DEBUG   HandlerThread:16510 [system_info.py:probe():195] Probing system
+2023-10-17 21:50:52,192 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:50:52,196 DEBUG   HandlerThread:16510 [system_info.py:_probe_git():180] Probing git
+2023-10-17 21:50:52,206 DEBUG   HandlerThread:16510 [system_info.py:_probe_git():188] Probing git done
+2023-10-17 21:50:52,206 DEBUG   HandlerThread:16510 [system_info.py:probe():240] Probing system done
+2023-10-17 21:50:52,206 DEBUG   HandlerThread:16510 [system_monitor.py:probe():210] {'os': 'Linux-5.19.0-32-generic-x86_64-with-glibc2.35', 'python': '3.9.17', 'heartbeatAt': '2023-10-18T01:50:52.191729', 'startedAt': '2023-10-18T01:50:51.716831', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': '/home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/train_multi_knolling.py', 'codePath': 'train_multi_knolling_zzz/train_multi_knolling.py', 'git': {'remote': 'https://github.com/H-Y-H-Y-H/knolling_bot.git', 'commit': '036a12c034f2b51fc85d2dd043afb317bcdbea78'}, 'email': '552310797@qq.com', 'root': '/home/zhizhuo/Creative_Machines_Lab/knolling_bot', 'host': 'zhizhuo-Alienware-x15-R1', 'username': 'zhizhuo', 'executable': '/home/zhizhuo/anaconda3/envs/knolling/bin/python', 'cpu_count': 8, 'cpu_count_logical': 16, 'cpu_freq': {'current': 1948.983375, 'min': 800.0, 'max': 4600.0}, 'cpu_freq_per_core': [{'current': 3075.688, 'min': 800.0, 'max': 4600.0}, {'current': 4349.073, 'min': 800.0, 'max': 4600.0}, {'current': 4161.126, 'min': 800.0, 'max': 4600.0}, {'current': 3213.934, 'min': 800.0, 'max': 4600.0}, {'current': 4032.181, 'min': 800.0, 'max': 4600.0}, {'current': 2300.0, 'min': 800.0, 'max': 4600.0}, {'current': 1336.618, 'min': 800.0, 'max': 4600.0}, {'current': 1293.143, 'min': 800.0, 'max': 4600.0}, {'current': 4043.521, 'min': 800.0, 'max': 4600.0}, {'current': 2416.032, 'min': 800.0, 'max': 4600.0}, {'current': 2300.0, 'min': 800.0, 'max': 4600.0}, {'current': 3922.102, 'min': 800.0, 'max': 4600.0}, {'current': 1992.232, 'min': 800.0, 'max': 4600.0}, {'current': 1341.668, 'min': 800.0, 'max': 4600.0}, {'current': 800.0, 'min': 800.0, 'max': 4600.0}, {'current': 794.643, 'min': 800.0, 'max': 4600.0}], 'disk': {'total': 388.0163116455078, 'used': 190.54712677001953}, 'gpu': 'NVIDIA GeForce RTX 3070 Laptop GPU', 'gpu_count': 1, 'gpu_devices': [{'name': 'NVIDIA GeForce RTX 3070 Laptop GPU', 'memory_total': 8370061312}], 'memory': {'total': 15.29227066040039}}
+2023-10-17 21:50:52,206 INFO    HandlerThread:16510 [system_monitor.py:probe():211] Finished collecting system info
+2023-10-17 21:50:52,206 INFO    HandlerThread:16510 [system_monitor.py:probe():214] Publishing system info
+2023-10-17 21:50:52,206 DEBUG   HandlerThread:16510 [system_info.py:_save_pip():51] Saving list of pip packages installed into the current environment
+2023-10-17 21:50:52,207 DEBUG   HandlerThread:16510 [system_info.py:_save_pip():67] Saving pip packages done
+2023-10-17 21:50:52,207 DEBUG   HandlerThread:16510 [system_info.py:_save_conda():74] Saving list of conda packages installed into the current environment
+2023-10-17 21:50:53,078 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/wandb-summary.json
+2023-10-17 21:50:53,078 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/conda-environment.yaml
+2023-10-17 21:50:53,079 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/requirements.txt
+2023-10-17 21:50:53,418 DEBUG   HandlerThread:16510 [system_info.py:_save_conda():86] Saving conda packages done
+2023-10-17 21:50:53,424 INFO    HandlerThread:16510 [system_monitor.py:probe():216] Finished publishing system info
+2023-10-17 21:50:53,428 DEBUG   SenderThread:16510 [sender.py:send():369] send: files
+2023-10-17 21:50:53,428 INFO    SenderThread:16510 [sender.py:_save_file():1354] saving file wandb-metadata.json with policy now
+2023-10-17 21:50:53,434 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: stop_status
+2023-10-17 21:50:53,438 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: stop_status
+2023-10-17 21:50:53,557 DEBUG   SenderThread:16510 [sender.py:send():369] send: telemetry
+2023-10-17 21:50:53,557 DEBUG   SenderThread:16510 [sender.py:send():369] send: telemetry
+2023-10-17 21:50:53,557 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,558 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,559 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,559 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,559 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,559 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:53,796 INFO    wandb-upload_0:16510 [upload_job.py:push():133] Uploaded file /tmp/tmp8dpn19zjwandb/479kefz9-wandb-metadata.json
+2023-10-17 21:50:54,074 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/conda-environment.yaml
+2023-10-17 21:50:54,075 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/wandb-metadata.json
+2023-10-17 21:50:54,075 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/output.log
+2023-10-17 21:50:54,198 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:50:56,075 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/output.log
+2023-10-17 21:50:56,202 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:50:56,758 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:50:56,801 DEBUG   SenderThread:16510 [sender.py:send():369] send: config
+2023-10-17 21:50:58,076 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/output.log
+2023-10-17 21:50:58,205 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:50:59,077 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/output.log
+2023-10-17 21:51:00,077 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/output.log
+2023-10-17 21:51:00,208 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:02,214 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:02,300 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:04,217 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:06,220 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:07,300 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:08,223 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:08,434 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: stop_status
+2023-10-17 21:51:08,434 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: stop_status
+2023-10-17 21:51:10,226 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:12,231 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:12,644 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:14,234 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:16,238 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:17,646 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:18,243 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:20,249 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:22,300 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:22,652 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:23,094 INFO    Thread-16 :16510 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/wandb/run-20231017_215051-dspw2oui/files/config.yaml
+2023-10-17 21:51:23,438 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: stop_status
+2023-10-17 21:51:23,440 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: stop_status
+2023-10-17 21:51:24,308 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:26,313 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:28,318 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:28,540 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:30,325 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:32,329 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:33,542 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:34,333 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:36,336 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:38,343 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:38,434 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: stop_status
+2023-10-17 21:51:38,434 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: stop_status
+2023-10-17 21:51:38,652 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:40,347 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:42,351 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:43,653 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:44,355 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:46,360 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:48,364 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:48,657 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: status_report
+2023-10-17 21:51:50,368 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:52,184 DEBUG   SystemMonitor:16510 [system_monitor.py:_start():159] Starting system metrics aggregation loop
+2023-10-17 21:51:52,191 DEBUG   SenderThread:16510 [sender.py:send():369] send: stats
+2023-10-17 21:51:52,418 ERROR   gpu       :16510 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-10-17 21:51:53,434 DEBUG   HandlerThread:16510 [handler.py:handle_request():144] handle_request: stop_status
+2023-10-17 21:51:53,435 DEBUG   SenderThread:16510 [sender.py:send_request():396] send_request: stop_status

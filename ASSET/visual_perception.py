@@ -248,7 +248,7 @@ class Yolo_pose_model():
 
         return im, result
 
-    def grasp_predict(self, first_flag=False, sub_index=0, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
+    def grasp_predict(self, first_flag=False, real_flag=False, img=None, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
         self.epoch = epoch
         if real_flag == True:
@@ -389,7 +389,7 @@ class Yolo_pose_model():
                 if len(pred_xylws) <= 1:  # filter the results no more than 1
                     print('yolo no more than 1')
                     if self.para_dict['use_lstm_grasp_model'] == True:
-                        return [], [], [], [], [], []
+                        return [], [], []
                     else:
                         return [], [], []
                 else:
@@ -404,7 +404,7 @@ class Yolo_pose_model():
                 if len(pred_xylws) <= 1: # filter the results no more than 1
                     print('yolo no more than 1')
                     if self.para_dict['use_lstm_grasp_model'] == True:
-                        return [], [], [], [], [], []
+                        return [], [], []
                     else:
                         return [], [], []
                 else:
@@ -458,7 +458,7 @@ class Yolo_pose_model():
                 self.plot_grasp(manipulator_before, prediction, model_output)
 
         if self.para_dict['use_lstm_grasp_model'] == True:
-            return manipulator_before, new_lwh_list, prediction, pred_order
+            return manipulator_before, new_lwh_list, prediction
         else:
             return manipulator_before, new_lwh_list, pred_conf
 
@@ -502,11 +502,11 @@ class Yolo_pose_model():
             output_img = cv2.putText(output_img, label, (int(y_px_center[i]) - 10, int(x_px_center[i])),
                              0, zzz_lw / 3, (0, 255, 0), thickness=tf, lineType=cv2.LINE_AA)
 
-        cv2.namedWindow('zzz', 0)
-        cv2.resizeWindow('zzz', 1280, 960)
-        cv2.imshow('zzz', output_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.namedWindow('zzz', 0)
+        # cv2.resizeWindow('zzz', 1280, 960)
+        # cv2.imshow('zzz', output_img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
         # img_path_output = self.para_dict['data_tar_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
         img_path_output = self.para_dict['data_source_path'] + 'sim_images/grasp.png'

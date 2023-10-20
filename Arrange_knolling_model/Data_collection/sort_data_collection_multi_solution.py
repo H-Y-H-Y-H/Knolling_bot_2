@@ -45,7 +45,8 @@ class Sort_objects():
         transform_flag = []
         rest_index = np.arange(len(item_xyz))
         index = 0
-
+        all_cls = []
+        class_index = 0
 
         for i in range(area_num):
             for j in range(ratio_num):
@@ -62,10 +63,12 @@ class Sort_objects():
                                 new_item_xyz.append(item_xyz[m])
                                 index += 1
                                 rest_index = np.delete(rest_index, np.where(rest_index == m))
-
+                                all_cls.append(class_index)
+                class_index += 1
                 if len(kind_index) != 0:
                     all_index.append(kind_index)
 
+        all_cls = np.asarray(all_cls)
         new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
         transform_flag = np.asarray(transform_flag)
         if len(rest_index) != 0:
@@ -75,7 +78,7 @@ class Sort_objects():
             all_index.append(list(np.arange(index, len(item_xyz))))
             transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
 
-        return new_item_xyz, all_index, transform_flag
+        return new_item_xyz, all_index, all_cls
 
 if __name__ == '__main__':
 

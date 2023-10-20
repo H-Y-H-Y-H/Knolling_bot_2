@@ -1,6 +1,6 @@
-from ASSET.ultralytics.yolo.engine.results import Results
-from ASSET.ultralytics.yolo.utils import ops
-from ASSET.ultralytics.yolo.v8.detect.predict import DetectionPredictor
+from ultralytics.yolo.engine.results import Results
+from ultralytics.yolo.utils import ops
+from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 import cv2
 from utils import *
 # import pyrealsense2 as rs
@@ -330,7 +330,7 @@ class Yolo_grasp_model():
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             use_python = True
             if use_python:
-                from ASSET.ultralytics import YOLO
+                from ultralytics import YOLO
                 images = YOLO(model)(**args)
             else:
                 predictor = PosePredictor(overrides=args)
@@ -342,13 +342,13 @@ class Yolo_grasp_model():
             one_img = images[0]
 
             pred_result = []
-            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()[:gt_boxes_num]
+            pred_xylws = one_img.boxes.xywhn.cpu().detach().numpy()
             if len(pred_xylws) <= 1: # filter the results no more than 1
                 print('yolo no more than 1')
             # else:
-            pred_cls = one_img.boxes.cls.cpu().detach().numpy()[:gt_boxes_num]
-            pred_conf = one_img.boxes.conf.cpu().detach().numpy()[:gt_boxes_num]
-            pred_keypoints = one_img.keypoints.cpu().detach().numpy()[:gt_boxes_num]
+            pred_cls = one_img.boxes.cls.cpu().detach().numpy()
+            pred_conf = one_img.boxes.conf.cpu().detach().numpy()
+            pred_keypoints = one_img.keypoints.cpu().detach().numpy()
             pred_keypoints[:, :, :2] = pred_keypoints[:, :, :2] / np.array([640, 480])
             pred_keypoints = pred_keypoints.reshape(len(pred_xylws), -1)
             pred = np.concatenate((np.zeros((len(pred_xylws), 1)), pred_xylws, pred_keypoints), axis=1)
@@ -387,22 +387,15 @@ class Yolo_grasp_model():
             manipulator_before = np.concatenate((pred_result[:, :3], np.zeros((len(pred_result), 2)), pred_result[:, 5].reshape(-1, 1)), axis=1)
             new_lwh_list = np.concatenate((pred_result[:, 3:5], np.ones((len(pred_result), 1)) * 0.016), axis=1)
 
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow('zzz', origin_img)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
 
-            if self.para_dict['save_img_flag'] == True and first_flag == True:
-                self.img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (self.epoch)
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', origin_img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                # img_path_output = self.img_path + '_pred.png'
-                # cv2.imwrite(img_path_output, origin_img)
-                pass
+            self.img_path = self.para_dict['data_source_path'] + 'sim_images/%012d' % (self.epoch)
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', origin_img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            img_path_output = self.img_path + '_pred.png'
+            cv2.imwrite(img_path_output, origin_img)
 
         return manipulator_before, new_lwh_list, pred_cls, pred_conf
 

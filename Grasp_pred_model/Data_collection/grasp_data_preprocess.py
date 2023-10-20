@@ -303,9 +303,9 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         tar_False = np.where(data[:, 0] == 0)[0]
 
         yolo_pred_TP = len(np.intersect1d(yolo_pred_P, tar_True))
-        yolo_pred_TN = len(np.intersect1d(yolo_pred_N, tar_True))
+        yolo_pred_TN = len(np.intersect1d(yolo_pred_N, tar_False))
         yolo_pred_FP = len(np.intersect1d(yolo_pred_P, tar_False))
-        yolo_pred_FN = len(np.intersect1d(yolo_pred_N, tar_False))
+        yolo_pred_FN = len(np.intersect1d(yolo_pred_N, tar_True))
         if yolo_pred_TP + yolo_pred_FN == 0:
             recall = 0
             yolo_pred_recall.append(0)
@@ -318,7 +318,7 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         else:
             precision = (yolo_pred_TP) / (yolo_pred_TP + yolo_pred_FP)
             yolo_pred_precision.append(precision)
-        accuracy = (yolo_pred_TP + yolo_pred_FN) / (yolo_pred_TP + yolo_pred_TN + yolo_pred_FP + yolo_pred_FN)
+        accuracy = (yolo_pred_TP + yolo_pred_TN) / (yolo_pred_TP + yolo_pred_TN + yolo_pred_FP + yolo_pred_FN)
         yolo_pred_accuracy.append(accuracy)
 
         if precision > max_precision:
@@ -346,7 +346,7 @@ def yolo_accuracy_analysis(path, analysis_path, total_num, ratio, threshold_star
         total_TN.append(yolo_pred_TN)
         total_FP.append(yolo_pred_FP)
         total_FN.append(yolo_pred_FN)
-        print('Accuracy (TP + FN) / all: %.04f' % accuracy)
+        print('Accuracy (TP + TN) / all: %.04f' % accuracy)
         if (yolo_pred_TP + yolo_pred_FN) == 0:
             print('Recall (TP / (TP + FN)) 0')
         else:

@@ -123,14 +123,15 @@ class random_arrangement():
 
 class configuration_zzz():
 
-    def __init__(self, xyz_list, all_index, gap_item, gap_block, transform_flag,
+    def __init__(self, xyz_list, all_index, gap_item, gap_block, all_cls,
                  item_odd_prevent, block_odd_prevent, upper_left_max, forced_rotate_box, iteration_time):
 
         self.xyz_list = xyz_list
         self.all_index = all_index
         self.gap_item = gap_item
         self.gap_block = gap_block
-        self.transform_flag = transform_flag
+        self.all_cls = all_cls
+        # self.transform_flag = transform_flag
         self.item_odd_prevent = item_odd_prevent
         self.block_odd_prevent = block_odd_prevent
         self.upper_left_max = upper_left_max
@@ -139,14 +140,15 @@ class configuration_zzz():
 
     def calculate_items(self, item_num, item_xyz):
 
-        self.min_xy = np.ones(2) * 100
+        min_xy = np.ones(2) * 100
         best_item_config = []
         best_item_sequence = []
         item_odd_flag = False
         all_item_x = 100
         all_item_y = 100
-        self.best_iteration = 0
-        self.min_xy = 0
+        best_iteration = 0
+        xy_array = []
+        iteration_array = []
 
         for iter in range(self.iteration_time):
 
@@ -200,10 +202,18 @@ class configuration_zzz():
                     best_item_sequence = item_sequence
                     all_item_x = item_min_x
                     all_item_y = item_min_y
-                    self.best_iteration = iter
-                    self.min_xy = np.array([all_item_x, all_item_y])
-        # print(f'In iteration {self.best_iteration}, the min xy is {self.min_xy}')
-        return self.min_xy, best_item_config, item_odd_flag, best_item_sequence
+                    best_iteration = iter
+                    min_xy = np.array([all_item_x, all_item_y])
+                    xy_array.append(np.sum(min_xy))
+                    iteration_array.append(iter)
+                    # print(f'interation {self.best_iteration}, min_xy {np.sum(self.min_xy)}')
+        # print(f'In iteration {best_iteration}, the min xy is {min_xy}, total is {np.sum(min_xy)}')
+        # xy_array = 1 / np.asarray(xy_array)
+        # iteration_array = np.asarray(iteration_array)
+        # selected_index = np.where(xy_array > (1 / np.sum(min_xy) * 0.9))[0]
+        # selected_iter = iteration_array[selected_index]
+        # print(f'In iteration {selected_iter[0]}, the xy has met the condition, is {1 / xy_array[selected_index[0]]}')
+        return min_xy, best_item_config, item_odd_flag, best_item_sequence
 
     def calculate_block(self):  # first: calculate, second: reorder!
 
@@ -417,11 +427,11 @@ class configuration_zzz():
             for k in range(item_column):
                 if item_odd_flag == True and j == item_row - 1 and k == item_column - 1:
                     break
-                ################### check whether to transform for each item in each block!################
-                if self.transform_flag[item_index[item_sequence[j][k]]] == 1:
-                    # print(f'the index {item_index[index_temp[j][k]]} should be rotated because of transformation')
-                    item_ori[item_sequence[j][k], 2] -= np.pi / 2
-                ################### check whether to transform for each item in each block!################
+                # ################### check whether to transform for each item in each block!################
+                # if self.transform_flag[item_index[item_sequence[j][k]]] == 1:
+                #     # print(f'the index {item_index[index_temp[j][k]]} should be rotated because of transformation')
+                #     item_ori[item_sequence[j][k], 2] -= np.pi / 2
+                # ################### check whether to transform for each item in each block!################
                 x_pos = start_item_x[j] + (item_xyz[item_sequence[j][k]][0]) / 2
                 y_pos = start_item_y[k] + (item_xyz[item_sequence[j][k]][1]) / 2
                 item_pos[item_sequence[j][k]][0] = x_pos

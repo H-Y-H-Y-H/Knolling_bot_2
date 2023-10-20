@@ -655,12 +655,12 @@ if __name__ == '__main__':
 
     np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.3, 'yolo_iou': 0.8, 'device': 'cuda:0',
+                 'yolo_conf': 0.6, 'yolo_iou': 0.6, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(10, 11),
+                 'boxes_num': np.random.randint(5, 6),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
@@ -673,7 +673,7 @@ if __name__ == '__main__':
                  'urdf_path': './ASSET/urdf/',
                  'yolo_model_path': './ASSET/models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_grasp_model': True, 'use_yolo_model': False}
+                 'use_knolling_model': True, 'use_lstm_grasp_model': False, 'use_yolo_model': True}
 
     if para_dict['real_operate'] == True:
         para_dict['yolo_model_path'] = './ASSET/models/1007_pile_sundry/weights/best.pt'

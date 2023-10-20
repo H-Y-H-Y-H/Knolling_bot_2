@@ -1,6 +1,6 @@
-from ASSET.ultralytics.yolo.engine.results import Results
-from ASSET.ultralytics.yolo.utils import ops
-from ASSET.ultralytics.yolo.v8.detect.predict import DetectionPredictor
+from ultralytics.yolo.engine.results import Results
+from ultralytics.yolo.utils import ops
+from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 import cv2
 from utils import *
 from ASSET.grasp_model_deploy import *
@@ -211,12 +211,12 @@ class Yolo_grasp_model():
                 if pred_cls[i] == 1:
                     self.pred_TP += 1
                 elif pred_cls[i] == 0:
-                    self.pred_TN += 1
+                    self.pred_FN += 1
             if new_tar_cls[i] == 0:
                 if pred_cls[i] == 1:
                     self.pred_FP += 1
                 elif pred_cls[i] == 0:
-                    self.pred_FN += 1
+                    self.pred_TN += 1
 
     def yolo_grasp_predict(self, target=None, gt_boxes_num=None, test_pile_detection=None, epoch=0):
 
@@ -225,6 +225,7 @@ class Yolo_grasp_model():
         self.pred_FP = 0
         self.pred_FN = 0
         self.pred_less_num = 0
+        self.pred_more_num = 0
 
         self.epoch = epoch
 
@@ -235,7 +236,7 @@ class Yolo_grasp_model():
         args = dict(model=model, source=source, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
         use_python = True
         if use_python:
-            from ASSET.ultralytics import YOLO
+            from ultralytics import YOLO
             images = YOLO(model)(**args)
         else:
             predictor = PosePredictor(overrides=args)
@@ -268,6 +269,7 @@ class Yolo_grasp_model():
                 pred_less_flag == True
             else:
                 print('pred more that gt', int(len(pred_xylws) - self.gt_num))
+                self.pred_more_num += int(len(pred_xylws) - self.gt_num)
                 pred_xylws = pred_xylws[:self.gt_num]
                 pred_cls = one_img_result.boxes.cls.cpu().detach().numpy()[:self.gt_num]
                 pred_conf = one_img_result.boxes.conf.cpu().detach().numpy()[:self.gt_num]
@@ -365,8 +367,8 @@ class Yolo_grasp_model():
 
 if __name__ == '__main__':
 
-    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.004, 'yolo_iou': 0.8,
-                 'yolo_model_path': '../models/919_grasp/weights/best.pt',
+    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.004, 'yolo_iou': 0.6,
+                 'yolo_model_path': '../ASSET/models/919_grasp/weights/best.pt',
                  'dataset_path': '../../knolling_dataset/yolo_grasp_dataset_919/',
                  'index_begin': 44000}
 
@@ -383,8 +385,13 @@ if __name__ == '__main__':
     total_precision = []
     total_accuracy = []
     total_less_num = []
+    total_more_num = []
     max_precision = -np.inf
     max_accuracy = -np.inf
+    total_TP = []
+    total_TN = []
+    total_FP = []
+    total_FN = []
     for i in model_threshold:
         zzz_yolo.para_dict['yolo_conf'] = i
         zzz_yolo.yolo_grasp_predict()
@@ -393,8 +400,13 @@ if __name__ == '__main__':
         print('this is TN', zzz_yolo.pred_TN)
         print('this is FP', zzz_yolo.pred_FP)
         print('this is FN', zzz_yolo.pred_FN)
+        total_TP.append(zzz_yolo.pred_TP)
+        total_TN.append(zzz_yolo.pred_TN)
+        total_FP.append(zzz_yolo.pred_FP)
+        total_FN.append(zzz_yolo.pred_FN)
 
         total_less_num.append(zzz_yolo.pred_less_num)
+        total_more_num.append(zzz_yolo.pred_more_num)
 
         if zzz_yolo.pred_TP + zzz_yolo.pred_FN == 0:
             recall = 0
@@ -406,7 +418,7 @@ if __name__ == '__main__':
         else:
             precision = (zzz_yolo.pred_TP) / (zzz_yolo.pred_TP + zzz_yolo.pred_FP)
         total_precision.append(precision)
-        accuracy = (zzz_yolo.pred_TP + zzz_yolo.pred_FN) / (zzz_yolo.pred_TP + zzz_yolo.pred_TN + zzz_yolo.pred_FP + zzz_yolo.pred_FN)
+        accuracy = (zzz_yolo.pred_TP + zzz_yolo.pred_TN) / (zzz_yolo.pred_TP + zzz_yolo.pred_TN + zzz_yolo.pred_FP + zzz_yolo.pred_FN)
         total_accuracy.append(accuracy)
 
         if precision > max_precision:
@@ -420,6 +432,11 @@ if __name__ == '__main__':
     total_precision = np.asarray(total_precision)
     total_accuracy = np.asarray(total_accuracy)
     total_less_num = np.asarray(total_less_num)
+    total_more_num = np.asarray(total_more_num)
+    total_TP = np.asarray(total_TP)
+    total_TN = np.asarray(total_TN)
+    total_FP = np.asarray(total_FP)
+    total_FN = np.asarray(total_FN)
 
     print(f'When the threshold is {max_accuracy_threshold}, the max accuracy is {max_accuracy}')
     print(f'When the threshold is {max_precision_threshold}, the max precision is {max_precision}')
@@ -446,4 +463,5 @@ if __name__ == '__main__':
 
         for i in range(len(model_threshold)):
             f.write(f'threshold: {model_threshold[i]:.6f}, recall: {total_recall[i]:.4f}, precision: {total_precision[i]:.4f}, '
-                    f'accuracy: {total_accuracy[i]:.4f}, less_num: {total_less_num[i]}\n')
+                    f'accuracy: {total_accuracy[i]:.4f}, less_num: {total_less_num[i]}, more_num: {total_more_num[i]},'
+                    f'TP: {total_TP[i]}, TN: {total_TN[i]}, FP: {total_FP[i]}, FN: {total_FN[i]}\n')

@@ -1,16 +1,16 @@
 ----------- Dataset -----------
 threshold_start: 0.3
 threshold_end: 0.8
-threshold: 0.8, max accuracy: 0.9856212696690179
+threshold: 0.8, max accuracy: 0.98551516807871
 threshold: 0.8, max precision: 0.9767649687220733
 ----------- Dataset -----------
-threshold: 0.300000, recall: 0.2969, precision: 0.9546, accuracy: 0.9751, less_num: 23
-threshold: 0.355556, recall: 0.2970, precision: 0.9546, accuracy: 0.9751, less_num: 25
-threshold: 0.411111, recall: 0.2971, precision: 0.9546, accuracy: 0.9751, less_num: 26
-threshold: 0.466667, recall: 0.2971, precision: 0.9546, accuracy: 0.9751, less_num: 26
-threshold: 0.522222, recall: 0.2974, precision: 0.9545, accuracy: 0.9758, less_num: 39
-threshold: 0.577778, recall: 0.2977, precision: 0.9569, accuracy: 0.9764, less_num: 57
-threshold: 0.633333, recall: 0.2981, precision: 0.9610, accuracy: 0.9789, less_num: 78
-threshold: 0.688889, recall: 0.2986, precision: 0.9651, accuracy: 0.9804, less_num: 101
-threshold: 0.744444, recall: 0.2987, precision: 0.9691, accuracy: 0.9824, less_num: 133
-threshold: 0.800000, recall: 0.3009, precision: 0.9768, accuracy: 0.9856, less_num: 189
+threshold: 0.300000, recall: 0.9629, precision: 0.9546, accuracy: 0.9749, less_num: 57, more_num: 38,TP: 1115, TN: 2607, FP: 53, FN: 43
+threshold: 0.355556, recall: 0.9629, precision: 0.9546, accuracy: 0.9748, less_num: 59, more_num: 34,TP: 1115, TN: 2605, FP: 53, FN: 43
+threshold: 0.411111, recall: 0.9629, precision: 0.9546, accuracy: 0.9748, less_num: 60, more_num: 32,TP: 1115, TN: 2604, FP: 53, FN: 43
+threshold: 0.466667, recall: 0.9629, precision: 0.9546, accuracy: 0.9748, less_num: 61, more_num: 24,TP: 1115, TN: 2603, FP: 53, FN: 43
+threshold: 0.522222, recall: 0.9653, precision: 0.9545, accuracy: 0.9755, less_num: 73, more_num: 8,TP: 1113, TN: 2596, FP: 53, FN: 40
+threshold: 0.577778, recall: 0.9652, precision: 0.9569, accuracy: 0.9762, less_num: 89, more_num: 5,TP: 1110, TN: 2586, FP: 50, FN: 40
+threshold: 0.633333, recall: 0.9694, precision: 0.9610, accuracy: 0.9787, less_num: 111, more_num: 3,TP: 1108, TN: 2576, FP: 45, FN: 35
+threshold: 0.688889, recall: 0.9701, precision: 0.9651, accuracy: 0.9802, less_num: 134, more_num: 2,TP: 1105, TN: 2562, FP: 40, FN: 34
+threshold: 0.744444, recall: 0.9725, precision: 0.9691, accuracy: 0.9822, less_num: 165, more_num: 1,TP: 1098, TN: 2546, FP: 35, FN: 31
+threshold: 0.800000, recall: 0.9759, precision: 0.9768, accuracy: 0.9855, less_num: 216, more_num: 0,TP: 1093, TN: 2513, FP: 26, FN: 27
