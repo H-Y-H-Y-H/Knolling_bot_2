@@ -1,0 +1,32 @@
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_0.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_1.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_2.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_3.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_4.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_5.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_6.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_7.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_8.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_9.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_10.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_11.txt
+100%|██████████| 9600/9600 [00:00<00:00, 136178.24it/s]
+100%|██████████| 9600/9600 [00:00<00:00, 134769.84it/s]
+100%|██████████| 2400/2400 [00:00<00:00, 132531.92it/s]
+100%|██████████| 2400/2400 [00:00<00:00, 134289.35it/s]
+output tensor([ 0.9238, -0.8115, -0.0958, -0.2536, -2.6945, -0.3136,  0.9442,  0.6372,
+        -0.1979,  0.6085,  0.9071, -0.3854,  1.7100,  0.5462,  0.3132,  1.6349,
+        -0.2929,  1.7710, -0.9506, -1.6618,  0.1270,  0.4575, -0.2188,  0.2238,
+         0.8678, -0.4160, -1.1958, -0.6301, -0.2559,  0.7564,  1.2952, -0.0043,
+         0.1232, -1.0766, -0.8793, -0.8162, -3.1625, -1.3626,  0.5778,  0.0108,
+        -0.4423, -1.2095, -0.6168,  1.6732,  0.4977, -0.1635, -1.4282,  0.7372,
+         0.4216, -0.3327,  0.5929,  0.8410,  1.4225, -0.1367,  0.7202,  2.2070,
+        -1.6596, -0.0413, -0.6831, -3.1459], device='cuda:0',
+       grad_fn=<UnsafeViewBackward0>)
+target tensor([52.3500, 51.3000, 58.7500, 36.7500, 52.5500, 42.7000, 58.7000, 42.4000,
+        63.8500, 36.8000, 53.5500, 47.6500, 64.0000, 42.8500, 59.6000, 47.7500,
+        52.6000, 51.6000, 57.0000, 51.9000, 65.0500, 47.7000, 60.8500, 51.7000,
+        65.8500, 51.6500, 52.8500, 57.3000, 56.9000, 57.0000, 61.4000, 57.3000,
+        70.1500, 51.9500, 65.7000, 58.0000, 74.6500, 52.5000, 57.2000, 62.6500,
+        53.0500, 63.3500, 61.0000, 62.8000, 70.2000, 58.2500, 65.9000, 63.3000,
+        79.9000, 52.0000, 74.5000, 58.1500, 70.0000, 62.8500, 73.8500, 62.7000,

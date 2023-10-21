@@ -1,0 +1,16 @@
+
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_0.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_1.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_2.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_3.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_4.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_5.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_6.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_7.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_8.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_9.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_10.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_11.txt
+100%|██████████| 9600/9600 [00:00<00:00, 136791.69it/s]
+100%|██████████| 9600/9600 [00:00<00:00, 136810.28it/s]
+100%|██████████| 2400/2400 [00:00<00:00, 135049.63it/s]

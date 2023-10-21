@@ -1,0 +1,23 @@
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_0.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_1.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_2.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_3.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_4.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_5.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_6.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_7.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_8.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_9.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_10.txt
+load data: ../../knolling_dataset/learning_data_1015/num_30_after_11.txt
+100%|██████████| 9600/9600 [00:00<00:00, 135874.95it/s]
+100%|██████████| 9600/9600 [00:00<00:00, 136739.66it/s]
+100%|██████████| 2400/2400 [00:00<00:00, 134847.01it/s]
+100%|██████████| 2400/2400 [00:00<00:00, 133369.50it/s]
+Traceback (most recent call last):
+  File "/home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/train_multi_knolling.py", line 291, in <module>
+    loss = model.calculate_loss(output_batch, target_batch, input_batch)
+  File "/home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/new_model.py", line 414, in calculate_loss
+    Distance_loss = self.calculate_distance(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw, tar_lw=tar_lw_raw)
+  File "/home/zhizhuo/Creative_Machines_Lab/knolling_bot/train_multi_knolling_zzz/new_model.py", line 430, in calculate_distance
+    pass
