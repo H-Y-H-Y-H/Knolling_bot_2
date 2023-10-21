@@ -1,0 +1,13 @@
+----------- Dataset -----------
+valid_num: 20000
+tar_true: 11060
+tar_false: 57794
+threshold_start: 0.0
+threshold_end: 1
+threshold: 0.9795918367346939, max accuracy: 0.8393702617131902
+threshold: 0.9591836734693877, max precision: 0.3598405995360733
+----------- Dataset -----------
+----------- Statistics -----------
+yolo_loss_mean: 1.0985947110172212
+yolo_loss_std: 0.1601209902136344
+----------- Statistics -----------

@@ -1,0 +1,444 @@
+2023-09-04 16:04:34,397 INFO    StreamThr :11077 [internal.py:wandb_internal():86] W&B internal server running at pid: 11077, started at: 2023-09-04 16:04:34.397217
+2023-09-04 16:04:34,399 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status
+2023-09-04 16:04:34,399 INFO    WriterThread:11077 [datastore.py:open_for_write():85] open: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/run-p8g1sa5a.wandb
+2023-09-04 16:04:34,400 DEBUG   SenderThread:11077 [sender.py:send():369] send: header
+2023-09-04 16:04:34,407 DEBUG   SenderThread:11077 [sender.py:send():369] send: run
+2023-09-04 16:04:35,109 INFO    SenderThread:11077 [dir_watcher.py:__init__():211] watching files in: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files
+2023-09-04 16:04:35,109 INFO    SenderThread:11077 [sender.py:_start_run_threads():1100] run started: p8g1sa5a with start time 1693857874.396733
+2023-09-04 16:04:35,109 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:35,109 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:35,112 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: check_version
+2023-09-04 16:04:35,112 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: check_version
+2023-09-04 16:04:35,428 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: run_start
+2023-09-04 16:04:35,430 DEBUG   HandlerThread:11077 [system_info.py:__init__():31] System info init
+2023-09-04 16:04:35,430 DEBUG   HandlerThread:11077 [system_info.py:__init__():46] System info init done
+2023-09-04 16:04:35,430 INFO    HandlerThread:11077 [system_monitor.py:start():181] Starting system monitor
+2023-09-04 16:04:35,430 INFO    SystemMonitor:11077 [system_monitor.py:_start():145] Starting system asset monitoring threads
+2023-09-04 16:04:35,430 INFO    HandlerThread:11077 [system_monitor.py:probe():201] Collecting system info
+2023-09-04 16:04:35,431 INFO    SystemMonitor:11077 [interfaces.py:start():190] Started cpu monitoring
+2023-09-04 16:04:35,432 INFO    SystemMonitor:11077 [interfaces.py:start():190] Started disk monitoring
+2023-09-04 16:04:35,432 INFO    SystemMonitor:11077 [interfaces.py:start():190] Started gpu monitoring
+2023-09-04 16:04:35,432 INFO    SystemMonitor:11077 [interfaces.py:start():190] Started memory monitoring
+2023-09-04 16:04:35,433 INFO    SystemMonitor:11077 [interfaces.py:start():190] Started network monitoring
+2023-09-04 16:04:35,441 DEBUG   HandlerThread:11077 [system_info.py:probe():195] Probing system
+2023-09-04 16:04:35,443 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:35,445 DEBUG   HandlerThread:11077 [system_info.py:_probe_git():180] Probing git
+2023-09-04 16:04:35,450 DEBUG   HandlerThread:11077 [system_info.py:_probe_git():188] Probing git done
+2023-09-04 16:04:35,450 DEBUG   HandlerThread:11077 [system_info.py:probe():240] Probing system done
+2023-09-04 16:04:35,450 DEBUG   HandlerThread:11077 [system_monitor.py:probe():210] {'os': 'Linux-5.19.0-32-generic-x86_64-with-glibc2.35', 'python': '3.9.17', 'heartbeatAt': '2023-09-04T20:04:35.441866', 'startedAt': '2023-09-04T20:04:34.393510', 'docker': None, 'cuda': None, 'args': (), 'state': 'running', 'program': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/train_mlp.py', 'codePath': 'Unstack_pred_model/train_mlp.py', 'git': {'remote': 'https://github.com/H-Y-H-Y-H/Knolling_bot_2.git', 'commit': 'd1e45c65dab9303f98b63abce028fd13678d57a3'}, 'email': '552310797@qq.com', 'root': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2', 'host': 'zhizhuo-Alienware-x15-R1', 'username': 'zhizhuo', 'executable': '/home/zhizhuo/anaconda3/envs/knolling/bin/python', 'cpu_count': 8, 'cpu_count_logical': 16, 'cpu_freq': {'current': 2073.4036875, 'min': 800.0, 'max': 4600.0}, 'cpu_freq_per_core': [{'current': 3981.991, 'min': 800.0, 'max': 4600.0}, {'current': 1103.417, 'min': 800.0, 'max': 4600.0}, {'current': 3436.184, 'min': 800.0, 'max': 4600.0}, {'current': 4353.362, 'min': 800.0, 'max': 4600.0}, {'current': 3408.803, 'min': 800.0, 'max': 4600.0}, {'current': 884.672, 'min': 800.0, 'max': 4600.0}, {'current': 1134.932, 'min': 800.0, 'max': 4600.0}, {'current': 800.196, 'min': 800.0, 'max': 4600.0}, {'current': 893.825, 'min': 800.0, 'max': 4600.0}, {'current': 3679.01, 'min': 800.0, 'max': 4600.0}, {'current': 2300.0, 'min': 800.0, 'max': 4600.0}, {'current': 4379.478, 'min': 800.0, 'max': 4600.0}, {'current': 803.164, 'min': 800.0, 'max': 4600.0}, {'current': 4170.426, 'min': 800.0, 'max': 4600.0}, {'current': 3398.791, 'min': 800.0, 'max': 4600.0}, {'current': 800.841, 'min': 800.0, 'max': 4600.0}], 'disk': {'total': 388.0163116455078, 'used': 124.59832382202148}, 'gpu': 'NVIDIA GeForce RTX 3070 Laptop GPU', 'gpu_count': 1, 'gpu_devices': [{'name': 'NVIDIA GeForce RTX 3070 Laptop GPU', 'memory_total': 8370061312}], 'memory': {'total': 15.29227066040039}}
+2023-09-04 16:04:35,450 INFO    HandlerThread:11077 [system_monitor.py:probe():211] Finished collecting system info
+2023-09-04 16:04:35,451 INFO    HandlerThread:11077 [system_monitor.py:probe():214] Publishing system info
+2023-09-04 16:04:35,451 DEBUG   HandlerThread:11077 [system_info.py:_save_pip():51] Saving list of pip packages installed into the current environment
+2023-09-04 16:04:35,451 DEBUG   HandlerThread:11077 [system_info.py:_save_pip():67] Saving pip packages done
+2023-09-04 16:04:35,451 DEBUG   HandlerThread:11077 [system_info.py:_save_conda():74] Saving list of conda packages installed into the current environment
+2023-09-04 16:04:36,110 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:36,110 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/requirements.txt
+2023-09-04 16:04:36,110 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/conda-environment.yaml
+2023-09-04 16:04:36,635 DEBUG   HandlerThread:11077 [system_info.py:_save_conda():86] Saving conda packages done
+2023-09-04 16:04:36,636 INFO    HandlerThread:11077 [system_monitor.py:probe():216] Finished publishing system info
+2023-09-04 16:04:36,637 DEBUG   SenderThread:11077 [sender.py:send():369] send: files
+2023-09-04 16:04:36,637 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-metadata.json with policy now
+2023-09-04 16:04:36,641 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-04 16:04:36,641 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: stop_status
+2023-09-04 16:04:36,897 DEBUG   SenderThread:11077 [sender.py:send():369] send: telemetry
+2023-09-04 16:04:36,897 DEBUG   SenderThread:11077 [sender.py:send():369] send: config
+2023-09-04 16:04:37,101 INFO    wandb-upload_0:11077 [upload_job.py:push():133] Uploaded file /tmp/tmpcebq5k3_wandb/vmwk7936-wandb-metadata.json
+2023-09-04 16:04:37,109 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/conda-environment.yaml
+2023-09-04 16:04:37,109 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-metadata.json
+2023-09-04 16:04:37,109 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_created():272] file/dir created: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:37,447 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:39,110 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:39,453 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:39,465 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:04:41,110 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:41,457 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:43,111 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:43,460 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:43,842 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:43,843 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:43,843 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:43,843 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:43,844 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:43,844 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:43,844 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:43,844 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:44,111 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:44,596 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:04:44,597 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:44,597 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:44,598 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:44,598 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:44,598 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:44,598 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:44,598 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:44,605 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:45,111 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:45,111 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:45,266 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:45,267 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:45,267 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:45,267 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:45,268 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:45,268 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:45,268 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:45,275 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:45,465 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:45,953 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:45,954 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:45,954 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:45,954 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:45,955 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:45,955 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:45,955 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:45,962 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:46,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:46,672 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:46,672 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:46,673 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:46,673 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:46,673 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:46,673 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:46,673 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:46,680 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:47,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:47,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:47,434 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:47,434 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:47,434 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:47,435 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:47,435 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:47,436 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:47,436 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:47,442 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:47,468 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:48,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:48,198 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:48,198 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:48,199 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:48,199 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:48,199 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:48,199 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:48,199 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:48,206 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:48,966 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:48,966 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:48,966 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:48,967 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:48,967 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:48,967 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:48,967 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:48,967 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:49,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:49,112 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:49,470 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:49,725 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:49,726 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:49,726 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:49,726 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:49,726 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:04:49,727 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:49,727 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:49,727 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:49,734 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:50,113 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:50,487 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:50,487 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:50,487 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:50,488 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:50,488 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:50,488 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:50,488 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:50,488 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:51,113 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:51,113 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:51,251 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:51,251 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:51,252 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:51,252 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:51,252 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:51,252 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:51,252 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:51,259 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:51,473 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:51,640 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: stop_status
+2023-09-04 16:04:51,640 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: stop_status
+2023-09-04 16:04:52,019 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:52,020 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:52,020 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:52,020 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:52,021 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:52,021 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:52,021 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:52,028 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:52,113 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:52,794 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:52,794 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:52,794 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:52,794 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:52,795 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:52,795 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:52,795 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:52,802 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:53,113 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:53,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:53,475 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:53,560 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:53,561 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:53,561 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:53,561 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:53,562 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:53,562 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:53,562 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:53,562 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:54,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:54,243 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:54,243 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:54,244 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:54,244 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:54,244 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:54,244 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:54,244 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:54,251 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:54,920 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:54,921 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:54,921 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:04:54,921 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:54,921 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:54,921 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:54,922 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:54,922 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:54,922 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:55,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:55,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:55,481 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:55,591 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:55,591 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:55,592 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:55,592 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:55,592 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:55,592 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:55,592 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:55,592 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:56,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:56,260 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:56,260 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:56,260 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:56,260 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:56,261 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:56,261 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:56,261 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:56,268 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:56,932 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:56,932 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:56,933 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:56,933 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:56,933 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:56,933 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:56,933 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:56,940 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:57,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:57,114 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:57,484 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:57,603 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:57,603 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:57,604 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:57,604 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:57,604 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:57,604 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:57,604 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:57,604 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:58,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:58,270 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:58,271 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:58,271 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:58,272 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:58,272 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:58,272 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:58,272 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:58,279 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:58,964 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:58,965 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:58,965 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:58,965 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:58,965 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:58,965 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:58,965 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:58,972 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:59,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:04:59,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:04:59,486 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:04:59,682 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:59,683 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:04:59,683 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:59,683 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:59,684 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:04:59,684 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:04:59,684 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:04:59,684 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:00,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:05:00,398 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:00,398 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:00,398 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:05:00,399 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:00,399 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:00,399 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:00,399 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:00,399 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:00,406 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:01,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:05:01,115 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:05:01,151 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:01,152 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:01,152 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:01,152 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:01,152 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:01,153 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:01,153 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:01,153 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:01,489 ERROR   gpu       :11077 [interfaces.py:monitor():144] Failed to sample metric: Not Supported
+2023-09-04 16:05:01,914 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:01,915 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: partial_history
+2023-09-04 16:05:01,915 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:01,915 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:01,915 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:01,915 DEBUG   SenderThread:11077 [sender.py:send():369] send: history
+2023-09-04 16:05:01,915 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: summary_record
+2023-09-04 16:05:01,922 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:02,116 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:05:02,593 DEBUG   SenderThread:11077 [sender.py:send():369] send: exit
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:send_exit():574] handling exit code: 0
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:send_exit():576] handling runtime: 27
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:send_exit():582] send defer
+2023-09-04 16:05:02,594 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,594 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 0
+2023-09-04 16:05:02,594 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 0
+2023-09-04 16:05:02,594 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 1
+2023-09-04 16:05:02,594 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,594 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 1
+2023-09-04 16:05:02,595 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,595 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 1
+2023-09-04 16:05:02,595 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 2
+2023-09-04 16:05:02,595 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,595 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 2
+2023-09-04 16:05:02,595 INFO    HandlerThread:11077 [system_monitor.py:finish():190] Stopping system monitor
+2023-09-04 16:05:02,595 INFO    HandlerThread:11077 [interfaces.py:finish():202] Joined cpu monitor
+2023-09-04 16:05:02,595 DEBUG   SystemMonitor:11077 [system_monitor.py:_start():159] Starting system metrics aggregation loop
+2023-09-04 16:05:02,595 DEBUG   SystemMonitor:11077 [system_monitor.py:_start():166] Finished system metrics aggregation loop
+2023-09-04 16:05:02,595 DEBUG   SystemMonitor:11077 [system_monitor.py:_start():170] Publishing last batch of metrics
+2023-09-04 16:05:02,596 INFO    HandlerThread:11077 [interfaces.py:finish():202] Joined disk monitor
+2023-09-04 16:05:02,618 INFO    HandlerThread:11077 [interfaces.py:finish():202] Joined gpu monitor
+2023-09-04 16:05:02,618 INFO    HandlerThread:11077 [interfaces.py:finish():202] Joined memory monitor
+2023-09-04 16:05:02,619 INFO    HandlerThread:11077 [interfaces.py:finish():202] Joined network monitor
+2023-09-04 16:05:02,619 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,619 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 2
+2023-09-04 16:05:02,619 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 3
+2023-09-04 16:05:02,619 DEBUG   SenderThread:11077 [sender.py:send():369] send: stats
+2023-09-04 16:05:02,619 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,619 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 3
+2023-09-04 16:05:02,619 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,619 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 3
+2023-09-04 16:05:02,619 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 4
+2023-09-04 16:05:02,619 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,619 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 4
+2023-09-04 16:05:02,620 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,620 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 4
+2023-09-04 16:05:02,620 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 5
+2023-09-04 16:05:02,620 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,620 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 5
+2023-09-04 16:05:02,620 DEBUG   SenderThread:11077 [sender.py:send():369] send: summary
+2023-09-04 16:05:02,620 INFO    SenderThread:11077 [sender.py:_save_file():1354] saving file wandb-summary.json with policy end
+2023-09-04 16:05:02,620 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,620 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 5
+2023-09-04 16:05:02,620 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 6
+2023-09-04 16:05:02,620 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,620 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 6
+2023-09-04 16:05:02,621 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,621 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 6
+2023-09-04 16:05:02,623 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: status_report
+2023-09-04 16:05:02,922 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 7
+2023-09-04 16:05:02,922 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:02,923 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 7
+2023-09-04 16:05:02,924 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:02,924 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 7
+2023-09-04 16:05:03,117 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:05:03,117 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/config.yaml
+2023-09-04 16:05:03,118 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:05:03,594 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: poll_exit
+2023-09-04 16:05:05,118 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:05:06,928 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 8
+2023-09-04 16:05:06,928 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: poll_exit
+2023-09-04 16:05:06,928 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:06,928 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 8
+2023-09-04 16:05:06,928 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:06,928 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 8
+2023-09-04 16:05:06,928 INFO    SenderThread:11077 [job_builder.py:build():240] Attempting to build job artifact
+2023-09-04 16:05:06,928 INFO    SenderThread:11077 [job_builder.py:build():264] is repo sourced job
+2023-09-04 16:05:06,929 INFO    SenderThread:11077 [job_builder.py:build():305] adding wandb-job metadata file
+2023-09-04 16:05:06,948 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 9
+2023-09-04 16:05:06,948 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:06,949 DEBUG   SenderThread:11077 [sender.py:send():369] send: artifact
+2023-09-04 16:05:06,949 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 9
+2023-09-04 16:05:07,120 INFO    Thread-12 :11077 [dir_watcher.py:_on_file_modified():289] file/dir modified: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:05:07,450 INFO    SenderThread:11077 [sender.py:send_artifact():1450] sent artifact job-https___github.com_H-Y-H-Y-H_Knolling_bot_2.git_Unstack_pred_model_train_mlp.py - {'id': 'QXJ0aWZhY3Q6NTU5MTczNTc4', 'digest': 'e99094682a2b03d1006bc5fbbc7a15bd', 'state': 'COMMITTED', 'aliases': [{'artifactCollectionName': 'job-https___github.com_H-Y-H-Y-H_Knolling_bot_2.git_Unstack_pred_model_train_mlp.py', 'alias': 'latest'}, {'artifactCollectionName': 'job-https___github.com_H-Y-H-Y-H_Knolling_bot_2.git_Unstack_pred_model_train_mlp.py', 'alias': 'v0'}], 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjk0OTkxODIx', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6NTU5MTc2MTE3', 'versionIndex': 1}}, 'version': 'v0'}
+2023-09-04 16:05:07,451 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:07,451 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 9
+2023-09-04 16:05:07,451 INFO    SenderThread:11077 [dir_watcher.py:finish():359] shutting down directory watcher
+2023-09-04 16:05:08,121 INFO    SenderThread:11077 [dir_watcher.py:finish():389] scan: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files
+2023-09-04 16:05:08,122 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/config.yaml config.yaml
+2023-09-04 16:05:08,122 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-metadata.json wandb-metadata.json
+2023-09-04 16:05:08,122 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json wandb-summary.json
+2023-09-04 16:05:08,128 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log output.log
+2023-09-04 16:05:08,131 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/conda-environment.yaml conda-environment.yaml
+2023-09-04 16:05:08,132 INFO    SenderThread:11077 [dir_watcher.py:finish():403] scan save: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/requirements.txt requirements.txt
+2023-09-04 16:05:08,139 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 10
+2023-09-04 16:05:08,140 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:08,140 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 10
+2023-09-04 16:05:08,142 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:08,142 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 10
+2023-09-04 16:05:08,142 INFO    SenderThread:11077 [file_pusher.py:finish():159] shutting down file pusher
+2023-09-04 16:05:08,366 INFO    wandb-upload_2:11077 [upload_job.py:push():133] Uploaded file /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/output.log
+2023-09-04 16:05:08,417 INFO    wandb-upload_0:11077 [upload_job.py:push():133] Uploaded file /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/config.yaml
+2023-09-04 16:05:08,494 INFO    wandb-upload_4:11077 [upload_job.py:push():133] Uploaded file /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/requirements.txt
+2023-09-04 16:05:08,507 INFO    wandb-upload_3:11077 [upload_job.py:push():133] Uploaded file /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/conda-environment.yaml
+2023-09-04 16:05:08,525 INFO    wandb-upload_1:11077 [upload_job.py:push():133] Uploaded file /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/files/wandb-summary.json
+2023-09-04 16:05:08,597 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: keepalive
+2023-09-04 16:05:08,726 INFO    Thread-11 :11077 [sender.py:transition_state():602] send defer: 11
+2023-09-04 16:05:08,726 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:08,727 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 11
+2023-09-04 16:05:08,728 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:08,728 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 11
+2023-09-04 16:05:08,728 INFO    SenderThread:11077 [file_pusher.py:join():164] waiting for file pusher
+2023-09-04 16:05:08,728 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 12
+2023-09-04 16:05:08,729 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:08,729 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 12
+2023-09-04 16:05:08,729 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:08,730 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 12
+2023-09-04 16:05:08,828 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 13
+2023-09-04 16:05:08,829 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:08,829 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 13
+2023-09-04 16:05:08,830 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:08,830 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 13
+2023-09-04 16:05:08,830 INFO    SenderThread:11077 [sender.py:transition_state():602] send defer: 14
+2023-09-04 16:05:08,831 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: defer
+2023-09-04 16:05:08,831 INFO    HandlerThread:11077 [handler.py:handle_request_defer():170] handle defer: 14
+2023-09-04 16:05:08,832 DEBUG   SenderThread:11077 [sender.py:send():369] send: final
+2023-09-04 16:05:08,832 DEBUG   SenderThread:11077 [sender.py:send():369] send: footer
+2023-09-04 16:05:08,832 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: defer
+2023-09-04 16:05:08,832 INFO    SenderThread:11077 [sender.py:send_request_defer():598] handle sender defer: 14
+2023-09-04 16:05:08,833 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: poll_exit
+2023-09-04 16:05:08,834 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: poll_exit
+2023-09-04 16:05:08,835 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: server_info
+2023-09-04 16:05:08,836 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: get_summary
+2023-09-04 16:05:08,837 DEBUG   SenderThread:11077 [sender.py:send_request():396] send_request: server_info
+2023-09-04 16:05:08,842 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: sampled_history
+2023-09-04 16:05:08,893 INFO    MainThread:11077 [wandb_run.py:_footer_history_summary_info():3464] rendering history
+2023-09-04 16:05:08,893 INFO    MainThread:11077 [wandb_run.py:_footer_history_summary_info():3496] rendering summary
+2023-09-04 16:05:08,894 INFO    MainThread:11077 [wandb_run.py:_footer_sync_info():3423] logging synced files
+2023-09-04 16:05:08,895 DEBUG   HandlerThread:11077 [handler.py:handle_request():144] handle_request: shutdown
+2023-09-04 16:05:08,895 INFO    HandlerThread:11077 [handler.py:finish():854] shutting down handler
+2023-09-04 16:05:09,837 INFO    WriterThread:11077 [datastore.py:close():298] close: /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230904_160434-p8g1sa5a/run-p8g1sa5a.wandb
+2023-09-04 16:05:09,892 INFO    SenderThread:11077 [sender.py:finish():1526] shutting down sender
+2023-09-04 16:05:09,893 INFO    SenderThread:11077 [file_pusher.py:finish():159] shutting down file pusher
+2023-09-04 16:05:09,893 INFO    SenderThread:11077 [file_pusher.py:join():164] waiting for file pusher

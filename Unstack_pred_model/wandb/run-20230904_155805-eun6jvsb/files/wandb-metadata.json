@@ -1,0 +1,125 @@
+{
+    "os": "Linux-5.19.0-32-generic-x86_64-with-glibc2.35",
+    "python": "3.9.17",
+    "heartbeatAt": "2023-09-04T19:58:06.294242",
+    "startedAt": "2023-09-04T19:58:05.767585",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/train_mlp.py",
+    "codePath": "Unstack_pred_model/train_mlp.py",
+    "git": {
+        "remote": "https://github.com/H-Y-H-Y-H/Knolling_bot_2.git",
+        "commit": "d1e45c65dab9303f98b63abce028fd13678d57a3"
+    },
+    "email": "552310797@qq.com",
+    "root": "/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2",
+    "host": "zhizhuo-Alienware-x15-R1",
+    "username": "zhizhuo",
+    "executable": "/home/zhizhuo/anaconda3/envs/knolling/bin/python",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 1362.6311875,
+        "min": 800.0,
+        "max": 4600.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 800.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.034,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.028,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.034,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.51,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.165,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.017,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.517,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.605,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 800.189,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        },
+        {
+            "current": 2300.0,
+            "min": 800.0,
+            "max": 4600.0
+        }
+    ],
+    "disk": {
+        "total": 388.0163116455078,
+        "used": 124.59579467773438
+    },
+    "gpu": "NVIDIA GeForce RTX 3070 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3070 Laptop GPU",
+            "memory_total": 8370061312
+        }
+    ],
+    "memory": {
+        "total": 15.29227066040039
+    }
+}

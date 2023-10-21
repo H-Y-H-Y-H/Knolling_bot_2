@@ -1,0 +1,29 @@
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Current SDK version is 0.15.5
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Configure stats pid to 6433
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Loading settings from /home/zhizhuo/.config/wandb/settings
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Loading settings from /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/settings
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2023-09-06 20:43:08,491 INFO    MainThread:6433 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'Unstack_pred_model/train_mlp.py', 'program': '/home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/train_mlp.py'}
+2023-09-06 20:43:08,492 INFO    MainThread:6433 [wandb_init.py:_log_setup():507] Logging user logs to /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230906_204308-jodxlmlb/logs/debug.log
+2023-09-06 20:43:08,492 INFO    MainThread:6433 [wandb_init.py:_log_setup():508] Logging internal logs to /home/zhizhuo/Creative_Machines_Lab/Knolling_bot_2/Unstack_pred_model/wandb/run-20230906_204308-jodxlmlb/logs/debug-internal.log
+2023-09-06 20:43:08,492 INFO    MainThread:6433 [wandb_init.py:init():547] calling init triggers
+2023-09-06 20:43:08,493 INFO    MainThread:6433 [wandb_init.py:init():554] wandb.init called with sweep_config: {}
+config: {}
+2023-09-06 20:43:08,493 INFO    MainThread:6433 [wandb_init.py:init():596] starting backend
+2023-09-06 20:43:08,493 INFO    MainThread:6433 [wandb_init.py:init():600] setting up manager
+2023-09-06 20:43:08,498 INFO    MainThread:6433 [backend.py:_multiprocessing_setup():106] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2023-09-06 20:43:08,502 INFO    MainThread:6433 [wandb_init.py:init():606] backend started and connected
+2023-09-06 20:43:08,505 INFO    MainThread:6433 [wandb_init.py:init():705] updated telemetry
+2023-09-06 20:43:08,514 INFO    MainThread:6433 [wandb_init.py:init():738] communicating run to backend with 60.0 second timeout
+2023-09-06 20:43:08,841 INFO    MainThread:6433 [wandb_run.py:_on_init():2173] communicating current version
+2023-09-06 20:43:08,909 INFO    MainThread:6433 [wandb_run.py:_on_init():2182] got version response upgrade_message: "wandb version 0.15.10 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2023-09-06 20:43:08,909 INFO    MainThread:6433 [wandb_init.py:init():789] starting run threads in backend
+2023-09-06 20:43:10,166 INFO    MainThread:6433 [wandb_run.py:_console_start():2152] atexit reg
+2023-09-06 20:43:10,166 INFO    MainThread:6433 [wandb_run.py:_redirect():2007] redirect: SettingsConsole.WRAP_RAW
+2023-09-06 20:43:10,167 INFO    MainThread:6433 [wandb_run.py:_redirect():2072] Wrapping output streams.
+2023-09-06 20:43:10,167 INFO    MainThread:6433 [wandb_run.py:_redirect():2097] Redirects installed.
+2023-09-06 20:43:10,167 INFO    MainThread:6433 [wandb_init.py:init():830] run started, returning control to user process
+2023-09-06 20:43:10,168 INFO    MainThread:6433 [wandb_run.py:_config_callback():1281] config_cb None None {'device': 'cuda:0', 'num_img': 160000, 'ratio': 0.8, 'epoch': 300, 'model_path': './results/MLP_905_1/', 'input_data_path': '../../knolling_dataset/MLP_unstack_905/labels_box/', 'output_data_path': '../../knolling_dataset/MLP_unstack_905/labels_unstack/', 'learning_rate': 0.001, 'patience': 10, 'factor': 0.1, 'batch_size': 64, 'output_size': 6, 'abort_learning': 20, 'set_dropout': 0.1, 'num_boxes': 5, 'run_name': 'MLP_905_1', 'project_name': 'zzz_MLP_unstack', 'wandb_flag': True, 'use_mse': True, 'use_scaler': False, 'fine-tuning': False, 'node_1': 128, 'node_2': 32, 'node_3': 8}
+2023-09-06 20:48:31,217 WARNING MsgRouterThr:6433 [router.py:message_loop():77] message_loop has been closed

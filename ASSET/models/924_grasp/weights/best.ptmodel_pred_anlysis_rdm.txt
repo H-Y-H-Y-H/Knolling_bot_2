@@ -1,0 +1,1 @@
+recall: 0.9785, precision: 0.9637, accuracy: 0.9792, less_num: 6, more_num: 1, TP: 319, TN: 575, FP: 12, FN: 7

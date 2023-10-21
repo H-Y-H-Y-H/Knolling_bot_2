@@ -1,0 +1,16 @@
+----------- Dataset -----------
+threshold_start: 0.3
+threshold_end: 0.8
+threshold: 0.8, max accuracy: 0.996249665148674
+threshold: 0.8, max precision: 0.9947043248014121
+----------- Dataset -----------
+threshold: 0.300000, recall: 0.3012, precision: 0.9862, accuracy: 0.9922, less_num: 47, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1144, TN: 14, FP: 16, FN: 2654
+threshold: 0.355556, recall: 0.3012, precision: 0.9862, accuracy: 0.9922, less_num: 47, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1144, TN: 14, FP: 16, FN: 2654
+threshold: 0.411111, recall: 0.3012, precision: 0.9862, accuracy: 0.9922, less_num: 47, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1144, TN: 14, FP: 16, FN: 2654
+threshold: 0.466667, recall: 0.3014, precision: 0.9862, accuracy: 0.9922, less_num: 49, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1144, TN: 14, FP: 16, FN: 2652
+threshold: 0.522222, recall: 0.3012, precision: 0.9870, accuracy: 0.9924, less_num: 51, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1143, TN: 14, FP: 15, FN: 2652
+threshold: 0.577778, recall: 0.3011, precision: 0.9870, accuracy: 0.9924, less_num: 60, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1140, TN: 14, FP: 15, FN: 2646
+threshold: 0.633333, recall: 0.3013, precision: 0.9878, accuracy: 0.9932, less_num: 72, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1138, TN: 12, FP: 14, FN: 2639
+threshold: 0.688889, recall: 0.3014, precision: 0.9913, accuracy: 0.9947, less_num: 92, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1134, TN: 10, FP: 10, FN: 2629
+threshold: 0.744444, recall: 0.3021, precision: 0.9930, accuracy: 0.9955, less_num: 117, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1130, TN: 9, FP: 8, FN: 2611
+threshold: 0.800000, recall: 0.3030, precision: 0.9947, accuracy: 0.9962, less_num: 142, more_num: [15 15 14  9  6  1  0  0  0  0],TP: 1127, TN: 8, FP: 6, FN: 2592

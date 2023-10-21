@@ -1,0 +1,95 @@
+this is para_dict
+ {'device': 'cuda:0', 'num_img': 48000, 'ratio': 0.8, 'epoch': 300, 'model_path': './results/MLP_902_2/', 'input_data_path': '../../knolling_dataset/MLP_unstack_902/labels_box/', 'output_data_path': '../../knolling_dataset/MLP_unstack_902/labels_unstack/', 'learning_rate': 0.001, 'patience': 10, 'factor': 0.1, 'batch_size': 64, 'output_size': 6, 'abort_learning': 20, 'set_dropout': 0.1, 'num_boxes': 5, 'project_name': 'zzz_MLP_unstack', 'wandb_flag': True, 'use_mse': True, 'use_scaler': False, 'fine-tuning': False, 'node_1': 128, 'node_2': 32, 'node_3': 8}
+load the train data ...
+
+ 90%|████████▉ | 34405/38400 [00:03<00:00, 8856.90it/s]
+total train data: 38400
+load the valid data ...
+100%|██████████| 38400/38400 [00:04<00:00, 8946.87it/s]
+100%|██████████| 9600/9600 [00:01<00:00, 9064.82it/s]
+not fine-tuning
+Training_Loss At Epoch 0:	 0.295084
+Testing_Loss At Epoch 0:	 0.241716
+epoch0, time used: 1.24, lr: 0.001
+Training_Loss At Epoch 1:	 0.233137
+Testing_Loss At Epoch 1:	 0.234754
+epoch1, time used: 0.79, lr: 0.001
+Training_Loss At Epoch 2:	 0.217654
+Testing_Loss At Epoch 2:	 0.210063
+epoch2, time used: 0.74, lr: 0.001
+Training_Loss At Epoch 3:	 0.203825
+Testing_Loss At Epoch 3:	 0.199609
+epoch3, time used: 0.75, lr: 0.001
+Training_Loss At Epoch 4:	 0.190234
+Testing_Loss At Epoch 4:	 0.193957
+epoch4, time used: 0.78, lr: 0.001
+Training_Loss At Epoch 5:	 0.178984
+Testing_Loss At Epoch 5:	 0.17769
+epoch5, time used: 0.82, lr: 0.001
+Training_Loss At Epoch 6:	 0.173541
+Testing_Loss At Epoch 6:	 0.176109
+epoch6, time used: 0.81, lr: 0.001
+Training_Loss At Epoch 7:	 0.16942
+Testing_Loss At Epoch 7:	 0.171111
+epoch7, time used: 0.77, lr: 0.001
+Training_Loss At Epoch 8:	 0.166485
+Testing_Loss At Epoch 8:	 0.169804
+epoch8, time used: 0.83, lr: 0.001
+epoch9, time used: 0.79, lr: 0.001
+epoch10, time used: 0.75, lr: 0.001
+epoch11, time used: 0.84, lr: 0.001
+epoch12, time used: 0.81, lr: 0.001
+Training_Loss At Epoch 13:	 0.158537
+Testing_Loss At Epoch 13:	 0.165741
+epoch13, time used: 0.81, lr: 0.001
+Training_Loss At Epoch 14:	 0.156565
+Testing_Loss At Epoch 14:	 0.160726
+epoch14, time used: 0.8, lr: 0.001
+epoch15, time used: 0.76, lr: 0.001
+epoch16, time used: 0.82, lr: 0.001
+Training_Loss At Epoch 17:	 0.153782
+Testing_Loss At Epoch 17:	 0.159421
+epoch17, time used: 0.81, lr: 0.001
+epoch18, time used: 0.83, lr: 0.001
+Training_Loss At Epoch 19:	 0.150954
+Testing_Loss At Epoch 19:	 0.158382
+epoch19, time used: 0.81, lr: 0.001
+epoch20, time used: 1.06, lr: 0.001
+Training_Loss At Epoch 21:	 0.149261
+Testing_Loss At Epoch 21:	 0.158209
+epoch21, time used: 0.77, lr: 0.001
+Training_Loss At Epoch 22:	 0.148298
+Testing_Loss At Epoch 22:	 0.157363
+epoch22, time used: 1.08, lr: 0.001
+epoch23, time used: 0.97, lr: 0.001
+Training_Loss At Epoch 24:	 0.148523
+Testing_Loss At Epoch 24:	 0.156934
+epoch24, time used: 0.85, lr: 0.001
+Training_Loss At Epoch 25:	 0.146956
+Testing_Loss At Epoch 25:	 0.155766
+epoch25, time used: 0.78, lr: 0.001
+epoch26, time used: 0.78, lr: 0.001
+epoch27, time used: 0.74, lr: 0.001
+epoch28, time used: 0.8, lr: 0.001
+epoch29, time used: 0.78, lr: 0.001
+epoch30, time used: 0.88, lr: 0.001
+epoch31, time used: 0.91, lr: 0.001
+Training_Loss At Epoch 32:	 0.142476
+Testing_Loss At Epoch 32:	 0.155382
+epoch32, time used: 0.81, lr: 0.001
+Training_Loss At Epoch 33:	 0.141848
+Testing_Loss At Epoch 33:	 0.153301
+epoch33, time used: 0.91, lr: 0.001
+epoch34, time used: 0.87, lr: 0.001
+Training_Loss At Epoch 35:	 0.140094
+Testing_Loss At Epoch 35:	 0.153146
+epoch35, time used: 0.77, lr: 0.001
+epoch36, time used: 0.81, lr: 0.001
+epoch37, time used: 0.89, lr: 0.001
+epoch38, time used: 0.89, lr: 0.001
+epoch39, time used: 0.93, lr: 0.001
+Training_Loss At Epoch 40:	 0.137867
+Testing_Loss At Epoch 40:	 0.151225
+epoch40, time used: 0.91, lr: 0.001
+epoch41, time used: 0.81, lr: 0.001
+epoch42, time used: 0.78, lr: 0.001

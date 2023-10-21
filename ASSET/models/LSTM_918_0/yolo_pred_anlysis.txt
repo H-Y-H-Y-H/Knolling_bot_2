@@ -1,0 +1,64 @@
+----------- Dataset -----------
+valid_num: 20000
+tar_true: 23579
+tar_false: 50198
+threshold_start: 0.0
+threshold_end: 1
+threshold: 0.96, max accuracy: 0.7701587215527874
+threshold: 0.96, max precision: 0.6440316686967114
+----------- Dataset -----------
+----------- Statistics -----------
+yolo_loss_mean: 0.9566167158003246
+yolo_loss_std: 0.10018531790121323
+----------- Statistics -----------
+threshold: 0.000000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.020000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.040000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.060000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.080000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.100000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.120000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.140000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.160000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.180000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.200000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.220000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.240000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.260000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.280000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.300000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.320000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.340000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.360000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.380000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.400000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.420000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.440000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.460000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.480000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.500000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.520000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.540000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.560000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.580000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.600000, recall: 1.0000, precision: 0.3196, accuracy: 0.3196,TP: 23579, TN: 0, FP: 50198, FN: 0
+threshold: 0.620000, recall: 1.0000, precision: 0.3198, accuracy: 0.3201,TP: 23579, TN: 36, FP: 50162, FN: 0
+threshold: 0.640000, recall: 1.0000, precision: 0.3200, accuracy: 0.3207,TP: 23579, TN: 84, FP: 50114, FN: 0
+threshold: 0.660000, recall: 1.0000, precision: 0.3201, accuracy: 0.3213,TP: 23579, TN: 122, FP: 50076, FN: 0
+threshold: 0.680000, recall: 1.0000, precision: 0.3204, accuracy: 0.3222,TP: 23579, TN: 193, FP: 50005, FN: 0
+threshold: 0.700000, recall: 1.0000, precision: 0.3207, accuracy: 0.3230,TP: 23579, TN: 250, FP: 49948, FN: 0
+threshold: 0.720000, recall: 1.0000, precision: 0.3210, accuracy: 0.3241,TP: 23579, TN: 331, FP: 49867, FN: 0
+threshold: 0.740000, recall: 1.0000, precision: 0.3216, accuracy: 0.3257,TP: 23579, TN: 450, FP: 49748, FN: 0
+threshold: 0.760000, recall: 1.0000, precision: 0.3221, accuracy: 0.3273,TP: 23579, TN: 565, FP: 49633, FN: 0
+threshold: 0.780000, recall: 1.0000, precision: 0.3227, accuracy: 0.3294,TP: 23578, TN: 722, FP: 49476, FN: 1
+threshold: 0.800000, recall: 1.0000, precision: 0.3238, accuracy: 0.3325,TP: 23578, TN: 952, FP: 49246, FN: 1
+threshold: 0.820000, recall: 0.9999, precision: 0.3254, accuracy: 0.3374,TP: 23576, TN: 1319, FP: 48879, FN: 3
+threshold: 0.840000, recall: 0.9998, precision: 0.3280, accuracy: 0.3452,TP: 23575, TN: 1892, FP: 48306, FN: 4
+threshold: 0.860000, recall: 0.9997, precision: 0.3318, accuracy: 0.3566,TP: 23571, TN: 2738, FP: 47460, FN: 8
+threshold: 0.880000, recall: 0.9994, precision: 0.3386, accuracy: 0.3760,TP: 23566, TN: 4173, FP: 46025, FN: 13
+threshold: 0.900000, recall: 0.9982, precision: 0.3514, accuracy: 0.4106,TP: 23536, TN: 6759, FP: 43439, FN: 43
+threshold: 0.920000, recall: 0.9960, precision: 0.3787, accuracy: 0.4764,TP: 23484, TN: 11665, FP: 38533, FN: 95
+threshold: 0.940000, recall: 0.9820, precision: 0.4445, accuracy: 0.6019,TP: 23155, TN: 21255, FP: 28943, FN: 424
+threshold: 0.960000, recall: 0.6279, precision: 0.6440, accuracy: 0.7702,TP: 14805, TN: 42015, FP: 8183, FN: 8774
+threshold: 0.980000, recall: 0.0000, precision: 0.0000, accuracy: 0.6804,TP: 0, TN: 50198, FP: 0, FN: 23579
+threshold: 1.000000, recall: 0.0000, precision: 0.0000, accuracy: 0.6804,TP: 0, TN: 50198, FP: 0, FN: 23579

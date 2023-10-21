@@ -1,0 +1,33 @@
+----------- Dataset -----------
+total img: 59200
+yolo dominated: 12394
+yolo dominated: 12394
+grasp dominated: 22170
+not one result: 10029
+tar_true 46488
+tar_false 154919
+----------- Dataset -----------
+----------- Prediction -----------
+TP: 37650
+TN: 8838
+FP: 6435
+FN: 148484
+Accuracy (TP + FN) / all: 0.9242
+Recall (TP / (TP + FN)) 0.2023
+Precision (TP / (TP + FP)) 0.8540
+FN / (FN + FP): 0.958462164098658
+yolo_dominated_TP: 20265
+yolo_dominated_TN: 3461
+yolo_dominated_FP: 2567
+yolo_dominated_FN: 32907
+yolo_dominated_Accuracy: 0.8982
+yolo_dominated_Recall: 0.3811
+yolo_dominated_Precision: 0.8876
+grasp_dominated_TP: 17385
+grasp_dominated_TN: 5377
+grasp_dominated_FP: 3868
+grasp_dominated_FN: 115577
+grasp_dominated_Accuracy: 0.9350
+grasp_dominated_Recall: 0.1308
+grasp_dominated_Precision: 0.8180
+----------- Prediction -----------

@@ -1,0 +1,1 @@
+recall: 0.0697, precision: 0.8448, accuracy: 0.9773,TP: 147, TN: 22, FP: 27, FN: 1963

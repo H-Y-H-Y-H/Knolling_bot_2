@@ -1,0 +1,74 @@
+this is para_dict
+ {'device': 'cuda:0', 'num_img': 332000, 'ratio': 0.8, 'epoch': 300, 'model_path': './results/MLP_907_3/', 'input_data_path': '../../knolling_dataset/MLP_unstack_907_intensive/labels_box/', 'output_data_path': '../../knolling_dataset/MLP_unstack_907_intensive/labels_unstack/', 'learning_rate': 0.001, 'patience': 10, 'factor': 0.1, 'batch_size': 64, 'output_size': 6, 'abort_learning': 20, 'set_dropout': 0.05, 'num_boxes': 5, 'run_name': 'MLP_907_3', 'project_name': 'zzz_MLP_unstack', 'wandb_flag': True, 'use_mse': True, 'use_scaler': False, 'fine-tuning': False, 'node_1': 128, 'node_2': 32, 'node_3': 8}
+load the train data ...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 97%|█████████▋| 257513/265600 [00:29<00:00, 8944.16it/s]
+total train data: 265600
+100%|██████████| 265600/265600 [00:30<00:00, 8708.91it/s]
+
+
+
+ 96%|█████████▌| 63646/66400 [00:07<00:00, 8924.89it/s]
+total valid data: 66400
+
+100%|██████████| 66400/66400 [00:07<00:00, 8938.38it/s]
+Training_Loss At Epoch 0:	 0.36108
+Testing_Loss At Epoch 0:	 0.357093
+epoch0, time used: 5.66, lr: 0.001
+Training_Loss At Epoch 1:	 0.358052
+Testing_Loss At Epoch 1:	 0.354175
+epoch1, time used: 4.95, lr: 0.001
+Training_Loss At Epoch 2:	 0.355728
+Testing_Loss At Epoch 2:	 0.352089
+epoch2, time used: 5.67, lr: 0.001
+Training_Loss At Epoch 3:	 0.353223
+Testing_Loss At Epoch 3:	 0.350992
+epoch3, time used: 5.95, lr: 0.001
+Training_Loss At Epoch 4:	 0.350597
+Testing_Loss At Epoch 4:	 0.34905
+epoch4, time used: 6.02, lr: 0.001
+Training_Loss At Epoch 5:	 0.348462
+Testing_Loss At Epoch 5:	 0.346939
+epoch5, time used: 5.7, lr: 0.001
+epoch6, time used: 5.58, lr: 0.001
+epoch7, time used: 5.15, lr: 0.001
+Training_Loss At Epoch 8:	 0.343755
+Testing_Loss At Epoch 8:	 0.343938
+epoch8, time used: 5.41, lr: 0.001
+Training_Loss At Epoch 9:	 0.342834
+Testing_Loss At Epoch 9:	 0.342762
+epoch9, time used: 5.45, lr: 0.001
+epoch10, time used: 5.47, lr: 0.001
+epoch11, time used: 5.49, lr: 0.001
+epoch12, time used: 5.31, lr: 0.001
+epoch13, time used: 5.24, lr: 0.001
+epoch14, time used: 5.58, lr: 0.001
+epoch15, time used: 5.45, lr: 0.001
+epoch16, time used: 5.09, lr: 0.001
+epoch17, time used: 5.42, lr: 0.001
+epoch18, time used: 5.15, lr: 0.001
+epoch19, time used: 5.34, lr: 0.001
+epoch20, time used: 5.54, lr: 0.001
+epoch21, time used: 5.12, lr: 0.0001
+epoch22, time used: 5.53, lr: 0.0001
+epoch23, time used: 5.06, lr: 0.0001
+epoch24, time used: 5.34, lr: 0.0001
+epoch25, time used: 5.4, lr: 0.0001
+epoch26, time used: 5.54, lr: 0.0001
+epoch27, time used: 5.09, lr: 0.0001
+epoch28, time used: 5.49, lr: 0.0001
+epoch29, time used: 5.44, lr: 0.0001
+epoch30, time used: 5.26, lr: 0.0001
