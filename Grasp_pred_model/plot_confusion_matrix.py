@@ -2,16 +2,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Replace these with your known TP, TN, FP, FN values
-tp = 15872
-tn = 7797
-fp = 9167
-fn = 41031
+tp = 14805
+tn = 42015
+fp = 8183
+fn = 8774
 
-path = '../models/LSTM_918_0/'
+# tp = 21591
+# tn = 48889
+# fp = 1222
+# fn = 1954
+
+path = '../ASSET/models/LSTM_918_0/'
 # Create the confusion matrix
 confusion_matrix = np.array([[tn, fp], [fn, tp]])
 
-def plot_confusion_matrix(confusion_matrix, title='Yolo Confusion Matrix', cmap=plt.cm.Blues):
+def plot_confusion_matrix(confusion_matrix, title='VB Baseline', cmap=plt.cm.Blues):
     plt.figure(figsize=(6, 4))
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
     plt.title(title)

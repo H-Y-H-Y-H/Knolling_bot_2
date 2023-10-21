@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-PATH = '../models/LSTM_918_0/'
+PATH = '../ASSET/models/LSTM_918_0/'
 
 data_1_baseline = np.loadtxt(PATH + 'model_data_labels_1.txt')
 data_2_conf097 = np.loadtxt(PATH + 'model_data_labels_2.txt')

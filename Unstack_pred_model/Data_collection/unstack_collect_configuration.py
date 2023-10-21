@@ -80,7 +80,7 @@ class Unstack_env(Arm_env):
             cur_pos = real_xyz[-1]
             print('this is cur pos after pid', cur_pos)
 
-            if self.para_dict['data_collection'] == True:
+            if self.para_dict['Data_collection'] == True:
                 with open(file=self.para_dict['data_tar_path'] + "cmd_xyz_nn.txt", mode="a", encoding="utf-8") as f:
                     np.savetxt(f, cmd_xyz)
                 with open(file=self.para_dict['data_tar_path'] + "real_xyz_nn.txt", mode="a", encoding="utf-8") as f:
@@ -468,7 +468,7 @@ if __name__ == '__main__':
                  'data_tar_path': '../../../knolling_dataset/base_dataset/',
                  'urdf_path': '../../urdf/',
                  'yolo_model_path': '../../models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'obs_order': 'sim_image_obj', 'data_collection': True, 'rl_configuration': True,
+                 'real_operate': False, 'obs_order': 'sim_image_obj', 'Data_collection': True, 'rl_configuration': True,
                  'use_knolling_model': False, 'use_lstm_model': True, 'use_yolo_model': True}
 
     lstm_dict = {'input_size': 6,

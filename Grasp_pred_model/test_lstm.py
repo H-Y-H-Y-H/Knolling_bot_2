@@ -32,7 +32,7 @@ if __name__ == '__main__':
         model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
         para_dict['wandb_flag'] = False
         para_dict['num_img'] = 450000
-        para_dict['model_path'] = '../models/LSTM_918_0/'
+        para_dict['model_path'] = '../ASSET/models/LSTM_918_0/'
         para_dict['data_path'] = '../../knolling_dataset/grasp_dataset_914/labels_1/'
         para_dict['run_name'] = para_dict['run_name'] + '_test'
         para_dict['hidden_size'] = 32
@@ -129,7 +129,7 @@ if __name__ == '__main__':
             else:
                 precision = (TP) / (TP + FP)
                 model_pred_precision.append(precision)
-            accuracy = (TP + FN) / (TP + TN + FP + FN)
+            accuracy = (TP + TN) / (TP + TN + FP + FN)
             model_pred_accuracy.append(accuracy)
 
             if precision > max_precision:
@@ -158,7 +158,7 @@ if __name__ == '__main__':
             total_TN.append(TN)
             total_FP.append(FP)
             total_FN.append(FN)
-            print('Accuracy (TP + FN) / all: %.04f' % ((TP + FN) / (tar_true + tar_false)))
+            print('Accuracy (TP + TN) / all: %.04f' % ((TP + TN) / (tar_true + tar_false)))
             if (TP + FN) == 0:
                 print('Recall (TP / (TP + FN)) 0')
             else:
@@ -253,7 +253,7 @@ if __name__ == '__main__':
 
         # np.random.seed(150)
         # random.seed(150)
-        urdf_path = '../urdf/'
+        urdf_path = '../ASSET/urdf/'
         if use_grasp_model == True:
 
             if torch.cuda.is_available():

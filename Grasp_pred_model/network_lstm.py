@@ -153,11 +153,11 @@ class LSTMRegressor(nn.Module):
                             else:
                                 self.grasp_dominated_TP += 1
                         else:
-                            self.TN += 1
+                            self.FN += 1
                             if j == yolo_dominated_index:
-                                self.yolo_dominated_TN += 1
+                                self.yolo_dominated_FN += 1
                             else:
-                                self.grasp_dominated_TN += 1
+                                self.grasp_dominated_FN += 1
                     if tar[i, j, 0] == 0:
                         self.tar_false += 1
                         if criterion:
@@ -167,11 +167,11 @@ class LSTMRegressor(nn.Module):
                             else:
                                 self.grasp_dominated_FP += 1
                         else:
-                            self.FN += 1
+                            self.TN += 1
                             if j == yolo_dominated_index:
-                                self.yolo_dominated_FN += 1
+                                self.yolo_dominated_TN += 1
                             else:
-                                self.grasp_dominated_FN += 1
+                                self.grasp_dominated_TN += 1
 
             if np.all(tar[i] < 0.5):
                 # print('here')
