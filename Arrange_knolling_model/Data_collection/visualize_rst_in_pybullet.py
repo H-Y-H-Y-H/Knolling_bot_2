@@ -47,7 +47,7 @@ class Arm:
     def __init__(self, is_render=True):
 
         self.kImageSize = {'width': 480, 'height': 480}
-        self.urdf_path = '../urdf/'
+        self.urdf_path = '../../ASSET/urdf/'
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
         if self.is_render:
@@ -157,7 +157,7 @@ class Arm:
     def label2image(self, labels_data, img_index, save_urdf_path):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
-        labels_data = labels_data.reshape(-1, 5)
+        labels_data = labels_data.reshape(-1, 6)
         pos_data = labels_data[:, :2]
         # pos_data[:,0] = np.random.uniform(0.02,0.25,pos_data[:,0].shape)
         # pos_data[:,1] = np.random.uniform(-0.12,0.12,pos_data[:,1].shape)
@@ -213,7 +213,7 @@ class Arm:
         #     boxes.append(URDF.load('../urdf/box_generator/box_%d.urdf' % index_flag[0, i]))
         #     xyz_list.append(boxes[i].links[0].visuals[0].geometry.box.size)
 
-        temp_box = URDF.load('../urdf/box_generator/template.urdf')
+        temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
         save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
         os.makedirs(save_urdf_path_one_img, exist_ok=True)
         for i in range(len(lw_data)):
@@ -396,9 +396,6 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    range_low = 5
-    range_high = 6
-    total_urdf = 30
 
     area_num = 2
     ratio_num = 1
@@ -414,7 +411,7 @@ if __name__ == '__main__':
     forced_rotate_box = False
 
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-    DATAROOT = "../../knolling_dataset/learning_data_910/"
+    DATAROOT = "../../../knolling_dataset/learning_data_1019/"
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
     images_log_path = target_path + 'images_%s/' % before_after
@@ -423,77 +420,72 @@ if __name__ == '__main__':
     os.makedirs(preprocess_label_path, exist_ok=True)
 
     # name = "devoted-terraqin-29"
-    name = "autumn-meadow-16"
+    name = "classic-bush-95"
 
     show_baseline = 0
     show_results_flag = True
 
     if command == 'recover':
 
-        env = Arm(is_render=False)
-        visual_path = '../train_multi_knolling_zzz/results/%s/cfg_%s/pred_after'%(name,configuration)
+        env = Arm(is_render=True)
+        visual_path = '../train_multi_knolling_zzz/results/%s/pred_after'%(name)
 
-        for i in range(range_low, range_high):
 
-            box_num = 5
-            if show_results_flag:
-                if show_baseline == 0:
-                    data = np.loadtxt(visual_path + '/num_%d.txt' % box_num)
-                    savefolder = '../train_multi_knolling_zzz/results/%s/cfg_%s/pred_after/image/' % (name, configuration)
-                elif show_baseline == 1:
-                    data = np.loadtxt('../train_multi_knolling_zzz/baseline/mlp_result/outputs.csv')
+        box_num = 10
+        if show_baseline == 0:
+            data = np.loadtxt(visual_path + '/num_%d_new.txt' % 30)
+            savefolder = '../train_multi_knolling_zzz/results/%s/pred_after/image/' % (name)
+        elif show_baseline == 1:
+            data = np.loadtxt('../train_multi_knolling_zzz/baseline/mlp_result/outputs.csv')
 
-            else:
-                data = np.loadtxt(DATAROOT + '/labels_%s_%s/num_%d.txt' % (before_after, configuration, i))
+        test_start = int(len(data)*0.8)
+        # test_end = int(len(data)*0.81)
+        data = data[:test_start]
+        savefolder = '../train_multi_knolling_zzz/results/%s/pred_%s/' % (name, before_after)
 
-                test_start = int(len(data)*0.8)
-                # test_end = int(len(data)*0.81)
-                data = data[:test_start]
-                savefolder = '../train_multi_knolling_zzz/results/%s/cfg_%s/pred_%s/' % (name, configuration,before_after)
+        os.makedirs(savefolder, exist_ok=True)
 
-            os.makedirs(savefolder, exist_ok=True)
+        if len(data.shape) == 1:
+            data = data.reshape(1, len(data))
 
-            if len(data.shape) == 1:
-                data = data.reshape(1, len(data))
+        data = data[:,:box_num*6]
+        print('this is len data', len(data))
+        save_urdf_path = DATAROOT + '/box_urdf/num_%d/' % (box_num)
+        os.makedirs(save_urdf_path, exist_ok=True)
 
-            data = data[:,:box_num*5]
-            print('this is len data', len(data))
-            save_urdf_path = DATAROOT + '/cfg_%s/box_urdf/num_%d/' % (configuration, box_num)
-            os.makedirs(save_urdf_path, exist_ok=True)
+        new_data = []
+        # new_index_flag = []
+        # for j in range(start_evaluations, end_evaluations):
+        # for j in [ 81434, 100777,  88176, 148385,  9905,  23617,  95448, 103549, 113927,  17746]:
+        # for j in [88176,  9905,  81434]:
+        for j in range(len(data)):
+            env.get_parameters(box_num=box_num)
+            print(f'this is data {j}')
+            one_img_data = data[j].reshape(-1, 6)
+            # one_img_index_flag = index_flag[j].reshape(2, -1)
+            box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
+            one_img_data = one_img_data[box_order].reshape(-1,)
+            # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
+            new_data.append(one_img_data)
+            # new_index_flag.append(one_img_index_flag)
 
-            new_data = []
-            # new_index_flag = []
-            # for j in range(start_evaluations, end_evaluations):
-            # for j in [ 81434, 100777,  88176, 148385,  9905,  23617,  95448, 103549, 113927,  17746]:
-            # for j in [88176,  9905,  81434]:
-            for j in range(len(data)):
-                env.get_parameters(box_num=box_num)
-                print(f'this is data {j}')
-                one_img_data = data[j].reshape(-1, 5)
-                # one_img_index_flag = index_flag[j].reshape(2, -1)
-                box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
-                one_img_data = one_img_data[box_order].reshape(-1,)
-                # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
-                new_data.append(one_img_data)
-                # new_index_flag.append(one_img_index_flag)
+            image = env.label2image(data[j], j, save_urdf_path)
+            image = image[..., :3]
 
-                image = env.label2image(data[j], j, save_urdf_path)
-                image = image[..., :3]
+            cv2.imwrite(savefolder+'%d.png'%j,image)
+            cv2.namedWindow('zzz', 0)
+            cv2.imshow("zzz", image)
+            print('This is the data: \n', data[j])
 
-                cv2.imwrite(savefolder+'%d.png'%j,image)
-                cv2.namedWindow('zzz', 0)
-                cv2.imshow("zzz", image)
-                print('This is the data: \n', data[j])
+            cv2.waitKey()
+            cv2.destroyAllWindows()
 
-                cv2.waitKey()
-                cv2.destroyAllWindows()
+            # cv2.imwrite(images_log_path + '%d_%d.png' % (i, j), image)
 
-                # cv2.imwrite(images_log_path + '%d_%d.png' % (i, j), image)
-
-            # new_data = np.asarray(new_data)
-            # # new_index_flag = np.asarray(new_index_flag)
-            # np.savetxt(preprocess_label_path + 'num_%d.txt' % i, new_data)
-            # # np.savetxt(target_path + 'index_flag/num_%s_flag.txt' % i, new_index_flag)
+        # new_data = np.asarray(new_data)
+        # # new_index_flag = np.asarray(new_index_flag)
+        # np.savetxt(preprocess_label_path + 'num_%d.txt' % i, new_data)
+        # # np.savetxt(target_path + 'index_flag/num_%s_flag.txt' % i, new_index_flag)
 
     if command == 'knolling':
 

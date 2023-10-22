@@ -16,8 +16,8 @@ if __name__ == '__main__':
     config.num_layers = 4
     config.dropout_prob = 0.0
     config.max_seq_length = 30
-    config.lr = 1e-3
-    config.batch_size = 512
+    config.lr = 1e-4
+    config.batch_size = 256
     config.log_pth = 'data/%s/' % running_name
     config.noise_std = 0.
     config.pos_encoding_Flag = True
@@ -42,7 +42,8 @@ if __name__ == '__main__':
         forwardtype=config.forwardtype,
         high_dim_encoder=config.high_dim_encoder,
         all_steps = config.all_steps,
-        max_obj_num = 30,
+        max_obj_num = config.max_seq_length,
+        # max_obj_num = 30,
         num_gaussians = 5)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -64,18 +65,18 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 20000
+    DATA_CUT = 10000
 
     solution_num = 4
-    configuration_num = 3
+    configuration_num = 1
     object_num = 30
 
     file_num = int(solution_num * configuration_num)
     for f in range(file_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d_2w.txt' % (object_num, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
 
-        raw_data = np.loadtxt(dataset_path)[:DATA_CUT]
+        raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 6]
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
         train_data = raw_data[:int(len(raw_data) * 0.8)]
@@ -87,7 +88,7 @@ if __name__ == '__main__':
         valid_label = []
         train_cls = []
         valid_cls = []
-        for i in range(object_num):
+        for i in range(config.max_seq_length):
             train_input.append(train_data[:, i * 6 + 2:i * 6 + 4])
             valid_input.append(test_data[:, i * 6 + 2:i * 6 + 4])
             train_cls.append(train_data[:, [i * 6 + 5]])
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=1000, verbose=True)
 
     num_epochs = 5000
     train_loss_list = []

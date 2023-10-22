@@ -8,7 +8,7 @@ import math
 import torch.optim as optim
 import torch.nn.functional as F
 
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 # input min&max: [0.016, 0.048]
@@ -460,7 +460,19 @@ class Knolling_Transformer(nn.Module):
             tar_x_gap = tar_x_temp[tar_x_temp < 100]
             tar_y_temp = tar_y_distance[cls_mask]
             tar_y_gap = tar_y_temp[tar_y_temp < 100]
+            if len(tar_x_gap) == 0 and len(tar_y_gap) == 0:
+                print('x none and y none')
+                tar_x_gap = torch.tensor(0.0001)
+                tar_y_gap = torch.tensor(0.0001)
+            elif len(tar_x_gap) == 0 and len(tar_y_gap) != 0:
+                print('x none')
+                tar_x_gap = tar_y_gap
+            elif len(tar_x_gap) != 0 and len(tar_y_gap) == 0:
+                print('y none')
+                tar_y_gap = tar_x_gap
 
+            # if len(tar_x_temp[tar_x_temp < 100]) == 0 or len(tar_y_temp[tar_y_temp < 100]) == 0:
+            #     print('here')
             tar_total_min.append(torch.min(tar_x_gap))
             tar_total_min.append(torch.min(tar_y_gap))
 
@@ -471,21 +483,45 @@ class Knolling_Transformer(nn.Module):
             pred_x_distance.masked_fill_(pred_x_mask, 100)
             pred_y_distance.masked_fill_(pred_y_mask, 100)
 
-            pred_x_temp = pred_x_distance[cls_mask]
-            if len(pred_x_temp < 100) == 0:
-                # pred_x_gap = torch.zeros(len(pred_x_temp))
-                pred_x_gap = 0.0001
-            else:
-                pred_x_gap = pred_x_temp[pred_x_temp < 100]
-            pred_y_temp = pred_y_distance[cls_mask]
-            if len(pred_y_temp < 100) == 0:
-                pred_y_gap = torch.zeros(len(pred_y_temp))
-                pred_x_gap = 0.0001
-            else:
-                pred_y_gap = pred_y_temp[pred_y_temp < 100]
+            # pred_x_temp = pred_x_distance[cls_mask]
+            # if len(pred_x_temp[pred_x_temp < 100]) == 0:
+            #     # pred_x_gap = torch.zeros(len(pred_x_temp))
+            #     pred_x_gap = 0.0001
+            #     print('x none')
+            # else:
+            #     pred_x_gap = pred_x_temp[pred_x_temp < 100]
+            #
+            # pred_y_temp = pred_y_distance[cls_mask]
+            # if len(pred_y_temp[pred_y_temp < 100]) == 0:
+            #     # pred_y_gap = torch.zeros(len(pred_y_temp))
+            #     pred_y_gap = 0.0001
+            #     print('y none')
+            # else:
+            #     pred_y_gap = pred_y_temp[pred_y_temp < 100]
 
-            pred_total_min.append(torch.min(pred_x_gap))
-            pred_total_min.append(torch.min(pred_y_gap))
+            pred_x_temp = pred_x_distance[cls_mask]
+            pred_y_temp = pred_y_distance[cls_mask]
+            pred_x_gap = pred_x_temp[pred_x_temp < 100]
+            pred_y_gap = pred_y_temp[pred_y_temp < 100]
+            if len(pred_x_gap) == 0 and len(pred_y_gap) == 0:
+                print('x none and y none')
+                pred_x_gap = torch.tensor(0.015)
+                pred_y_gap = torch.tensor(0.015)
+            elif len(pred_x_gap) == 0 and len(pred_y_gap) != 0:
+                print('x none')
+                pred_x_gap = torch.clone(pred_y_gap)
+            elif len(pred_x_gap) != 0 and len(pred_y_gap) == 0:
+                print('y none')
+                pred_y_gap = torch.clone(pred_x_gap)
+
+            try:
+                pred_total_min.append(torch.min(pred_x_gap))
+                pred_total_min.append(torch.min(pred_y_gap))
+            except:
+                print('this is pred_x_gap', pred_x_gap)
+                print('this is pred_y_gap', pred_y_gap)
+                print('this is len x', len(pred_x_temp))
+                print('this is len y', len(pred_y_temp))
 
         total_pred_min = torch.mean(torch.tensor(pred_total_min))
 
@@ -496,8 +532,11 @@ class Knolling_Transformer(nn.Module):
         if raw_loss > 0.015:
             return 0 + (raw_loss * 200 / 3 - 1) * 0.2
         else:
+            log_loss = torch.abs(torch.log(raw_loss * 200 / 3)) + 1
+            if log_loss > 15:
+                print('this is log loss', log_loss)
             # return torch.abs(torch.log(raw_loss * 200 / 3)) + 1
-            return torch.abs(torch.log(raw_loss * 200 / 3)) + 1
+            return log_loss
 
 if __name__ == "__main__":
 
