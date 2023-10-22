@@ -6,9 +6,9 @@ configuration = [[2, 1],
                  [1, 1]]
 num = 30
 
-start_evaluations = 50000
-end_evaluations =   150000
-step_num = 100
+start_evaluations = 0
+end_evaluations =   21000
+step_num = 3
 solution_num = 4 * len(configuration)
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -52,7 +52,7 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
         target_path = '../../../knolling_dataset/learning_data_1019/'
         before_path = target_path + 'labels_before_0/'
         after_path = target_path + 'labels_after_%s/' % m
-        output_path = target_path + 'num_%d_after_%d_add.txt' % (num, m)
+        output_path = target_path + 'num_%d_after_%d_2w.txt' % (num, m)
 
         total_data = []
         for s in save_point:

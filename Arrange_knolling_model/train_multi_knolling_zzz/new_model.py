@@ -8,7 +8,7 @@ import math
 import torch.optim as optim
 import torch.nn.functional as F
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 # input min&max: [0.016, 0.048]

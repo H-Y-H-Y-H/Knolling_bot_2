@@ -16,8 +16,8 @@ if __name__ == '__main__':
     config.num_layers = 4
     config.dropout_prob = 0.0
     config.max_seq_length = 30
-    config.lr = 1e-4
-    config.batch_size = 256
+    config.lr = 1e-3
+    config.batch_size = 512
     config.log_pth = 'data/%s/' % running_name
     config.noise_std = 0.
     config.pos_encoding_Flag = True
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 10000
+    DATA_CUT = 20000
 
     solution_num = 4
     configuration_num = 3
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     file_num = int(solution_num * configuration_num)
     for f in range(file_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d_2w.txt' % (object_num, f)
         print('load data:', dataset_path)
 
         raw_data = np.loadtxt(dataset_path)[:DATA_CUT]
@@ -125,9 +125,9 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=2000, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, verbose=True)
 
-    num_epochs = 1000
+    num_epochs = 5000
     train_loss_list = []
     valid_loss_list = []
     model.to(device)
@@ -386,4 +386,5 @@ if __name__ == '__main__':
                 wandb.log({"train loss": train_loss,
                            "valid loss": avg_loss,
                            "learning rate": optimizer.param_groups[0]['lr'],
+                           "scheduler factor": 0.5,
                            "min loss": min_loss})
