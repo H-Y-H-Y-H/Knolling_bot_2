@@ -62,11 +62,13 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+print(torch.min(torch.tensor(0)))
+
 def custom_function(x):
     if x > 0.015:
         return 0 + (x * 200 / 3 - 1) * 0.2
     else:
-        return np.abs(np.log((x * 200 / 3))) + 0
+        return np.abs(np.log(0)) + 0
 
 # Generate x values for the plot
 x_values = np.linspace(0.001, 0.05, 1000)  # Adjust the range and number of points as needed

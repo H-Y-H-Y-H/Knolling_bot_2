@@ -473,12 +473,14 @@ class Knolling_Transformer(nn.Module):
 
             pred_x_temp = pred_x_distance[cls_mask]
             if len(pred_x_temp < 100) == 0:
-                pred_x_gap = torch.zeros(len(pred_x_temp))
+                # pred_x_gap = torch.zeros(len(pred_x_temp))
+                pred_x_gap = 0.0001
             else:
                 pred_x_gap = pred_x_temp[pred_x_temp < 100]
             pred_y_temp = pred_y_distance[cls_mask]
             if len(pred_y_temp < 100) == 0:
                 pred_y_gap = torch.zeros(len(pred_y_temp))
+                pred_x_gap = 0.0001
             else:
                 pred_y_gap = pred_y_temp[pred_y_temp < 100]
 
