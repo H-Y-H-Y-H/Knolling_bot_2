@@ -64,7 +64,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000
+    DATA_CUT = 10000
 
     solution_num = 4
     configuration_num = 3
