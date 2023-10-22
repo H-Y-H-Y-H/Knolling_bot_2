@@ -44,7 +44,7 @@ if __name__ == '__main__':
         all_steps = config.all_steps,
         max_obj_num = config.max_seq_length,
         # max_obj_num = 30,
-        num_gaussians = 5)
+        num_gaussians = 3)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
