@@ -44,7 +44,7 @@ if __name__ == '__main__':
         all_steps = config.all_steps,
         max_obj_num = config.max_seq_length,
         # max_obj_num = 30,
-        num_gaussians = 3)
+        num_gaussians = 4)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 10000
+    DATA_CUT = 20000
 
     solution_num = 4
     configuration_num = 1
@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
     file_num = int(solution_num * configuration_num)
     for f in range(file_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d_2w.txt' % (object_num, f)
         print('load data:', dataset_path)
 
         raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 6]
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=1000, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=200, verbose=True)
 
     num_epochs = 5000
     train_loss_list = []

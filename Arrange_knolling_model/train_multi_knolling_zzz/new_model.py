@@ -505,8 +505,8 @@ class Knolling_Transformer(nn.Module):
             pred_y_gap = pred_y_temp[pred_y_temp < 100]
             if len(pred_x_gap) == 0 and len(pred_y_gap) == 0:
                 print('x none and y none')
-                pred_x_gap = torch.tensor(0.015)
-                pred_y_gap = torch.tensor(0.015)
+                pred_x_gap = torch.tensor(0.0001)
+                pred_y_gap = torch.tensor(0.0001)
             elif len(pred_x_gap) == 0 and len(pred_y_gap) != 0:
                 print('x none')
                 pred_x_gap = torch.clone(pred_y_gap)
