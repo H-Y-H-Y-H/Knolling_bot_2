@@ -27,8 +27,9 @@ if __name__ == '__main__':
     config.high_dim_encoder = True
     config.all_steps = True
     config.object_num = -1
-    config.overlap_area_factor = 100
+    config.overlap_area_factor = 500
     config.canvas_factor = 2
+    config.use_overlap_loss = False
     os.makedirs(config.log_pth, exist_ok=True)
 
     model = Knolling_Transformer(
@@ -48,7 +49,8 @@ if __name__ == '__main__':
         # max_obj_num = 30,
         num_gaussians = 4,
         overlap_area_factor=config.overlap_area_factor,
-        canvas_factor=config.canvas_factor
+        canvas_factor=config.canvas_factor,
+        use_overlap_loss=config.use_overlap_loss
     )
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 30000
+    DATA_CUT = 420000
 
     solution_num = 4
     configuration_num = 1

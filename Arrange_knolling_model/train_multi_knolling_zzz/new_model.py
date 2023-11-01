@@ -21,7 +21,7 @@ SHIFT_DATA = 50
 # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
 # DATAROOT = "../../knolling_dataset/learning_data_826/"
 # DATAROOT = "../../knolling_dataset/learning_data_910/"
-DATAROOT = "../../../knolling_dataset/learning_data_1019/"
+DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
@@ -252,7 +252,8 @@ class Knolling_Transformer(nn.Module):
             max_obj_num = 10,
             num_gaussians=3,
             overlap_area_factor=None,
-            canvas_factor=None
+            canvas_factor=None,
+            use_overlap_loss=None
     ):
 
         super(Knolling_Transformer, self).__init__()
@@ -268,8 +269,9 @@ class Knolling_Transformer(nn.Module):
         self.canvas_factor = canvas_factor
         self.mm2px = 530 / (0.34 * self.canvas_factor)
         self.padding_value = 1
-        self.max_overlap_area = 0
+        self.min_overlap_area = np.inf
         self.overlap_area_factor = overlap_area_factor
+        self.use_overlap_loss = use_overlap_loss
 
         self.max_obj_num = max_obj_num# maximun 10
         self.num_gaussians = num_gaussians
@@ -424,8 +426,11 @@ class Knolling_Transformer(nn.Module):
         tar_pos_raw = ((tar_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
         pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-        Overlap_loss = self.calcualte_overlap_loss(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw,
+        if self.use_overlap_loss == True:
+            Overlap_loss = self.calcualte_overlap_loss(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw,
                                                      tar_lw=tar_lw_raw, tar_cls=tar_cls_raw)
+        else:
+            Overlap_loss = 1
 
         total_loss = MSE_loss * Overlap_loss
 
@@ -601,9 +606,9 @@ class Knolling_Transformer(nn.Module):
                 penalty_list.append(100)
             else:
                 overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-                if overlap_area > self.max_overlap_area:
-                    self.max_overlap_area = overlap_area
-                    print('this is max_overlap_area', self.max_overlap_area)
+                if overlap_area < self.min_overlap_area:
+                    self.min_overlap_area = overlap_area
+                    print('this is max_overlap_area', self.min_overlap_area)
                 overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
                 avg_overlap_area.append(overlap_area)
                 avg_overlap_num.append(overlap_num)
