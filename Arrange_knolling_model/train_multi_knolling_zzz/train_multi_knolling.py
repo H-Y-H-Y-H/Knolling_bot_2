@@ -15,9 +15,9 @@ if __name__ == '__main__':
     config.num_attention_heads = 4
     config.num_layers = 4
     config.dropout_prob = 0.0
-    config.max_seq_length = 30
+    config.max_seq_length = 10
     config.lr = 1e-4
-    config.batch_size = 256
+    config.batch_size = 512
     config.log_pth = 'data/%s/' % running_name
     config.noise_std = 0.
     config.pos_encoding_Flag = True
@@ -27,6 +27,8 @@ if __name__ == '__main__':
     config.high_dim_encoder = True
     config.all_steps = True
     config.object_num = -1
+    config.overlap_area_factor = 100
+    config.canvas_factor = 2
     os.makedirs(config.log_pth, exist_ok=True)
 
     model = Knolling_Transformer(
@@ -44,13 +46,16 @@ if __name__ == '__main__':
         all_steps = config.all_steps,
         max_obj_num = config.max_seq_length,
         # max_obj_num = 30,
-        num_gaussians = 4)
+        num_gaussians = 4,
+        overlap_area_factor=config.overlap_area_factor,
+        canvas_factor=config.canvas_factor
+    )
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'light-grass-6'
+        pre_name = 'creepy-hex-124'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -65,7 +70,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 20000
+    DATA_CUT = 30000
 
     solution_num = 4
     configuration_num = 1
@@ -73,7 +78,7 @@ if __name__ == '__main__':
 
     file_num = int(solution_num * configuration_num)
     for f in range(file_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d_2w.txt' % (object_num, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
 
         raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 6]
@@ -128,7 +133,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=200, verbose=True)
 
-    num_epochs = 5000
+    num_epochs = 1000
     train_loss_list = []
     valid_loss_list = []
     model.to(device)

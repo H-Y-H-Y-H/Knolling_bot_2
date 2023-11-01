@@ -345,8 +345,8 @@ if __name__ == '__main__':
     before_after = 'after'
 
     iteration_time = 10
-    start_evaluations = 35000
-    end_evaluations =   42000
+    start_evaluations = 0
+    end_evaluations =   1000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
