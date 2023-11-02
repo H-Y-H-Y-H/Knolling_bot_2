@@ -15,7 +15,7 @@ if __name__ == '__main__':
     config.num_attention_heads = 4
     config.num_layers = 4
     config.dropout_prob = 0.0
-    config.max_seq_length = 10
+    config.max_seq_length = 5
     config.lr = 1e-4
     config.batch_size = 512
     config.log_pth = 'data/%s/' % running_name
@@ -30,6 +30,8 @@ if __name__ == '__main__':
     config.overlap_area_factor = 500
     config.canvas_factor = 2
     config.use_overlap_loss = False
+    config.patience = 200
+    config.num_gaussian = 4
     os.makedirs(config.log_pth, exist_ok=True)
 
     model = Knolling_Transformer(
@@ -47,7 +49,7 @@ if __name__ == '__main__':
         all_steps = config.all_steps,
         max_obj_num = config.max_seq_length,
         # max_obj_num = 30,
-        num_gaussians = 4,
+        num_gaussians = config.num_gaussian,
         overlap_area_factor=config.overlap_area_factor,
         canvas_factor=config.canvas_factor,
         use_overlap_loss=config.use_overlap_loss
@@ -72,14 +74,13 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 420000
+    DATA_CUT = 50000
 
     solution_num = 4
     configuration_num = 1
+    config.solu_num = int(solution_num * configuration_num)
     object_num = 30
-
-    file_num = int(solution_num * configuration_num)
-    for f in range(file_num):
+    for f in range(config.solu_num):
         dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
 
@@ -100,6 +101,8 @@ if __name__ == '__main__':
             valid_input.append(test_data[:, i * 6 + 2:i * 6 + 4])
             train_cls.append(train_data[:, [i * 6 + 5]])
             valid_cls.append(test_data[:, [i * 6 + 5]])
+            # train_cls.append(np.zeros((len(train_data), 1)))
+            # valid_cls.append(np.zeros((len(test_data), 1)))
             train_label.append(train_data[:, i * 6:i * 6 + 2])
             valid_label.append(test_data [:, i * 6:i * 6 + 2])
 
@@ -133,7 +136,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=200, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=config.patience, verbose=True)
 
     num_epochs = 1000
     train_loss_list = []
@@ -262,13 +265,6 @@ if __name__ == '__main__':
                            "min loss": min_loss})
 
         else:
-            # # object number > masked number
-            # if config.object_num == -1:
-            #     object_num = np.random.randint(5, 11) #[0,11)
-            # else:
-            #     object_num = config.object_num
-
-            # print("OBJ:", object_num)
             for input_batch, target_batch, input_cls in train_loader:
                 optimizer.zero_grad()
 

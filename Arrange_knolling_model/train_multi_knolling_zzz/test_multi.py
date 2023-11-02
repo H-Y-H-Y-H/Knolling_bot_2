@@ -78,13 +78,14 @@ if __name__ == '__main__':
     import wandb
     import argparse
 
-    DATAROOT = "../../../knolling_dataset/learning_data_1019/"
+    DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
 
     api = wandb.Api()
     # Project is specified by <entity/project-name>
     runs = api.runs("knolling_multi")
 
-    name = "classic-bush-95"
+    # name = "radiant-puddle-143"
+    name = 'dandy-hill-142'
     # model_name = 'latest_model.pt'
     model_name = "best_model.pt"
 
@@ -172,7 +173,7 @@ if __name__ == '__main__':
     for NUM_objects in range(config.max_seq_length, config.max_seq_length + 1):
         outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
         for i in range(NUM_objects):
-            raw_data[:, i * 6:i * 6 + 2] = outputs[:, 6 * 2:6 * 2 + 2]
+            raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
             raw_data[:, i * 6 + 6] = 0
         log_folder = './results/%s/pred_after' % (name)
         os.makedirs(log_folder, exist_ok=True)

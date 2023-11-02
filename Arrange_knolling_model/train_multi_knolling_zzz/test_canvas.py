@@ -6,7 +6,7 @@ import cv2
 
 def test_print_canvas():
     data_root = "../../../knolling_dataset/learning_data_1019_42w/"
-    data_raw = np.loadtxt(data_root + 'num_30_after_0.txt')[:8, :60].reshape(-1, 10, 6)
+    data_raw = np.loadtxt(data_root + 'num_30_after_0.txt')[:100, :60].reshape(-1, 10, 6)
 
     factor = 1
     padding_value = 255

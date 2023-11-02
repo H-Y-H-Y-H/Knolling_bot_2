@@ -19,7 +19,7 @@ print(device)
 SCALE_DATA = 100
 SHIFT_DATA = 50
 # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-# DATAROOT = "../../knolling_dataset/learning_data_826/"
+# DATAROOT = "../../../knolling_dataset/learning_data_826/"
 # DATAROOT = "../../knolling_dataset/learning_data_910/"
 DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
 
@@ -252,7 +252,7 @@ class Knolling_Transformer(nn.Module):
             max_obj_num = 10,
             num_gaussians=3,
             overlap_area_factor=None,
-            canvas_factor=None,
+            canvas_factor=1,
             use_overlap_loss=None
     ):
 
@@ -617,7 +617,8 @@ class Knolling_Transformer(nn.Module):
         avg_overlap_num = np.mean(np.asarray(avg_overlap_num))
         penalty = np.mean(np.asarray(penalty_list))
         if 15 < penalty < 100:
-            print('this is penalty', penalty)
+            pass
+            # print('this is penalty', penalty)
         if penalty <= 15:
             print('this is avg_overlap_area', avg_overlap_area)
             print('this is avg_overlap_num', avg_overlap_num)

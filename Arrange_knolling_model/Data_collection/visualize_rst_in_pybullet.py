@@ -411,7 +411,7 @@ if __name__ == '__main__':
     forced_rotate_box = False
 
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-    DATAROOT = "../../../knolling_dataset/learning_data_1019/"
+    DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
     images_log_path = target_path + 'images_%s/' % before_after
@@ -420,7 +420,9 @@ if __name__ == '__main__':
     os.makedirs(preprocess_label_path, exist_ok=True)
 
     # name = "devoted-terraqin-29"
-    name = "classic-bush-95"
+    # name = "classic-bush-95"
+    name = 'dandy-hill-142'
+    # name = "radiant-puddle-143"
 
     show_baseline = 0
     show_results_flag = True
@@ -431,7 +433,7 @@ if __name__ == '__main__':
         visual_path = '../train_multi_knolling_zzz/results/%s/pred_after'%(name)
 
 
-        box_num = 10
+        box_num = 5
         if show_baseline == 0:
             data = np.loadtxt(visual_path + '/num_%d_new.txt' % 30)
             savefolder = '../train_multi_knolling_zzz/results/%s/pred_after/image/' % (name)
