@@ -25,12 +25,12 @@ if __name__ == '__main__':
     config.forward_expansion = 4
     config.pre_trained = False
     config.high_dim_encoder = True
-    config.all_steps = True
+    config.all_steps = False
     config.object_num = -1
     config.overlap_area_factor = 500
     config.canvas_factor = 2
     config.use_overlap_loss = True
-    config.patience = 200
+    config.patience = 500
     config.num_gaussian = 4
     config.dataset_path = DATAROOT
     os.makedirs(config.log_pth, exist_ok=True)
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'creepy-hex-124'
+        pre_name = 'fluent-star-144'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 50000
+    DATA_CUT = 420000
 
     solution_num = 4
     configuration_num = 1

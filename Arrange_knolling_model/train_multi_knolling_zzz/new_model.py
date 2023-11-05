@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 # input min&max: [0.016, 0.048]
@@ -269,7 +269,8 @@ class Knolling_Transformer(nn.Module):
         self.canvas_factor = canvas_factor
         self.mm2px = 530 / (0.34 * self.canvas_factor)
         self.padding_value = 1
-        self.min_overlap_area = np.inf
+        # self.min_overlap_area = np.inf
+        self.min_overlap_num = np.inf
         self.overlap_area_factor = overlap_area_factor
         self.use_overlap_loss = use_overlap_loss
 
@@ -578,8 +579,15 @@ class Knolling_Transformer(nn.Module):
         avg_overlap_area = []
         avg_overlap_num = []
         for i in range(data_pred.shape[0]):
+
+            x_offset_px = np.min(data_pred[i, :, 0])
+            y_offset_px = np.min(data_pred[i, :, 1])
+            data_pred[i, :, [0, 2]] -= x_offset_px
+            data_pred[i, :, [1, 3]] -= y_offset_px
+            x_max_px = np.max(data_pred[i, :, 2])
+            y_max_px = np.max(data_pred[i, :, 3])
             # canvas_tar = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
-            canvas_pred = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
+            canvas_pred = np.zeros((x_max_px, y_max_px), dtype=np.uint8)
 
             for j in range(data_pred.shape[1]):
                 # corner_data_tar = data_tar[i, j]
@@ -588,40 +596,40 @@ class Knolling_Transformer(nn.Module):
                 canvas_pred[corner_data_pred[0]:corner_data_pred[2], corner_data_pred[1]:corner_data_pred[3]] += self.padding_value
                 # canvas = cv2.rectangle(canvas, (corner_data[0], corner_data[1]), (corner_data[2], corner_data[3]), 255, -1)
 
-            # cv2.namedWindow('zzz', 0)
-            # # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', canvas_pred)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-            #
-            # cv2.namedWindow('zzz', 0)
-            # # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', canvas_tar)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
+            # if np.max(canvas_pred) <= 0 or np.any(data_pred[i, :, 0] <= 0) or np.any(data_pred[i, :, 1] <= 0):
+            #     avg_overlap_area.append(100)
+            #     avg_overlap_num.append(100)
+            #     penalty_list.append(100)
+            # else:
+            #     overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
+            #     if overlap_area < self.min_overlap_area:
+            #         self.min_overlap_area = overlap_area
+            #         print('this is max_overlap_area', self.min_overlap_area)
+            #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
+            #     avg_overlap_area.append(overlap_area)
+            #     avg_overlap_num.append(overlap_num)
+            #     penalty_list.append(overlap_num * overlap_area)
 
-            if np.max(canvas_pred) <= 0 or np.any(data_pred[i, :, 0] <= 0) or np.any(data_pred[i, :, 1] <= 0):
-                avg_overlap_area.append(100)
-                avg_overlap_num.append(100)
-                penalty_list.append(100)
-            else:
-                overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-                if overlap_area < self.min_overlap_area:
-                    self.min_overlap_area = overlap_area
-                    print('this is max_overlap_area', self.min_overlap_area)
-                overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
-                avg_overlap_area.append(overlap_area)
-                avg_overlap_num.append(overlap_num)
-                penalty_list.append(overlap_num * overlap_area)
-        avg_overlap_area = np.mean(np.asarray(avg_overlap_area))
+            # overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
+            # if overlap_area < self.min_overlap_area:
+            #     self.min_overlap_area = overlap_area
+            #     print('this is max_overlap_area', self.min_overlap_area)
+            overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
+            # avg_overlap_area.append(overlap_area)
+            avg_overlap_num.append(overlap_num)
+            penalty_list.append(overlap_num)
+        # avg_overlap_area = np.mean(np.asarray(avg_overlap_area))
         avg_overlap_num = np.mean(np.asarray(avg_overlap_num))
         penalty = np.mean(np.asarray(penalty_list))
-        if 15 < penalty < 100:
-            pass
-            # print('this is penalty', penalty)
-        if penalty <= 15:
-            print('this is avg_overlap_area', avg_overlap_area)
-            print('this is avg_overlap_num', avg_overlap_num)
+        if avg_overlap_num < self.min_overlap_num:
+            self.min_overlap_num = avg_overlap_num
+            print('this is min overlap num:', self.min_overlap_num)
+        # if 15 < penalty < 100:
+        #     pass
+        # if penalty <= 15:
+        #     # print('this is avg_overlap_area', avg_overlap_area)
+        #     print('this is avg_overlap_num', avg_overlap_num)
+
 
         return penalty
 
