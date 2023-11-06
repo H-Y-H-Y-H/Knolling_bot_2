@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
 
 # input min&max: [0.016, 0.048]
@@ -251,9 +251,10 @@ class Knolling_Transformer(nn.Module):
             all_steps = False,
             max_obj_num = 10,
             num_gaussians=3,
-            overlap_area_factor=None,
             canvas_factor=1,
-            use_overlap_loss=None
+            use_overlap_loss=None,
+            mse_loss_factor=None,
+            overlap_loss_factor=None
     ):
 
         super(Knolling_Transformer, self).__init__()
@@ -271,8 +272,9 @@ class Knolling_Transformer(nn.Module):
         self.padding_value = 1
         # self.min_overlap_area = np.inf
         self.min_overlap_num = np.inf
-        self.overlap_area_factor = overlap_area_factor
         self.use_overlap_loss = use_overlap_loss
+        self.mse_loss_factor = mse_loss_factor
+        self.overlap_loss_factor = overlap_loss_factor
 
         self.max_obj_num = max_obj_num# maximun 10
         self.num_gaussians = num_gaussians
@@ -431,9 +433,12 @@ class Knolling_Transformer(nn.Module):
             Overlap_loss = self.calcualte_overlap_loss(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw,
                                                      tar_lw=tar_lw_raw, tar_cls=tar_cls_raw)
         else:
-            Overlap_loss = 1
+            Overlap_loss = 0
 
-        total_loss = MSE_loss * Overlap_loss
+        total_loss = MSE_loss * self.mse_loss_factor + self.overlap_loss_factor * Overlap_loss
+
+        # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
+        # total_loss = MSE_loss + scaled_overlap_loss
 
         return total_loss
 
@@ -499,22 +504,6 @@ class Knolling_Transformer(nn.Module):
             pred_x_distance.masked_fill_(pred_x_mask, 100)
             pred_y_distance.masked_fill_(pred_y_mask, 100)
 
-            # pred_x_temp = pred_x_distance[cls_mask]
-            # if len(pred_x_temp[pred_x_temp < 100]) == 0:
-            #     # pred_x_gap = torch.zeros(len(pred_x_temp))
-            #     pred_x_gap = 0.0001
-            #     print('x none')
-            # else:
-            #     pred_x_gap = pred_x_temp[pred_x_temp < 100]
-            #
-            # pred_y_temp = pred_y_distance[cls_mask]
-            # if len(pred_y_temp[pred_y_temp < 100]) == 0:
-            #     # pred_y_gap = torch.zeros(len(pred_y_temp))
-            #     pred_y_gap = 0.0001
-            #     print('y none')
-            # else:
-            #     pred_y_gap = pred_y_temp[pred_y_temp < 100]
-
             pred_x_temp = pred_x_distance[cls_mask]
             pred_y_temp = pred_y_distance[cls_mask]
             pred_x_gap = pred_x_temp[pred_x_temp < 100]
@@ -556,138 +545,108 @@ class Knolling_Transformer(nn.Module):
 
     def calcualte_overlap_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
 
-        canvas_width, canvas_height = int(640 / self.canvas_factor), int(480 / self.canvas_factor)
-        # temp_scaler = canvas_width * canvas_height / 10
+        # Assuming tar_pos, tar_lw, pred_pos are PyTorch tensors, and self.mm2px is a scalar tensor.
+        tar_pos_px = tar_pos * self.mm2px + 10
+        tar_lw_px = tar_lw * self.mm2px
+        pred_pos_px = pred_pos * self.mm2px + 10
 
-        tar_pos_px = tar_pos.detach().cpu().numpy() * self.mm2px + 10
-        tar_lw_px = tar_lw.detach().cpu().numpy() * self.mm2px
-        pred_pos_px = pred_pos.detach().cpu().numpy() * self.mm2px + 10
-
-        # data_tar = np.concatenate(((tar_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-        #                        (tar_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-        #                        (tar_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-        #                        (tar_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-        #                        ), axis=2).astype(np.int32)
-        data_pred = np.concatenate(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-                                   (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-                                   (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-                                   (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-                                   ), axis=2).astype(np.int32)
+        data_pred = torch.cat(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2).unsqueeze(2),
+                               (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2).unsqueeze(2),
+                               (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2).unsqueeze(2),
+                               (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2).unsqueeze(2)), dim=2).type(torch.int32).to(device)
 
         # Iterate through each rectangle and draw them on the canvas
         penalty_list = []
         avg_overlap_area = []
         avg_overlap_num = []
         for i in range(data_pred.shape[0]):
-
-            x_offset_px = np.min(data_pred[i, :, 0])
-            y_offset_px = np.min(data_pred[i, :, 1])
+            x_offset_px = torch.min(data_pred[i, :, 0])
+            y_offset_px = torch.min(data_pred[i, :, 1])
             data_pred[i, :, [0, 2]] -= x_offset_px
             data_pred[i, :, [1, 3]] -= y_offset_px
-            x_max_px = np.max(data_pred[i, :, 2])
-            y_max_px = np.max(data_pred[i, :, 3])
-            # canvas_tar = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
-            canvas_pred = np.zeros((x_max_px, y_max_px), dtype=np.uint8)
+            x_max_px = torch.max(data_pred[i, :, 2])
+            y_max_px = torch.max(data_pred[i, :, 3])
+            canvas_pred = torch.zeros(int(x_max_px), int(y_max_px))
 
             for j in range(data_pred.shape[1]):
-                # corner_data_tar = data_tar[i, j]
                 corner_data_pred = data_pred[i, j]
-                # canvas_tar[corner_data_tar[0]:corner_data_tar[2], corner_data_tar[1]:corner_data_tar[3]] += padding_value
-                canvas_pred[corner_data_pred[0]:corner_data_pred[2], corner_data_pred[1]:corner_data_pred[3]] += self.padding_value
-                # canvas = cv2.rectangle(canvas, (corner_data[0], corner_data[1]), (corner_data[2], corner_data[3]), 255, -1)
+                canvas_pred[corner_data_pred[0]:corner_data_pred[2],
+                corner_data_pred[1]:corner_data_pred[3]] += self.padding_value
 
-            # if np.max(canvas_pred) <= 0 or np.any(data_pred[i, :, 0] <= 0) or np.any(data_pred[i, :, 1] <= 0):
-            #     avg_overlap_area.append(100)
-            #     avg_overlap_num.append(100)
-            #     penalty_list.append(100)
-            # else:
-            #     overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-            #     if overlap_area < self.min_overlap_area:
-            #         self.min_overlap_area = overlap_area
-            #         print('this is max_overlap_area', self.min_overlap_area)
-            #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
-            #     avg_overlap_area.append(overlap_area)
-            #     avg_overlap_num.append(overlap_num)
-            #     penalty_list.append(overlap_num * overlap_area)
-
-            # overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-            # if overlap_area < self.min_overlap_area:
-            #     self.min_overlap_area = overlap_area
-            #     print('this is max_overlap_area', self.min_overlap_area)
-            overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
-            # avg_overlap_area.append(overlap_area)
+            overlap_num = torch.clamp(torch.max(canvas_pred) / self.padding_value, 1)
             avg_overlap_num.append(overlap_num)
             penalty_list.append(overlap_num)
-        # avg_overlap_area = np.mean(np.asarray(avg_overlap_area))
-        avg_overlap_num = np.mean(np.asarray(avg_overlap_num))
-        penalty = np.mean(np.asarray(penalty_list))
+
+        avg_overlap_num = torch.mean(torch.stack(avg_overlap_num))
+        penalty = torch.mean(torch.stack(penalty_list)).to(device).requires_grad_()
+
         if avg_overlap_num < self.min_overlap_num:
             self.min_overlap_num = avg_overlap_num
             print('this is min overlap num:', self.min_overlap_num)
-        # if 15 < penalty < 100:
-        #     pass
-        # if penalty <= 15:
-        #     # print('this is avg_overlap_area', avg_overlap_area)
-        #     print('this is avg_overlap_num', avg_overlap_num)
 
-
-        return penalty
-
-        # tar_pos_px = tar_pos * mm2px
-        # tar_lw_px = tar_lw * mm2px
-        # pred_pos_px = pred_pos * mm2px
+        # tar_pos_px = tar_pos.detach().cpu().numpy() * self.mm2px + 10
+        # tar_lw_px = tar_lw.detach().cpu().numpy() * self.mm2px
+        # pred_pos_px = pred_pos.detach().cpu().numpy() * self.mm2px + 10
         #
-        # data_tar = torch.cat(((tar_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2).unsqueeze(2),
-        #                            (tar_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2).unsqueeze(2),
-        #                            (tar_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2).unsqueeze(2),
-        #                            (tar_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2).unsqueeze(2),
-        #                            ), dim=2)
-        # data_pred = torch.cat(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2).unsqueeze(2),
-        #                             (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2).unsqueeze(2),
-        #                             (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2).unsqueeze(2),
-        #                             (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2).unsqueeze(2),
-        #                             ), dim=2)
-        #
-        # # Define the dimensions of the canvas
-        # canvas_width, canvas_height = int(640 / factor), int(480 / factor)
+        # data_pred = np.concatenate(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
+        #                            (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
+        #                            (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
+        #                            (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
+        #                            ), axis=2).astype(np.int32)
         #
         # # Iterate through each rectangle and draw them on the canvas
         # penalty_list = []
-        # for i in range(data_tar.size[0]):
-        #     canvas_tar = torch.zeros((canvas_height, canvas_width))
-        #     canvas_pred = torch.zeros((canvas_height, canvas_width))
+        # avg_overlap_area = []
+        # avg_overlap_num = []
+        # for i in range(data_pred.shape[0]):
         #
-        #     for j in range(data_tar.size[1]):
-        #         corner_data_tar = data_tar[i, j]
+        #     x_offset_px = np.min(data_pred[i, :, 0])
+        #     y_offset_px = np.min(data_pred[i, :, 1])
+        #     data_pred[i, :, [0, 2]] -= x_offset_px
+        #     data_pred[i, :, [1, 3]] -= y_offset_px
+        #     x_max_px = np.max(data_pred[i, :, 2])
+        #     y_max_px = np.max(data_pred[i, :, 3])
+        #     # canvas_tar = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
+        #     canvas_pred = np.zeros((x_max_px, y_max_px), dtype=np.uint8)
+        #
+        #     for j in range(data_pred.shape[1]):
+        #         # corner_data_tar = data_tar[i, j]
         #         corner_data_pred = data_pred[i, j]
-        #         canvas_tar[corner_data_tar[0]:corner_data_tar[2],
-        #         corner_data_tar[1]:corner_data_tar[3]] += padding_value
-        #         canvas_pred[corner_data_pred[0]:corner_data_pred[2],
-        #         corner_data_pred[1]:corner_data_pred[3]] += padding_value
+        #         # canvas_tar[corner_data_tar[0]:corner_data_tar[2], corner_data_tar[1]:corner_data_tar[3]] += padding_value
+        #         canvas_pred[corner_data_pred[0]:corner_data_pred[2], corner_data_pred[1]:corner_data_pred[3]] += self.padding_value
         #         # canvas = cv2.rectangle(canvas, (corner_data[0], corner_data[1]), (corner_data[2], corner_data[3]), 255, -1)
         #
-        #     canvas_tar_show = torch.clone(canvas_tar).cpu().detach()
+        #     # if np.max(canvas_pred) <= 0 or np.any(data_pred[i, :, 0] <= 0) or np.any(data_pred[i, :, 1] <= 0):
+        #     #     avg_overlap_area.append(100)
+        #     #     avg_overlap_num.append(100)
+        #     #     penalty_list.append(100)
+        #     # else:
+        #     #     overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
+        #     #     if overlap_area < self.min_overlap_area:
+        #     #         self.min_overlap_area = overlap_area
+        #     #         print('this is max_overlap_area', self.min_overlap_area)
+        #     #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
+        #     #     avg_overlap_area.append(overlap_area)
+        #     #     avg_overlap_num.append(overlap_num)
+        #     #     penalty_list.append(overlap_num * overlap_area)
         #
-        #     cv2.namedWindow('zzz', 0)
-        #     # cv2.resizeWindow('zzz', 1280, 960)
-        #     cv2.imshow('zzz', canvas_pred)
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-        #
-        #     cv2.namedWindow('zzz', 0)
-        #     # cv2.resizeWindow('zzz', 1280, 960)
-        #     cv2.imshow('zzz', canvas_tar)
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-        #
-        #     if np.max(canvas_pred) <= 0:
-        #         penalty_list.append(3)
-        #     else:
-        #         over_lap_area = np.where(canvas_pred > padding_value)[0]
-        #         over_lap_num = int(np.max(canvas_pred) / padding_value)
-        #         penalty_list.append(over_lap_num * over_lap_area)
-        # penalty_list = np.asarray(penalty_list)
-        # return np.mean(penalty_list)
+        #     # overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
+        #     # if overlap_area < self.min_overlap_area:
+        #     #     self.min_overlap_area = overlap_area
+        #     #     print('this is max_overlap_area', self.min_overlap_area)
+        #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
+        #     # avg_overlap_area.append(overlap_area)
+        #     avg_overlap_num.append(overlap_num)
+        #     penalty_list.append(overlap_num)
+        # # avg_overlap_area = np.mean(np.asarray(avg_overlap_area))
+        # avg_overlap_num = np.mean(np.asarray(avg_overlap_num))
+        # penalty = np.mean(np.asarray(penalty_list))
+        # if avg_overlap_num < self.min_overlap_num:
+        #     self.min_overlap_num = avg_overlap_num
+        #     print('this is min overlap num:', self.min_overlap_num)
+
+
+        return penalty
 
 if __name__ == "__main__":
 

@@ -1,9 +1,15 @@
 from datetime import datetime
 import os
 from new_model import *
+import wandb
 
 if __name__ == '__main__':
-    import wandb
+
+    def main():
+        wandb.init(project='knolling_multi')  # ,mode = 'disabled'
+        config = wandb.config
+        running_name = wandb.run.name
+
 
     wandb.init(project='knolling_multi')  #,mode = 'disabled'
     config = wandb.config
@@ -25,13 +31,15 @@ if __name__ == '__main__':
     config.forward_expansion = 4
     config.pre_trained = False
     config.high_dim_encoder = True
-    config.all_steps = True
+    config.all_steps = False
     config.object_num = -1
-    config.overlap_area_factor = 500
+    config.overlap_area_factor = None
     config.canvas_factor = 2
-    config.use_overlap_loss = False
-    config.patience = 200
+    config.use_overlap_loss = True
+    config.patience = 500
     config.num_gaussian = 4
+    config.dataset_path = DATAROOT
+    config.loss_factor = [0.5, 0.5]
     os.makedirs(config.log_pth, exist_ok=True)
 
     model = Knolling_Transformer(
@@ -52,14 +60,15 @@ if __name__ == '__main__':
         num_gaussians = config.num_gaussian,
         overlap_area_factor=config.overlap_area_factor,
         canvas_factor=config.canvas_factor,
-        use_overlap_loss=config.use_overlap_loss
+        use_overlap_loss=config.use_overlap_loss,
+        loss_factor=config.loss_factor
     )
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'creepy-hex-124'
+        pre_name = 'fallen-morning-156'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -143,6 +152,7 @@ if __name__ == '__main__':
     valid_loss_list = []
     model.to(device)
     abort_learning = 0
+    max_loss_patience = 30
     min_loss = np.inf
     noise_std = torch.tensor(config.noise_std).to(device)
     for epoch in range(num_epochs):
@@ -392,3 +402,5 @@ if __name__ == '__main__':
                            "learning rate": optimizer.param_groups[0]['lr'],
                            "scheduler factor": 0.5,
                            "min loss": min_loss})
+                if abort_learning > max_loss_patience:
+                    quit()

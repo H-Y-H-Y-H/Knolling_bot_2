@@ -422,6 +422,7 @@ if __name__ == '__main__':
     # name = "devoted-terraqin-29"
     # name = "classic-bush-95"
     name = 'dandy-hill-142'
+    # name = 'fallen-morning-156'
     # name = "radiant-puddle-143"
 
     show_baseline = 0
@@ -476,6 +477,7 @@ if __name__ == '__main__':
 
             cv2.imwrite(savefolder+'%d.png'%j,image)
             cv2.namedWindow('zzz', 0)
+            cv2.resizeWindow('zzz', 1280, 960)
             cv2.imshow("zzz", image)
             print('This is the data: \n', data[j])
 

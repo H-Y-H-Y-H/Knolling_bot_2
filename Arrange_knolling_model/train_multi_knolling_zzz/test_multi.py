@@ -1,9 +1,63 @@
 import os
+
+import numpy as np
+
 from new_model import *
 from torch.utils.data import DataLoader, random_split
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+def evaluate_success_rate(raw_data, Num_objects, config_transformer):
+
+    mm2px = 530 / (0.34 * config_transformer.canvas_factor)
+    padding_value = 1
+
+    data = raw_data[:, :Num_objects * 6].reshape(-1, Num_objects, 6)
+    tar_lw = data[:, :, 2:4]
+    pred_pos = data[:, :, :2]
+    tar_lw_px = tar_lw * mm2px
+    pred_pos_px = pred_pos * mm2px + 10
+
+    data_pred = np.concatenate(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
+                                (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
+                                (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
+                                (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
+                                ), axis=2).astype(np.int32)
+
+    # Iterate through each rectangle and draw them on the canvas
+    avg_overlap_num = []
+    success_flag = []
+    for i in range(data_pred.shape[0]):
+
+        x_offset_px = np.min(data_pred[i, :, 0])
+        y_offset_px = np.min(data_pred[i, :, 1])
+        data_pred[i, :, [0, 2]] -= x_offset_px
+        data_pred[i, :, [1, 3]] -= y_offset_px
+        x_max_px = np.max(data_pred[i, :, 2])
+        y_max_px = np.max(data_pred[i, :, 3])
+        canvas_pred = np.zeros((x_max_px, y_max_px), dtype=np.uint8)
+
+        for j in range(data_pred.shape[1]):
+            corner_data_pred = data_pred[i, j]
+            canvas_pred[corner_data_pred[0]:corner_data_pred[2],
+            corner_data_pred[1]:corner_data_pred[3]] += padding_value
+
+        overlap_num = np.clip(int(np.max(canvas_pred) / padding_value), 1, None)
+        avg_overlap_num.append(overlap_num)
+        if overlap_num > 1:
+            print(f'fail {i}')
+            success_flag.append(0)
+        else:
+            success_flag.append(1)
+    avg_overlap_num = np.asarray(avg_overlap_num)
+    success_flag = np.asarray(success_flag)
+
+    evaluate_path = log_path + 'evaluate_result.txt'
+    with open(evaluate_path, "w") as f:
+        f.write(f'test_num {test_num_scenario}\n')
+        f.write(f'success rate: {len(np.where(success_flag == 1)[0]) / len(success_flag)}\n')
+        for i in range(data_pred.shape[0]):
+            f.write(f'index: {i}, overlap_num: {avg_overlap_num[i]:.4f}, success: {success_flag[i]}\n')
 
 def test_model_batch(val_loader, model, log_path, num_obj=10):
     model.to(device)
@@ -84,9 +138,12 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     runs = api.runs("knolling_multi")
 
+    # name = 'hearty-blaze-158'
+    # name = 'super-cherry-159'
+    name = 'graceful-glade-160'
     # name = "radiant-puddle-143"
-    name = 'dandy-hill-142'
-    # model_name = 'latest_model.pt'
+    # name = 'dandy-hill-142'
+    # name = 'fallen-morning-156'
     model_name = "best_model.pt"
 
     summary_list, config_list, name_list = [], [], []
@@ -107,20 +164,18 @@ if __name__ == '__main__':
     valid_input_data = []
     valid_output_data = []
     valid_cls_data = []
-    # cfg = 0
-    # dataset_path = DATAROOT + '/labels_after_%d/' % cfg
+    total_raw_data = []
 
     file_num = 30
-    for NUM_objects in range(config.max_seq_length, config.max_seq_length + 1):
+    test_num_scenario = 100
+    NUM_objects = config.max_seq_length
+    solu_num = config.solu_num
+    for s in range(solu_num):
         print('load data:', NUM_objects)
-        raw_data = np.loadtxt(DATAROOT + '/num_%d_after_%d.txt' % (file_num, 0))
+        raw_data = np.loadtxt(DATAROOT + '/num_%d_after_%d.txt' % (file_num, s))
 
-        # raw_data = np.loadtxt(dataset_path + 'real_before/num_%d_d9.txt' % NUM_objects)
-        # if len(raw_data[0]) != 50:
-        #     raw_data = np.hstack((raw_data,np.zeros((len(raw_data),50-len(raw_data[0])))))
-        # raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.81)]
-
-        raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + 100]
+        raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        total_raw_data = np.append(total_raw_data, raw_data)
         test_data = raw_data * SCALE_DATA + SHIFT_DATA
         valid_input = []
         valid_label = []
@@ -159,7 +214,9 @@ if __name__ == '__main__':
         high_dim_encoder=config.high_dim_encoder,
         all_steps = config.all_steps,
         max_obj_num = config.max_seq_length,
-        num_gaussians=5
+        num_gaussians=config.num_gaussian,
+        canvas_factor=config.canvas_factor,
+        use_overlap_loss=config.use_overlap_loss
     )
 
     # Number of parameters: 87458
@@ -170,12 +227,14 @@ if __name__ == '__main__':
 
     log_path = './results/%s/' % (name)
     os.makedirs(log_path, exist_ok=True)
-    for NUM_objects in range(config.max_seq_length, config.max_seq_length + 1):
-        outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
-        for i in range(NUM_objects):
-            raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
-            raw_data[:, i * 6 + 6] = 0
-        log_folder = './results/%s/pred_after' % (name)
-        os.makedirs(log_folder, exist_ok=True)
-        print(log_folder)
-        np.savetxt(log_folder + '/num_%d_new.txt' % file_num, raw_data)
+    # for NUM_objects in range(config.max_seq_length, config.max_seq_length + 1):
+    raw_data = total_raw_data.reshape(test_num_scenario * solu_num, -1)
+    outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
+    for i in range(NUM_objects):
+        raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
+        raw_data[:, i * 6 + 6] = 0
+    evaluate_success_rate(raw_data, NUM_objects, config)
+    log_folder = './results/%s/pred_after' % (name)
+    os.makedirs(log_folder, exist_ok=True)
+    print(log_folder)
+    np.savetxt(log_folder + '/num_%d_new.txt' % file_num, raw_data)
