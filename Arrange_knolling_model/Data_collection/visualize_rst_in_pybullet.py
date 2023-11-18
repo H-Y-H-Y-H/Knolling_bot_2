@@ -434,7 +434,7 @@ if __name__ == '__main__':
         visual_path = '../train_multi_knolling_zzz/results/%s/pred_after'%(name)
 
 
-        box_num = 5
+        box_num = 10
         if show_baseline == 0:
             data = np.loadtxt(visual_path + '/num_%d_new.txt' % 30)
             savefolder = '../train_multi_knolling_zzz/results/%s/pred_after/image/' % (name)
@@ -490,86 +490,3 @@ if __name__ == '__main__':
         # # new_index_flag = np.asarray(new_index_flag)
         # np.savetxt(preprocess_label_path + 'num_%d.txt' % i, new_data)
         # # np.savetxt(target_path + 'index_flag/num_%s_flag.txt' % i, new_index_flag)
-
-    if command == 'knolling':
-
-        # target_path = '/home/zhizhuo/ADDdisk/Create Machine Lab/knolling_dataset/learning_data_505/'
-        before_path = target_path + 'labels_before/'
-        after_path = target_path + 'labels_after/'
-        index_flag_path = target_path + 'index_flag/'
-        os.makedirs(before_path, exist_ok=True)
-        os.makedirs(after_path, exist_ok=True)
-        os.makedirs(index_flag_path, exist_ok=True)
-
-        env = Arm(is_render=False)
-        for num in range(range_low, range_high):
-
-            data_before = []
-            data_after = []
-            index_flag = []
-            j = 0
-            while True:
-
-                # if j == 2:
-                #     print('here!')
-                lego_num = num
-                boxes_index = np.random.choice(50, lego_num)
-
-                total_offset = [0.016, -0.17 + 0.016, 0]
-                gap_item = 0.01
-                gap_block = 0.02
-                random_offset = False
-                real_operate = False
-                obs_order = 'sim_image_obj'
-                check_detection_loss = False
-                obs_img_from = 'env'
-                use_yolo_pos = False
-
-                env.get_parameters(lego_num=lego_num, area_num=area_num, ratio_num=ratio_num, boxes_index=boxes_index,
-                                   total_offset=total_offset, configuration=configuration,
-                                   gap_item=gap_item, gap_block=gap_block,
-                                   real_operate=real_operate, obs_order=obs_order,
-                                   random_offset=random_offset, check_detection_loss=check_detection_loss,
-                                   obs_img_from=obs_img_from, use_yolo_pos=use_yolo_pos,
-                                   item_odd_prevent=item_odd_prevent, block_odd_prevent = block_odd_prevent,
-                                   upper_left_max = upper_left_max, forced_rotate_box=forced_rotate_box)
-
-                pos_before, ori_before, xy_before, transform_before = env.reset()
-                data_before.append(
-                    np.concatenate((pos_before, xy_before, ori_before.reshape(-1, 1)), axis=1).reshape(-1, ))
-                pos_after, ori_after, xy_after, transform_after = env.change_config()
-
-                break_flag = False
-                for i in range(len(pos_after)):
-                    if pos_after[i, 0] > 0.3 or pos_after[i, 1] > 0.2 or pos_after[i, 1] < -0.2:
-                        print(f'num{num}, evaluation {j} out of the boundary!')
-                        break_flag = True
-                if break_flag == True:
-                    pass
-                else:
-                    print(j)
-                    data_after.append(np.concatenate((pos_after, xy_after, ori_after.reshape(-1, 1)), axis=1).reshape(-1))
-                    index_flag.append(np.concatenate((boxes_index, transform_after)))
-                    j += 1
-
-                if len(data_after) == int(end_evaluations - start_evaluations):
-                    break
-
-                # print(data_before[j].shape[0])
-                # print(data_after[j].shape[0])
-                # if data_before[j].shape[0] != 5 * num:
-                #     print('before error')
-                #     print(j, data_before[j].shape[0])
-                #     print(data_before[j].reshape(-1, 5))
-                #     exit()
-                # if data_after[j].shape[0] != 5 * num:
-                #     print('after error')
-                #     print(j, data_after[j].shape[0])
-                #     exit()
-
-            data_before = np.asarray(data_before)
-            data_after = np.asarray(data_after)
-            index_flag = np.asarray(index_flag)
-            np.savetxt(before_path + 'num_%s_%s.txt' % (num, end_evaluations), data_before)
-            np.savetxt(after_path + 'num_%s_%s.txt' % (num, end_evaluations), data_after)
-            np.savetxt(index_flag_path + 'num_%s_%s_flag.txt' % (num, end_evaluations), index_flag)
