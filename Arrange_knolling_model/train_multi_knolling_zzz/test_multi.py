@@ -132,7 +132,7 @@ if __name__ == '__main__':
     import wandb
     import argparse
 
-    DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
+    DATAROOT = "../../../knolling_dataset/learning_data_1019/"
 
     api = wandb.Api()
     # Project is specified by <entity/project-name>
@@ -140,9 +140,9 @@ if __name__ == '__main__':
 
     # name = 'hearty-blaze-158'
     # name = 'super-cherry-159'
-    name = 'graceful-glade-160'
+    # name = 'graceful-glade-160'
     # name = "radiant-puddle-143"
-    # name = 'dandy-hill-142'
+    name = 'dandy-hill-142'
     # name = 'fallen-morning-156'
     model_name = "best_model.pt"
 
@@ -167,9 +167,9 @@ if __name__ == '__main__':
     total_raw_data = []
 
     file_num = 30
-    test_num_scenario = 100
+    test_num_scenario = 1000
     NUM_objects = config.max_seq_length
-    solu_num = config.solu_num
+    solu_num = 5
     for s in range(solu_num):
         print('load data:', NUM_objects)
         raw_data = np.loadtxt(DATAROOT + '/num_%d_after_%d.txt' % (file_num, s))
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
 
     test_dataset = CustomDataset(test_input_padded, test_label_padded, test_cls_padded)
-    val_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    val_loader = DataLoader(test_dataset, batch_size=512, shuffle=True)
 
     model = Knolling_Transformer(
         input_length=config.max_seq_length,

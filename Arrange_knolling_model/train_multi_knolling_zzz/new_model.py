@@ -21,7 +21,7 @@ SHIFT_DATA = 50
 # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
 # DATAROOT = "../../../knolling_dataset/learning_data_826/"
 # DATAROOT = "../../knolling_dataset/learning_data_910/"
-DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
+DATAROOT = "../../../knolling_dataset/learning_data_1019/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
@@ -40,8 +40,8 @@ def pad_sequences(sequences, max_seq_length=10, pad_value=0):
 
 class CustomDataset(torch.utils.data.Dataset):
     def __init__(self, input_data, output_data, cls_data):
-        self.input_data = input_data
-        self.output_data = output_data
+        self.input_data = input_data    # length and width
+        self.output_data = output_data  # gt position
         self.cls_data = cls_data
 
     def __len__(self):
