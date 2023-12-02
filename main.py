@@ -680,7 +680,7 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'data_source_path': './knolling_box/',
+                 'data_source_path': './knolling_img/',
                  'urdf_path': './ASSET/urdf/',
                  'yolo_model_path': './ASSET/models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'data_collection': False,
