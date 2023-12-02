@@ -357,8 +357,8 @@ class calibration_main(Arm_env):
 
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
-            HOST = "192.168.0.187"  # Standard loopback interface address (localhost)
-            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
+            HOST = "192.168.0.188"  # Standard loopback interface address (localhost)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -428,7 +428,7 @@ if __name__ == '__main__':
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'dataset_path': '../../knolling_dataset/data_903/',
-                 'urdf_path': '../urdf/',
+                 'urdf_path': '../ASSET/urdf/',
                  'yolo_model_path': './627_pile_pose/weights/best.pt',
                  'real_operate': True, 'obs_order': 'real_image_obj', 'Data_collection': True,
                  'use_knolling_model': False, 'use_lstm_model': False, 'use_yolo_model': False}

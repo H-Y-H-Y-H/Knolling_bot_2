@@ -18,13 +18,6 @@ class knolling_main():
         self.task = knolling_env(para_dict=para_dict, lstm_dict=lstm_dict)
         self.robot = knolling_robot(para_dict=para_dict, knolling_para=knolling_para)
 
-        self.success_manipulator_after = []
-        self.success_manipulator_before = []
-        self.success_lwh = []
-        self.success_num = 0
-        self.finished_index = []
-        self.rest_index = np.arange(self.para_dict['boxes_num'])
-
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['boxes_num'])
@@ -91,7 +84,8 @@ class knolling_main():
 
     def get_knolling_data(self, pos_before, ori_before, lwh_list, success_index, offline_flag=True):
 
-        success_index = np.arange(len(pos_before))
+        # test for all objects!!!!!!!!
+        # success_index = np.arange(len(pos_before))
 
         if self.para_dict['use_knolling_model'] == True:
 
@@ -117,10 +111,10 @@ class knolling_main():
 
             else:
 
-                if self.success_num > 0:
-                    create_pos = np.concatenate((self.success_manipulator_after[:, :3], pos_before[self.success_num:, :]), axis=0)
-                    create_ori = np.concatenate((self.success_manipulator_after[:, 3:6], ori_before[self.success_num:, :]), axis=0)
-                    create_lwh = np.concatenate((self.success_lwh[:, :3], lwh_list[self.success_num:, :]), axis=0)
+                if self.finished_num > 0:
+                    create_pos = np.concatenate((self.success_manipulator_after[:, :3], pos_before[self.finished_num:, :]), axis=0)
+                    create_ori = np.concatenate((self.success_manipulator_after[:, 3:6], ori_before[self.finished_num:, :]), axis=0)
+                    create_lwh = np.concatenate((self.finished_lwh[:, :3], lwh_list[self.finished_num:, :]), axis=0)
                     create_ori[:len(self.success_manipulator_after), 2] = 0
                 else:
                     create_pos = np.copy(pos_before)
@@ -131,13 +125,15 @@ class knolling_main():
                 self.task.create_objects(pos_data=create_pos, ori_data=create_ori, lwh_data=create_lwh)
                 ################### recreate the new object ####################
 
-                arrangement_num = 10  # provide several candidates to select the best output
+                candidate_num = 10  # provide several candidates to select the best output
                 candidate_img = []
                 candidate_after = []
                 candidate_before = []
                 candidate_lwh = []
                 self.before_arrange_state = p.saveState()
-                for i in range(arrangement_num):
+
+                lwh_list = np.around(lwh_list, decimals=3)
+                for i in range(candidate_num):
                     # input_index = np.setdiff1d(np.arange(len(pos_before)), success_index)
                     input_index = np.copy(success_index)
                     pos_before_input = pos_before.astype(np.float32)
@@ -146,7 +142,7 @@ class knolling_main():
                     ori_after = np.zeros((len(ori_before_input), 3))
 
                     #################### exchange the length and width randomly enrich the input ##################
-                    for j in range(len(input_index)):
+                    for j in input_index:
                         if np.random.random() < 0.5:
                             temp = lwh_list_input[j, 1]
                             lwh_list_input[j, 1] = lwh_list_input[j, 0]
@@ -158,7 +154,6 @@ class knolling_main():
                     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
                     # manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
                     # manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
-                    # lwh_list_classify = lwh_list_input[input_index]
 
                     manipulator_before = np.concatenate((pos_before_input, ori_before_input), axis=1)
                     manipulator_after = np.concatenate((pos_after.astype(np.float32), ori_after), axis=1)
@@ -182,11 +177,10 @@ class knolling_main():
                     candidate_after.append(manipulator_after)
                     candidate_lwh.append(lwh_list_classify)
 
-                candidate_index = self.get_candidate_index(candidate_img, arrangement_num)
+                candidate_index = self.get_candidate_index(candidate_img, candidate_num)
                 manipulator_before = candidate_before[candidate_index]
                 manipulator_after = candidate_after[candidate_index]
                 lwh_list_classify = candidate_lwh[candidate_index]
-
 
             p.restoreState(self.before_arrange_state)
             print('here')
@@ -252,8 +246,6 @@ class knolling_main():
             gripper_width = 0.024
             gripper_height = 0.04
 
-        # workbench_center = np.array([(self.x_high_obs + self.x_low_obs) / 2,
-        #                              (self.y_high_obs + self.y_low_obs) / 2])
         offset_low = np.array([0, 0, 0.01])
         offset_high = np.array([0, 0, 0.04])
 
@@ -428,82 +420,85 @@ class knolling_main():
 
         return
 
-    def unstack(self):
-
-        self.offset_low = np.array([0, 0, 0.003])
-        self.offset_high = np.array([0, 0, 0.04])
-        while True:
-            crowded_index = np.where(self.pred_cls == 0)[0]
-            manipulator_before_input = self.manipulator_before[crowded_index]
-            lwh_list_input = self.lwh_list[crowded_index]
-            rays = self.task.get_ray(manipulator_before_input, lwh_list_input)
-            out_times = 0
-            fail_times = 0
-            for i in range(len(rays)):
-
-                trajectory_pos_list = [self.para_dict['reset_pos'], # move to the destination
-                                       [1, 0],  # gripper close!
-                                       self.offset_high + rays[i, :3],  # move directly to the above of the target
-                                       self.offset_low + rays[i, :3],  # decline slowly
-                                       self.offset_low + rays[i, 6:9],
-                                       self.offset_high + rays[i, 6:9],
-                                       self.para_dict['reset_pos'],] # unstack
-
-                trajectory_ori_list = [self.para_dict['reset_ori'],
-                                       [1, 0],
-                                       self.para_dict['reset_ori'] + rays[i, 3:6],
-                                       self.para_dict['reset_ori'] + rays[i, 3:6],
-                                       self.para_dict['reset_ori'] + rays[i, 9:12],
-                                       self.para_dict['reset_ori'] + rays[i, 9:12],
-                                       self.para_dict['reset_ori'],]
-
-                if self.para_dict['real_operate'] == True:
-                    last_pos = self.para_dict['reset_pos']
-                    last_ori = self.para_dict['reset_ori']
-                    left_pos = None
-                    right_pos = None
-                else:
-                    last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                    last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-                    left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-                    right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-
-                for j in range(len(trajectory_pos_list)):
-                    if len(trajectory_pos_list[j]) == 3:
-                        last_pos = self.robot.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
-                        last_ori = np.copy(trajectory_ori_list[j])
-                    elif len(trajectory_pos_list[j]) == 2:
-                        ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
-                        self.robot.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-                        ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
-
-            self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.task.get_obs()
-            crowded_index = np.where(self.pred_cls == 0)[0]
-            if len(crowded_index) == 0:
-                print('unstack success!')
-                break
-
-            # if out_times == 0 and fail_times == 0:
-            #     break
-            # else:
-            #     add_num = fail_times + out_times
-            #     print('add additional rays', add_num)
-
-        # rewrite this variable to ensure to load data one by one
-        return self.img_per_epoch
+    # def unstack(self):
+    #
+    #     self.offset_low = np.array([0, 0, 0.003])
+    #     self.offset_high = np.array([0, 0, 0.04])
+    #     while True:
+    #         crowded_index = np.where(self.pred_cls == 0)[0]
+    #         manipulator_before_input = self.manipulator_before[crowded_index]
+    #         lwh_list_input = self.lwh_list[crowded_index]
+    #         rays = self.task.get_ray(manipulator_before_input, lwh_list_input)
+    #         out_times = 0
+    #         fail_times = 0
+    #         for i in range(len(rays)):
+    #
+    #             trajectory_pos_list = [self.para_dict['reset_pos'], # move to the destination
+    #                                    [1, 0],  # gripper close!
+    #                                    self.offset_high + rays[i, :3],  # move directly to the above of the target
+    #                                    self.offset_low + rays[i, :3],  # decline slowly
+    #                                    self.offset_low + rays[i, 6:9],
+    #                                    self.offset_high + rays[i, 6:9],
+    #                                    self.para_dict['reset_pos'],] # unstack
+    #
+    #             trajectory_ori_list = [self.para_dict['reset_ori'],
+    #                                    [1, 0],
+    #                                    self.para_dict['reset_ori'] + rays[i, 3:6],
+    #                                    self.para_dict['reset_ori'] + rays[i, 3:6],
+    #                                    self.para_dict['reset_ori'] + rays[i, 9:12],
+    #                                    self.para_dict['reset_ori'] + rays[i, 9:12],
+    #                                    self.para_dict['reset_ori'],]
+    #
+    #             if self.para_dict['real_operate'] == True:
+    #                 last_pos = self.para_dict['reset_pos']
+    #                 last_ori = self.para_dict['reset_ori']
+    #                 left_pos = None
+    #                 right_pos = None
+    #             else:
+    #                 last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+    #                 last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+    #                 left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
+    #                 right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
+    #
+    #             for j in range(len(trajectory_pos_list)):
+    #                 if len(trajectory_pos_list[j]) == 3:
+    #                     last_pos = self.robot.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
+    #                     last_ori = np.copy(trajectory_ori_list[j])
+    #                 elif len(trajectory_pos_list[j]) == 2:
+    #                     ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
+    #                     self.robot.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
+    #                     ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
+    #
+    #         self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.task.get_obs()
+    #         crowded_index = np.where(self.pred_cls == 0)[0]
+    #         if len(crowded_index) == 0:
+    #             print('unstack success!')
+    #             break
+    #
+    #         # if out_times == 0 and fail_times == 0:
+    #         #     break
+    #         # else:
+    #         #     add_num = fail_times + out_times
+    #         #     print('add additional rays', add_num)
+    #
+    #     # rewrite this variable to ensure to load data one by one
+    #     return self.img_per_epoch
 
     def knolling(self):
 
-        crowded_index = np.where(self.pred_cls == 0)[0]
+        # crowded_index = np.where(self.pred_cls == 0)[0]
         success_index = np.intersect1d(self.rest_index, np.where(self.pred_cls == 1)[0])
-        if self.success_num > 0:
-            pos_before = np.concatenate((self.success_manipulator_before[:, :3], self.manipulator_before[self.success_num:, :3]), axis=0)
-            ori_before = np.concatenate((self.success_manipulator_before[:, 3:6], self.manipulator_before[self.success_num:, 3:6]), axis=0)
-            lwh_list = np.concatenate((self.success_lwh[:, :3], self.lwh_list[self.success_num:, :3]), axis=0)
+        if self.finished_num > 0:
+            pos_before = np.concatenate((self.success_manipulator_before[:, :3], self.manipulator_before[self.finished_num:, :3]), axis=0)
+            ori_before = np.concatenate((self.success_manipulator_before[:, 3:6], self.manipulator_before[self.finished_num:, 3:6]), axis=0)
+            lwh_list = np.concatenate((self.finished_lwh[:, :3], self.lwh_list[self.finished_num:, :3]), axis=0)
         else:
             pos_before = self.manipulator_before[:, :3]
             ori_before = self.manipulator_before[:, 3:6]
             lwh_list = np.copy(self.lwh_list)
+
+        # After the knolling model, manipulator before and after only contain boxes which can be grasped in current scenario!
+        # Also, the lwh_list will change the length and width randomly!
         manipulator_before, manipulator_after, lwh_list = self.get_knolling_data(pos_before=pos_before,
                                                                                  ori_before=ori_before,
                                                                                  lwh_list=lwh_list,
@@ -513,14 +508,15 @@ class knolling_main():
         # manipulator_before = manipulator_before[self.success_num:]
         # manipulator_after = manipulator_after[self.success_num:]
         # lwh_list = lwh_list[self.success_num:]
-        # after the transformer model, manipulator before and after only contain boxes which can be grasped!
+
+
         start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
 
 
         self.success_manipulator_after = np.append(self.success_manipulator_after, manipulator_after).reshape(-1, 6)
         self.success_manipulator_before = np.append(self.success_manipulator_before, manipulator_before).reshape(-1, 6)
-        self.success_lwh = np.append(self.success_lwh, lwh_list).reshape(-1, 3)
-        self.success_num += len(manipulator_after)
+        self.finished_lwh = np.append(self.finished_lwh, lwh_list).reshape(-1, 3)
+        self.finished_num += len(manipulator_after)
 
         offset_low = np.array([0, 0, 0.00])
         offset_low_place = np.array([0, 0, 0.005])
@@ -627,21 +623,34 @@ class knolling_main():
 
     def step(self):
 
-        self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.reset() # reset the table
+        # initiate the list for the Hierarchical knolling
+        self.success_manipulator_after = []
+        self.success_manipulator_before = []
+        self.finished_lwh = []
+        self.finished_num = 0
+        self.finished_index = []
+        self.rest_index = np.arange(self.para_dict['boxes_num'])
+
+        # reset the table
+        self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.reset()
+
         # self.boxes_id_recover = np.copy(self.boxes_index)
         # self.manual_knolling() # generate the knolling after data based on manual or the model
+
+        # create the gripper mapping from sim to real
         self.robot.calculate_gripper()
+
+        # setup and connect the real world robot arm
         self.conn, self.real_table_height, self.sim_table_height = self.robot.arm_setup()
 
         #######################################################################################
         # 1: clean_grasp + knolling, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
-        crowded_index = np.where(self.pred_cls == 0)[0]
-        while self.success_num < self.task.num_boxes:
+        # crowded_index = np.where(self.pred_cls == 0)[0]
+        while self.finished_num < self.task.num_boxes:
             self.clean_grasp()
             # self.unstack()
             self.knolling()
             self.exclude_objects()
-            print('here')
         #######################################################################################
 
         if self.para_dict['real_operate'] == True:
@@ -650,8 +659,10 @@ class knolling_main():
 
 if __name__ == '__main__':
 
-    # np.random.seed(21)
-    # random.seed(21)
+    np.random.seed(25)
+    random.seed(25)
+    # 记一下25！！！
+
 
     np.set_printoptions(precision=5)
     para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
@@ -673,7 +684,7 @@ if __name__ == '__main__':
                  'urdf_path': './ASSET/urdf/',
                  'yolo_model_path': './ASSET/models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_grasp_model': False, 'use_yolo_model': True}
+                 'use_knolling_model': True, 'use_lstm_grasp_model': True, 'use_yolo_model': False}
 
     if para_dict['real_operate'] == True:
         para_dict['yolo_model_path'] = './ASSET/models/1007_pile_sundry/weights/best.pt'
@@ -699,14 +710,14 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'threshold': 0.45,
+                 'threshold': 0.55,
                  'grasp_model_path': './ASSET/models/LSTM_918_0/best_model.pt',}
 
-    arrange_dict = {'running_name': 'devoted-terrain-29',
-                    'transformer_model_path': './ASSET/models/devoted-terrain-29',
-                    'use_yaml': True,
+    arrange_dict = {'running_name': 'autumn-meadow-16',
+                    'transformer_model_path': './ASSET/models/autumn-meadow-16',
+                    'use_yaml': False,
                     'arrange_x_offset': 0.03,
-                    'arrange_y_offset': 0.0}
+                    'arrange_y_offset': 0.00}
 
     main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
 

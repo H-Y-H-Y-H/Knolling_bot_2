@@ -1,7 +1,7 @@
 # from arrangement import *
 from ASSET.arrange_model_deploy import *
 from ASSET.visual_perception import *
-from ASSET.yolo_grasp_deploy import *
+# from ASSET.yolo_grasp_deploy import *
 from utils import *
 import pybullet as p
 import pybullet_data as pd
