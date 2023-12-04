@@ -143,7 +143,7 @@ if __name__ == '__main__':
     # for i in range(num_img_start, num_img_end):
     #     capture(img_path, i)
 
-    output_path = '../../knolling_dataset/yolo_pile_1007_real_sundry/origin_images/'
+    output_path = '../../knolling_dataset/yolo_pile_1204_real_sundry/origin_images/'
     os.makedirs(output_path, exist_ok=True)
-    # capture_video()
-    show_save_video(output_path)
+    capture_video()
+    # show_save_video(output_path)

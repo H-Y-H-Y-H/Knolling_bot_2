@@ -342,7 +342,7 @@ if __name__ == '__main__':
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': '../../../knolling_dataset/base_dataset_crowded/',
-                 'data_tar_path': '../../../knolling_dataset/grasp_dataset_1016/',
+                 'data_tar_path': '../../../knolling_dataset/grasp_dataset_1202/',
                  'urdf_path': '../../ASSET/urdf/',
                  'yolo_model_path': '../../ASSET/models/627_pile_pose/weights/best.pt',
                  'real_operate': False, 'obs_order': 'sim_image_obj', 'Data_collection': True,

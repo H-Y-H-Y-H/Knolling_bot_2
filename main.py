@@ -85,7 +85,7 @@ class knolling_main():
     def get_knolling_data(self, pos_before, ori_before, lwh_list, success_index, offline_flag=True):
 
         # test for all objects!!!!!!!!
-        # success_index = np.arange(len(pos_before))
+        success_index = np.arange(len(pos_before))
 
         if self.para_dict['use_knolling_model'] == True:
 
@@ -152,6 +152,7 @@ class knolling_main():
 
                     # input include all objects(finished, success, fail),
                     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+
                     # manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
                     # manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
 
@@ -659,8 +660,8 @@ class knolling_main():
 
 if __name__ == '__main__':
 
-    np.random.seed(25)
-    random.seed(25)
+    np.random.seed(28)
+    random.seed(28)
     # 记一下25！！！
 
 
@@ -683,7 +684,7 @@ if __name__ == '__main__':
                  'data_source_path': './knolling_img/',
                  'urdf_path': './ASSET/urdf/',
                  'yolo_model_path': './ASSET/models/627_pile_pose/weights/best.pt',
-                 'real_operate': False, 'data_collection': False,
+                 'real_operate': True, 'data_collection': False,
                  'use_knolling_model': True, 'use_lstm_grasp_model': True, 'use_yolo_model': False}
 
     if para_dict['real_operate'] == True:
@@ -712,6 +713,8 @@ if __name__ == '__main__':
                  'set_dropout': 0.1,
                  'threshold': 0.55,
                  'grasp_model_path': './ASSET/models/LSTM_918_0/best_model.pt',}
+    if para_dict['real_operate'] == True:
+        lstm_dict['threshold'] = 0.40
 
     arrange_dict = {'running_name': 'autumn-meadow-16',
                     'transformer_model_path': './ASSET/models/autumn-meadow-16',

@@ -297,7 +297,7 @@ class Yolo_pose_model():
                 args = dict(model=model, source=resized_color_image, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
                 use_python = True
                 if use_python:
-                    from ASSET.ultralytics import YOLO
+                    from ultralytics import YOLO
                     images = YOLO(model)(**args)
 
                 origin_img = np.copy(resized_color_image)
