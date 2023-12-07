@@ -437,7 +437,7 @@ if __name__ == '__main__':
             f.write(f'boxes_num: {boxes_num}\n')
             # f.write(f'kind_num: {kind_num}\n')
             f.write(f'solution_num: {solution_num}\n')
-            f.write(f'area_num: {area_num}, ratio_num: {ratio_num}\n')
+            f.write(f'config: {config_dict}\n')
             f.write(f'item_odd_prevent: {item_odd_prevent}\n')
             f.write(f'block_odd_prevent: {block_odd_prevent}\n')
             f.write(f'upper_left_max: {upper_left_max}\n')

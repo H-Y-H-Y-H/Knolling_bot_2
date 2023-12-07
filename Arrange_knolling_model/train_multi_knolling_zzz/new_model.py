@@ -21,7 +21,7 @@ SHIFT_DATA = 50
 # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
 # DATAROOT = "../../../knolling_dataset/learning_data_826/"
 # DATAROOT = "../../knolling_dataset/learning_data_910/"
-DATAROOT = "../../../knolling_dataset/learning_data_1019/"
+DATAROOT = "../../../knolling_dataset/learning_data_1019_5w/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
@@ -252,9 +252,9 @@ class Knolling_Transformer(nn.Module):
             max_obj_num = 10,
             num_gaussians=3,
             canvas_factor=1,
-            use_overlap_loss=None,
-            mse_loss_factor=None,
-            overlap_loss_factor=None
+            use_overlap_loss=True,
+            mse_loss_factor=1,
+            overlap_loss_factor=1
     ):
 
         super(Knolling_Transformer, self).__init__()
@@ -432,10 +432,10 @@ class Knolling_Transformer(nn.Module):
         if self.use_overlap_loss == True:
             Overlap_loss = self.calcualte_overlap_loss(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw,
                                                      tar_lw=tar_lw_raw, tar_cls=tar_cls_raw)
+            total_loss = MSE_loss * self.mse_loss_factor + self.overlap_loss_factor * Overlap_loss
         else:
             Overlap_loss = 0
-
-        total_loss = MSE_loss * self.mse_loss_factor + self.overlap_loss_factor * Overlap_loss
+            total_loss = MSE_loss
 
         # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
         # total_loss = MSE_loss + scaled_overlap_loss

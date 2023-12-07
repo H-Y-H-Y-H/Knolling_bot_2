@@ -157,7 +157,7 @@ class Arm:
     def label2image(self, labels_data, img_index, save_urdf_path):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
-        labels_data = labels_data.reshape(-1, 6)
+        labels_data = labels_data.reshape(-1, 5)
         pos_data = labels_data[:, :2]
         # pos_data[:,0] = np.random.uniform(0.02,0.25,pos_data[:,0].shape)
         # pos_data[:,1] = np.random.uniform(-0.12,0.12,pos_data[:,1].shape)
@@ -464,7 +464,7 @@ if __name__ == '__main__':
         for j in range(len(data)):
             env.get_parameters(box_num=box_num)
             print(f'this is data {j}')
-            one_img_data = data[j].reshape(-1, 6)
+            one_img_data = data[j].reshape(-1, 5)
             # one_img_index_flag = index_flag[j].reshape(2, -1)
             box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
             one_img_data = one_img_data[box_order].reshape(-1,)

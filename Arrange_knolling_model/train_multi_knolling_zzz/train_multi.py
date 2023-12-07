@@ -6,7 +6,11 @@ import wandb
 if __name__ == '__main__':
 
     def main():
-        wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
+        if sweep_train_flag == True:
+            wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
+        else:
+            wandb.init(project='knolling_multi')
+            DATAROOT = "../../../knolling_dataset/learning_data_826/"
         config = wandb.config
         running_name = wandb.run.name
 
@@ -16,7 +20,8 @@ if __name__ == '__main__':
         config.num_layers = 4
         config.dropout_prob = 0.0
         config.max_seq_length = 5
-        # config.lr = 1e-4
+        if sweep_train_flag == False:
+            config.lr = 1e-4
         config.batch_size = 512
         config.log_pth = 'data/%s/' % running_name
         config.pos_encoding_Flag = True
@@ -27,7 +32,7 @@ if __name__ == '__main__':
         config.all_steps = False
         config.object_num = -1
         config.canvas_factor = 2
-        config.use_overlap_loss = True
+        config.use_overlap_loss = False
         config.patience = 30
         config.num_gaussian = 4
         config.dataset_path = DATAROOT
@@ -47,12 +52,11 @@ if __name__ == '__main__':
             high_dim_encoder=config.high_dim_encoder,
             all_steps = config.all_steps,
             max_obj_num = config.max_seq_length,
-            # max_obj_num = 30,
             num_gaussians = config.num_gaussian,
             canvas_factor=config.canvas_factor,
             use_overlap_loss=config.use_overlap_loss,
-            mse_loss_factor=config.mse_loss_factor,
-            overlap_loss_factor=config.overlap_loss_factor
+            mse_loss_factor=1,
+            overlap_loss_factor=1
         )
 
         num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -81,10 +85,9 @@ if __name__ == '__main__':
         config.solu_num = int(solution_num * configuration_num)
         object_num = 30
         for f in range(config.solu_num):
-            dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
+            dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (5, f)
             print('load data:', dataset_path)
-
-            raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 6]
+            raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 5]
             raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
             train_data = raw_data[:int(len(raw_data) * 0.8)]
@@ -97,12 +100,12 @@ if __name__ == '__main__':
             train_cls = []
             valid_cls = []
             for i in range(config.max_seq_length):
-                train_input.append(train_data[:, i * 6 + 2:i * 6 + 4])
-                valid_input.append(test_data[:, i * 6 + 2:i * 6 + 4])
-                train_cls.append(train_data[:, [i * 6 + 5]])
-                valid_cls.append(test_data[:, [i * 6 + 5]])
-                train_label.append(train_data[:, i * 6:i * 6 + 2])
-                valid_label.append(test_data [:, i * 6:i * 6 + 2])
+                train_input.append(train_data[:, i * 5 + 2:i * 5 + 4])
+                valid_input.append(test_data[:, i * 5 + 2:i * 5 + 4])
+                train_cls.append(train_data[:, [i * 5 + 0]])
+                valid_cls.append(test_data[:, [i * 5 + 0]])
+                train_label.append(train_data[:, i * 5:i * 5 + 2])
+                valid_label.append(test_data [:, i * 5:i * 5 + 2])
 
             train_input = np.asarray(train_input).transpose(1, 0, 2)
             valid_input = np.asarray(valid_input).transpose(1, 0, 2)
@@ -264,16 +267,21 @@ if __name__ == '__main__':
                     print('abort training!')
                     break
 
-    sweep_configuration = {
-        "method": "random",
-        "metric": {"goal": "minimize", "name": "min_loss"},
-        "parameters": {
-            "mse_loss_factor": {"max": 2.0, "min": 0.1},
-            "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-            "lr": {"values": [1e-3, 1e-4]}
-        },
-    }
+    sweep_train_flag = False
 
-    sweep_id = wandb.sweep(sweep=sweep_configuration, project="knolling_tuning")
+    if sweep_train_flag == True:
+        sweep_configuration = {
+            "method": "random",
+            "metric": {"goal": "minimize", "name": "min_loss"},
+            "parameters": {
+                "mse_loss_factor": {"max": 2.0, "min": 0.1},
+                "overlap_loss_factor": {"max": 2.0, "min": 0.1},
+                "lr": {"values": [1e-3, 1e-4]}
+            },
+        }
 
-    wandb.agent(sweep_id, function=main, count=3)
+        sweep_id = wandb.sweep(sweep=sweep_configuration, project="knolling_tuning")
+
+        wandb.agent(sweep_id, function=main, count=3)
+    else:
+        main()
