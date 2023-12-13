@@ -1,10 +1,10 @@
 /Grasp_pred_model/results/
 /Grasp_pred_model/wandb/
 /backup_script/
-/realsense_test/
+/realsense_camera/
 /RL_dynamic_model/
 /ideas.txt
-/Arrange_knolling_model/train_multi_knolling_zzz/data/
-/Arrange_knolling_model/train_multi_knolling_zzz/wandb/
-/Arrange_knolling_model/train_multi_knolling_zzz/results/
+/Arrange_knolling_model/train_and_test/data/
+/Arrange_knolling_model/train_and_test/wandb/
+/Arrange_knolling_model/train_and_test/results/
 /ultralytics/

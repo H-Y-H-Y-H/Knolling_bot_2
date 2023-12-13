@@ -898,7 +898,7 @@ class Arm_env():
                     #     # cv2.imwrite(img_path_output, origin_img)
                     #     break
                 else:
-                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.model_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
                 ################### the results of object detection has changed the order!!!! ####################
 
             else:

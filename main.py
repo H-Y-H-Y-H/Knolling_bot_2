@@ -141,14 +141,14 @@ class knolling_main():
                     lwh_list_input = lwh_list.astype(np.float32)
                     ori_after = np.zeros((len(ori_before_input), 3))
 
-                    #################### exchange the length and width randomly enrich the input ##################
-                    for j in input_index:
-                        if np.random.random() < 0.5:
-                            temp = lwh_list_input[j, 1]
-                            lwh_list_input[j, 1] = lwh_list_input[j, 0]
-                            lwh_list_input[j, 0] = temp
-                            ori_after[j, 2] += np.pi / 2
-                    #################### exchange the length and width randomly enrich the input ##################
+                    # #################### exchange the length and width randomly enrich the input ##################
+                    # for j in input_index:
+                    #     if np.random.random() < 0.5:
+                    #         temp = lwh_list_input[j, 1]
+                    #         lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                    #         lwh_list_input[j, 0] = temp
+                    #         ori_after[j, 2] += np.pi / 2
+                    # #################### exchange the length and width randomly enrich the input ##################
 
                     # input include all objects(finished, success, fail),
                     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
@@ -660,19 +660,20 @@ class knolling_main():
 
 if __name__ == '__main__':
 
-    np.random.seed(28)
-    random.seed(28)
+    # np.random.seed(28)
+    # random.seed(28)
     # 记一下25！！！
 
-
+    # default: conf 0.6, iou 0.6
     np.set_printoptions(precision=5)
-    para_dict = {'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.6, 'yolo_iou': 0.6, 'device': 'cuda:0',
+    para_dict = {
+                 'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
+                 'yolo_conf': 0.3, 'yolo_iou': 0.6, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
+                 'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(5, 6),
+                 'boxes_num': np.random.randint(10, 11),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
@@ -681,16 +682,26 @@ if __name__ == '__main__':
                  'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
                  'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-                 'data_source_path': './knolling_img/',
+                 'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'yolo_model_path': './ASSET/models/627_pile_pose/weights/best.pt',
-                 'real_operate': True, 'data_collection': False,
-                 'use_knolling_model': True, 'use_lstm_grasp_model': True, 'use_yolo_model': False}
+                 'real_operate': False, 'data_collection': False,
+                 'object': 'box', # box, polygon
+                 'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
+                 'lstm_enable_flag': True
+                }
 
-    if para_dict['real_operate'] == True:
-        para_dict['yolo_model_path'] = './ASSET/models/1007_pile_sundry/weights/best.pt'
-    if para_dict['use_yolo_model'] == True:
+    # visual_perception_model： lstm_grasp, yolo_grasp, yolo_seg
+    # determine to choose which model
+    if para_dict['visual_perception_model'] == 'yolo_grasp':
         para_dict['yolo_model_path'] = './ASSET/models/924_grasp/weights/best.pt'
+    elif para_dict['visual_perception_model'] == 'lstm_grasp':
+        if para_dict['real_operate'] == True:
+            para_dict['yolo_model_path'] = './ASSET/models/1007_pile_sundry/weights/best.pt'
+        else:
+            para_dict['yolo_model_path'] = './ASSET/models/627_pile_pose/weights/best.pt'
+    else:
+        if para_dict['visual_perception_model'] == 'yolo_seg':
+            para_dict['yolo_model_path'] = './ASSET/models/820_pile_seg/weights/best.pt'
 
 
     knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
@@ -716,9 +727,9 @@ if __name__ == '__main__':
     if para_dict['real_operate'] == True:
         lstm_dict['threshold'] = 0.40
 
-    arrange_dict = {'running_name': 'autumn-meadow-16',
-                    'transformer_model_path': './ASSET/models/autumn-meadow-16',
-                    'use_yaml': False,
+    arrange_dict = {'running_name': 'devoted-terrain-29',
+                    'transformer_model_path': './ASSET/models/devoted-terrain-29',
+                    'use_yaml': True,
                     'arrange_x_offset': 0.03,
                     'arrange_y_offset': 0.00}
 

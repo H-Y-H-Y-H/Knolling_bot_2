@@ -422,6 +422,7 @@ if __name__ == '__main__':
     # name = "devoted-terraqin-29"
     # name = "classic-bush-95"
     name = 'dandy-hill-142'
+    name = 'devoted-terrain-29'
     # name = 'fallen-morning-156'
     # name = "radiant-puddle-143"
 
@@ -431,20 +432,20 @@ if __name__ == '__main__':
     if command == 'recover':
 
         env = Arm(is_render=True)
-        visual_path = '../train_multi_knolling_zzz/results/%s/pred_after'%(name)
+        visual_path = '../train_and_test/results/%s/pred_after'%(name)
 
 
         box_num = 10
         if show_baseline == 0:
             data = np.loadtxt(visual_path + '/num_%d_new.txt' % 30)
-            savefolder = '../train_multi_knolling_zzz/results/%s/pred_after/image/' % (name)
+            savefolder = '../train_and_test/results/%s/pred_after/image/' % (name)
         elif show_baseline == 1:
-            data = np.loadtxt('../train_multi_knolling_zzz/baseline/mlp_result/outputs.csv')
+            data = np.loadtxt('../train_and_test/baseline/mlp_result/outputs.csv')
 
         test_start = int(len(data)*0.8)
         # test_end = int(len(data)*0.81)
         data = data[:test_start]
-        savefolder = '../train_multi_knolling_zzz/results/%s/pred_%s/' % (name, before_after)
+        savefolder = '../train_and_test/results/%s/pred_%s/' % (name, before_after)
 
         os.makedirs(savefolder, exist_ok=True)
 

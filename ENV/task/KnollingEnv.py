@@ -108,12 +108,23 @@ class knolling_env():
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
-        if self.para_dict['use_yolo_model'] == True:
-            self.yolo_pose_model = Yolo_grasp_model(para_dict=para_dict)
-        if self.para_dict['use_lstm_grasp_model'] == True:
+
+
+        # if self.para_dict['use_yolo_grasp_model'] == True:
+        #     self.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
+        # if self.para_dict['use_lstm_grasp_model'] == True:
+        #     self.lstm_dict = lstm_dict
+        #     self.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
+        #                                             use_lstm=self.para_dict['use_lstm_grasp_model'])
+
+        if self.para_dict['visual_perception_model'] == 'yolo_seg':
+            self.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
+        if self.para_dict['visual_perception_model'] == 'yolo_grasp':
+            self.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
+        if self.para_dict['visual_perception_model'] == 'lstm_grasp':
             self.lstm_dict = lstm_dict
-            self.yolo_pose_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
-                                                    use_lstm=self.para_dict['use_lstm_grasp_model'])
+            self.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
+                                                   use_lstm=True)
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -266,15 +277,22 @@ class knolling_env():
                 print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
                 rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
 
-                self.boxes_index = []
+                self.objects_index = []
                 for i in range(self.num_boxes):
                     obj_name = f'object_{i}'
-                    create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
-                    self.boxes_index.append(int(i + 2))
+                    if self.para_dict['object'] == 'box':
+                        create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
+                    elif self.para_dict['object'] == 'polygon':
+                        p.loadURDF(
+                            ('../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % np.random.uniform(0, 600, 1)[0]),
+                            basePosition=rdm_pos[i],
+                            baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                            flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+                    self.objects_index.append(int(i + 2))
                     r = np.random.uniform(0, 0.9)
                     g = np.random.uniform(0, 0.9)
                     b = np.random.uniform(0, 0.9)
-                    p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                    p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
 
                 for _ in range(int(100)):
                     p.stepSimulation()
@@ -296,15 +314,15 @@ class knolling_env():
                 self.lwh_list = lwh_list_init
                 self.num_boxes = np.copy(len(self.lwh_list))
 
-                self.boxes_index = []
+                self.objects_index = []
                 for i in range(self.num_boxes):
                     obj_name = f'object_{i}'
                     create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
-                    self.boxes_index.append(int(i + 2))
+                    self.objects_index.append(int(i + 2))
                     r = np.random.uniform(0, 0.9)
                     g = np.random.uniform(0, 0.9)
                     b = np.random.uniform(0, 0.9)
-                    p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                    p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
 
                 for _ in range(int(100)):
                     p.stepSimulation()
@@ -320,21 +338,21 @@ class knolling_env():
 
         else:
 
-            for i in range(len(self.boxes_index)):
-                p.removeBody(self.boxes_index[i])
+            for i in range(len(self.objects_index)):
+                p.removeBody(self.objects_index[i])
             self.lwh_list = lwh_data
             self.num_boxes = np.copy(len(self.lwh_list))
-            self.boxes_index = []
+            self.objects_index = []
             for i in range(self.num_boxes):
                 obj_name = f'object_{i}'
                 create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=self.lwh_list[i])
-                self.boxes_index.append(int(i + 2))
+                self.objects_index.append(int(i + 2))
                 r = np.random.uniform(0, 0.9)
                 g = np.random.uniform(0, 0.9)
                 b = np.random.uniform(0, 0.9)
-                p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
             if self.create_entry_num % 2 == 0:
-                self.boxes_index.reverse()
+                self.objects_index.reverse()
             self.create_entry_num += 1
 
             p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
@@ -346,18 +364,18 @@ class knolling_env():
         if self.para_dict['real_operate'] == False and manipulator_after is None:
             forbid_range = np.array([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
             while True:
-                new_num_item = len(self.boxes_index)
+                new_num_item = len(self.objects_index)
                 delete_index = []
 
                 self.gt_pos_ori = []
                 self.gt_ori_qua = []
-                for i in range(len(self.boxes_index)):
-                    p.changeDynamics(self.boxes_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
-                                                         contactDamping=self.para_dict['box_contact_damping'],
-                                                         contactStiffness=self.para_dict['box_contact_stiffness'])
-                    cur_qua = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[1])
+                for i in range(len(self.objects_index)):
+                    p.changeDynamics(self.objects_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
+                                     contactDamping=self.para_dict['box_contact_damping'],
+                                     contactStiffness=self.para_dict['box_contact_stiffness'])
+                    cur_qua = np.asarray(p.getBasePositionAndOrientation(self.objects_index[i])[1])
                     cur_ori = np.asarray(p.getEulerFromQuaternion(cur_qua))
-                    cur_pos = np.asarray(p.getBasePositionAndOrientation(self.boxes_index[i])[0])
+                    cur_pos = np.asarray(p.getBasePositionAndOrientation(self.objects_index[i])[0])
                     self.gt_pos_ori.append([cur_pos, cur_ori])
                     self.gt_ori_qua.append(cur_qua)
                     roll_flag = False
@@ -379,8 +397,8 @@ class knolling_env():
 
                 delete_index.reverse()
                 for i in delete_index:
-                    p.removeBody(self.boxes_index[i])
-                    self.boxes_index.pop(i)
+                    p.removeBody(self.objects_index[i])
+                    self.objects_index.pop(i)
                     self.num_boxes -= 1
                     self.lwh_list = np.delete(self.lwh_list, i, axis=0)
                     self.gt_pos_ori = np.delete(self.gt_pos_ori, i, axis=0)
@@ -413,15 +431,15 @@ class knolling_env():
             self.lwh_list = np.copy(lwh_data)
             qua_data = config_data[:, 9:]
 
-            self.boxes_index = []
+            self.objects_index = []
             for i in range(len(pos_data)):
                 obj_name = f'object_{i}'
                 create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lwh_data[i])
-                self.boxes_index.append(int(i + 2))
+                self.objects_index.append(int(i + 2))
                 r = np.random.uniform(0, 0.9)
                 g = np.random.uniform(0, 0.9)
                 b = np.random.uniform(0, 0.9)
-                p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
+                p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
 
             for _ in range(int(100)):
                 p.stepSimulation()
@@ -439,7 +457,7 @@ class knolling_env():
 
             for i in range(len(recover_index)):
                 # don't use self.boxes_index, you should reset the pos based on the sequence
-                p.resetBasePositionAndOrientation(self.boxes_index[recover_index[i]],
+                p.resetBasePositionAndOrientation(self.objects_index[recover_index[i]],
                                                   pos_data[recover_index[i]],
                                                   p.getQuaternionFromEuler(ori_data[recover_index[i]]))
 
@@ -557,13 +575,13 @@ class knolling_env():
                 img, _ = get_images()
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, gt_boxes_num=len(self.boxes_index), first_flag=baseline_flag)
+                manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(img=img, epoch=epoch, gt_boxes_num=len(self.objects_index), first_flag=baseline_flag)
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
             else:
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.grasp_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
+                manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
 

@@ -3,11 +3,11 @@
 import torch
 from utils import *
 import cv2
-# import pyrealsense2 as rs
+import pyrealsense2 as rs
 import numpy as np
-from ASSET.ultralytics.yolo.engine.results import Results
-from ASSET.ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops
-from ASSET.ultralytics.yolo.v8.detect.predict import DetectionPredictor
+from ultralytics.yolo.engine.results import Results
+from ultralytics.yolo.utils import DEFAULT_CFG, ROOT, ops
+from ultralytics.yolo.v8.detect.predict import DetectionPredictor
 
 class Yolo_seg_model():
 
@@ -165,7 +165,7 @@ class Yolo_seg_model():
                 cv2.imwrite(img_path + '.png', resized_color_image)
                 img_path_input = img_path + '.png'
                 args = dict(model=model, source=img_path_input, conf=0.3, iou=0.8)
-                from ASSET.ultralytics import YOLO
+                from ultralytics import YOLO
                 images = YOLO(model)(**args)
 
                 origin_img = cv2.imread(img_path_input)
@@ -233,7 +233,7 @@ class Yolo_seg_model():
             cv2.imwrite(img_path + '.png', img)
             img_path_input = img_path + '.png'
             args = dict(model=model, source=img_path_input, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-            from ASSET.ultralytics import YOLO
+            from ultralytics import YOLO
             images = YOLO(model)(**args)
 
             origin_img = cv2.imread(img_path_input)

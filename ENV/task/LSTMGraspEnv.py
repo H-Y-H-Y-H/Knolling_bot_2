@@ -545,7 +545,7 @@ class LSTM_grasp_collection_env():
                 ################### the results of object detection has changed the order!!!! ####################
                 # structure of results: x, y, z, length, width, ori
                 if self.para_dict['use_lstm_grasp_model'] == True:
-                    manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, first_flag=baseline_flag)
+                    manipulator_before, new_lwh_list, pred_cls = self.yolo_pose_model.model_predict(img=img, epoch=epoch, first_flag=baseline_flag)
                     # self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
                     # cv2.namedWindow('zzz', 0)
                     # cv2.resizeWindow('zzz', 1280, 960)
@@ -556,7 +556,7 @@ class LSTM_grasp_collection_env():
                     #     # cv2.imwrite(img_path_output, origin_img)
                     #     break
                 else:
-                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.grasp_predict(img=img, epoch=epoch, first_flag=baseline_flag)
+                    manipulator_before, new_lwh_list, pred_conf = self.yolo_pose_model.model_predict(img=img, epoch=epoch, first_flag=baseline_flag)
                 ################### the results of object detection has changed the order!!!! ####################
 
             else:
