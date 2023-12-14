@@ -141,14 +141,14 @@ class knolling_main():
                     lwh_list_input = lwh_list.astype(np.float32)
                     ori_after = np.zeros((len(ori_before_input), 3))
 
-                    # #################### exchange the length and width randomly enrich the input ##################
-                    # for j in input_index:
-                    #     if np.random.random() < 0.5:
-                    #         temp = lwh_list_input[j, 1]
-                    #         lwh_list_input[j, 1] = lwh_list_input[j, 0]
-                    #         lwh_list_input[j, 0] = temp
-                    #         ori_after[j, 2] += np.pi / 2
-                    # #################### exchange the length and width randomly enrich the input ##################
+                    #################### exchange the length and width randomly enrich the input ##################
+                    for j in input_index:
+                        if np.random.random() < 0.5:
+                            temp = lwh_list_input[j, 1]
+                            lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                            lwh_list_input[j, 0] = temp
+                            ori_after[j, 2] += np.pi / 2
+                    #################### exchange the length and width randomly enrich the input ##################
 
                     # input include all objects(finished, success, fail),
                     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
@@ -255,7 +255,8 @@ class knolling_main():
         restrict_gripper_diagonal = np.sqrt(gripper_width ** 2 + gripper_height ** 2)
         gripper_box_gap = 0.006
 
-        while len(crowded_index) >= len(self.rest_index):
+        while len(crowded_index) >= 1:
+            # len(crowded_index) >= len(self.rest_index):
 
             crowded_pos = self.manipulator_before[crowded_index, :3]
             crowded_ori = self.manipulator_before[crowded_index, 3:6]
@@ -400,7 +401,11 @@ class knolling_main():
             ######################### remove the debug lines after moving ######################
 
             self.exclude_objects()
-            crowded_index = np.intersect1d(np.where(self.pred_cls == 0)[0], self.rest_index)
+
+            ######### this is temp setting, to make all objects graspable ########
+            # crowded_index = np.intersect1d(np.where(self.pred_cls == 0)[0], self.rest_index)
+            crowded_index = np.where(self.pred_cls == 0)[0]
+            ######### this is temp setting, to make all objects graspable ########
 
             ################## Check the results to determine whether to clean again #####################
             # self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.task.get_obs()
@@ -673,7 +678,7 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(10, 11),
+                 'boxes_num': np.random.randint(5, 6),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
@@ -727,9 +732,9 @@ if __name__ == '__main__':
     if para_dict['real_operate'] == True:
         lstm_dict['threshold'] = 0.40
 
-    arrange_dict = {'running_name': 'devoted-terrain-29',
+    arrange_dict = {'running_name': 'autumn-meadow-16',
                     'transformer_model_path': './ASSET/models/devoted-terrain-29',
-                    'use_yaml': True,
+                    'use_yaml': False,
                     'arrange_x_offset': 0.03,
                     'arrange_y_offset': 0.00}
 
