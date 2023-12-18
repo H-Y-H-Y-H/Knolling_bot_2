@@ -450,20 +450,38 @@ class Arrange_model():
             pass
 
         else:
-            api = wandb.Api()
-            # Project is specified by <entity/project-name>
-            runs = api.runs("knolling_multi")
 
+            import json
+
+            # api = wandb.Api()
+            # # Project is specified by <entity/project-name>
+            # runs = api.runs("knolling_multi")
+            #
             name = self.arrange_dict['running_name']
             model_name = "best_model.pt"
-            summary_list, config_list, name_list = [], [], []
-            config = None
-            for run in runs:
-                if run.name == name:
-                    print("found: ", name)
-                    config = {k: v for k, v in run.config.items() if not k.startswith('_')}
-            print(config)
-            config = argparse.Namespace(**config)
+            # summary_list, config_list, name_list = [], [], []
+            # config = None
+            # for run in runs:
+            #     if run.name == name:
+            #         print("found: ", name)
+            #         config = {k: v for k, v in run.config.items() if not k.startswith('_')}
+            # print(config)
+            # json_object = json.dumps(config, indent=19)
+
+            # # Writing to sample.json
+            # with open("./temp.json", "w") as outfile:
+            #     outfile.write(json_object)
+
+
+            # Opening JSON file
+            with open('./temp.json', 'r') as openfile:
+
+                # Reading from json file
+                json_object = json.load(openfile)
+
+            config = argparse.Namespace(**json_object)
+
+            # config = argparse.Namespace(**config)
 
             self.model = Knolling_Transformer(input_length=config.max_seq_length,
                                               input_size=2,
@@ -517,6 +535,7 @@ class Arrange_model():
             pos_before_grasp = pos_before_input[new_index, :2].reshape(1, len(pos_before_input), 2) * self.scale_data + self.shift_data
             lwh_before_grasp = lwh_before_input[new_index, :2].reshape(1, len(lwh_before_input), 2) * self.scale_data + self.shift_data
 
+            # pad based on the model, not the current number
             pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=self.para_dict['boxes_num'])
             lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=self.para_dict['boxes_num'])
 

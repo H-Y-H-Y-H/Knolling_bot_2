@@ -151,13 +151,13 @@ class knolling_main():
                     #################### exchange the length and width randomly enrich the input ##################
 
                     # input include all objects(finished, success, fail),
-                    pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)
+                    pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)[:len(lwh_list_input), :]
 
-                    # manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
-                    # manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
+                    manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+                    manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
 
-                    manipulator_before = np.concatenate((pos_before_input, ori_before_input), axis=1)
-                    manipulator_after = np.concatenate((pos_after.astype(np.float32), ori_after), axis=1)
+                    # manipulator_before = np.concatenate((pos_before_input, ori_before_input), axis=1)
+                    # manipulator_after = np.concatenate((pos_after.astype(np.float32), ori_after), axis=1)
                     lwh_list_classify = np.copy(lwh_list_input)
                     # rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
                     # # manipulator_after[rotate_index, -1] += np.pi / 2
@@ -525,7 +525,7 @@ class knolling_main():
         self.finished_num += len(manipulator_after)
 
         offset_low = np.array([0, 0, 0.00])
-        offset_low_place = np.array([0, 0, 0.005])
+        offset_low_place = np.array([0, 0, 0.008])
         offset_high = np.array([0, 0, 0.04])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
@@ -673,7 +673,7 @@ if __name__ == '__main__':
     np.set_printoptions(precision=5)
     para_dict = {
                  'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.3, 'yolo_iou': 0.6, 'device': 'cuda:0',
+                 'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
@@ -689,7 +689,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': False, 'data_collection': False,
+                 'real_operate': True, 'data_collection': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
                  'lstm_enable_flag': True
