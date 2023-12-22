@@ -469,12 +469,13 @@ class Arrange_model():
             # json_object = json.dumps(config, indent=19)
 
             # # Writing to sample.json
-            # with open("./temp.json", "w") as outfile:
+            # with open("./para.json", "w") as outfile:
             #     outfile.write(json_object)
 
 
             # Opening JSON file
-            with open('./temp.json', 'r') as openfile:
+            PATH = './ASSET/models/%s/' % (name)
+            with open(PATH + 'para.json', 'r') as openfile:
 
                 # Reading from json file
                 json_object = json.load(openfile)

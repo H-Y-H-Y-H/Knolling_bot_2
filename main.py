@@ -689,7 +689,7 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': True, 'data_collection': False,
+                 'real_operate': False, 'data_collection': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
                  'lstm_enable_flag': True

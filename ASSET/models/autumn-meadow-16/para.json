@@ -1,0 +1,24 @@
+{
+                   "lr": 0.0001,
+                   "log_pth": "data/autumn-meadow-16/",
+                   "num_data": [
+                                      2000000,
+                                      500000
+                   ],
+                   "all_steps": true,
+                   "noise_std": 0,
+                   "batch_size": 512,
+                   "num_layers": 4,
+                   "object_num": -1,
+                   "forwardtype": 1,
+                   "pre_trained": false,
+                   "dropout_prob": 0,
+                   "model_params": 87926,
+                   "max_seq_length": 5,
+                   "all_zero_target": 0,
+                   "map_embed_d_dim": 32,
+                   "high_dim_encoder": true,
+                   "forward_expansion": 4,
+                   "pos_encoding_Flag": true,
+                   "num_attention_heads": 4
+}
