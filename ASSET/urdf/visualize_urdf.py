@@ -15,6 +15,7 @@ class visualize_env():
         self.init_ori_range = para_dict['init_ori_range']
         self.init_offset_range = para_dict['init_offset_range']
         self.urdf_path = para_dict['urdf_path']
+        self.object_urdf_path = para_dict['object_urdf_path']
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
@@ -141,7 +142,7 @@ class visualize_env():
         ]   
 
         for i in range(self.objects_num):
-            urdf_file = self.urdf_path + urdf_filenames[i % len(urdf_filenames)] # Cycle through the list of URDF files
+            urdf_file = self.object_urdf_path + urdf_filenames[i % len(urdf_filenames)] # Cycle through the list of URDF files
             obj_id = p.loadURDF(urdf_file,
                                 basePosition=rdm_pos[i],
                                 baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
@@ -221,6 +222,7 @@ if __name__ == '__main__':
         'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
         'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
         'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
+        'object_urdf_path': 'OpensCAD_generate/urdf_file/',
         'urdf_path': './',
     }
 

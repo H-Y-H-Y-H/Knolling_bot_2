@@ -12,13 +12,13 @@
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="generated_stl/charger/charger_1/charger_1_L0.85_T0.85/charger_1_L0.85_T0.85.stl" scale="1 1 1"/>
+        <mesh filename="generated_stl/charger/charger_1/charger_1_L0.85_T0.85/charger_1_L0.85_T0.85.stl" scale="0.01 0.01 0.01"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="generated_stl/charger/charger_1/charger_1_L0.85_T0.85/charger_1_L0.85_T0.85.stl" scale="1 1 1"/>
+        <mesh filename="generated_stl/charger/charger_1/charger_1_L0.85_T0.85/charger_1_L0.85_T0.85.stl" scale="0.01 0.01 0.01"/>
       </geometry>
     </collision>
   </link>

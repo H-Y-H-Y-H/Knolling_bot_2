@@ -16,13 +16,13 @@ def generate_urdf(stl_file, urdf_directory):
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="{stl_file}" scale="1 1 1"/>
+        <mesh filename="{stl_file}" scale="0.01 0.01 0.01"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="{stl_file}" scale="1 1 1"/>
+        <mesh filename="{stl_file}" scale="0.01 0.01 0.01"/>
       </geometry>
     </collision>
   </link>
