@@ -353,9 +353,6 @@ if __name__ == '__main__':
     boxes_num = 30
     kind_num = 5
 
-    area_num = 2
-    ratio_num = 1
-
     config_dict = [[2, 1],
                    [1, 2],
                     [1, 1]]

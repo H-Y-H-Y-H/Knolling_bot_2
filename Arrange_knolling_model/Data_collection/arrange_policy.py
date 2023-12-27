@@ -508,3 +508,26 @@ class configuration_zzz():
                 item_ori[item_index] = ori
 
         return item_pos, item_ori  # pos_list, ori_list
+
+class arrangement():
+
+    def __init__(self, xyz_list, all_index, gap_item, gap_block, all_cls,
+                 item_odd_prevent, block_odd_prevent, upper_left_max, forced_rotate_box, iteration_time):
+
+        self.xyz_list = xyz_list
+        self.all_index = all_index
+        self.gap_item = gap_item
+        self.gap_block = gap_block
+        self.all_cls = all_cls
+        # self.transform_flag = transform_flag
+        self.item_odd_prevent = item_odd_prevent
+        self.block_odd_prevent = block_odd_prevent
+        self.upper_left_max = upper_left_max
+        self.forced_rotate_box = forced_rotate_box
+        self.iteration_time = iteration_time
+
+    def generate_arrangement(self):
+
+        pass
+
+        return 0

@@ -539,6 +539,8 @@ class Arrange_model():
             # pad based on the model, not the current number
             pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=self.para_dict['boxes_num'])
             lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=self.para_dict['boxes_num'])
+            # pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=5)
+            # lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=5)
 
             input_data = torch.from_numpy(lwh_before_grasp[:, :, :2]).to(device).float()
             target_data = torch.from_numpy(pos_before_grasp[:, :, :2]).to(device).float()

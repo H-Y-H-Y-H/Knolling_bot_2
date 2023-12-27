@@ -665,8 +665,8 @@ class knolling_main():
 
 if __name__ == '__main__':
 
-    # np.random.seed(28)
-    # random.seed(28)
+    np.random.seed(25)
+    random.seed(25)
     # 记一下25！！！
 
     # default: conf 0.6, iou 0.6
@@ -678,7 +678,7 @@ if __name__ == '__main__':
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(5, 6),
+                 'boxes_num': np.random.randint(4, 5),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,

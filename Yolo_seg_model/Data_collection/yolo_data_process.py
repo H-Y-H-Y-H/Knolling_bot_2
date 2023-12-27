@@ -6,7 +6,7 @@ import shutil
 from itertools import combinations, permutations
 from tqdm import tqdm
 
-def yolo_box(img, label):
+def plot_yolo_box(img, label):
     # label = [0,x,y,l,w],[0,x,y,l,w],...
     # label = label[:,1:]
     for i in range(len(label)):
@@ -29,7 +29,7 @@ def yolo_box(img, label):
 
     return img
 
-def yolo_points(img, label):
+def plot_yolo_points(img, label):
 
     for i in range(len(label)):
         kpts = label[i][1:].reshape(-1, 2)
@@ -203,7 +203,7 @@ def pose4keypoints(data_root, target_path, start_num, end_num):
             # color_segmentation(real_world_img, 5, label_plot)
         print('this is total_1', total_1)
         print('this is total_2', total_2)
-def segmentation(data_root, target_path, start_num, end_num, show_flag=False):
+def polygon_segmentation(data_root, target_path, start_num, end_num, show_flag=False):
 
     os.makedirs(data_root + 'labels/', exist_ok=True)
     os.makedirs(target_path + 'preprocess_labels/', exist_ok=True)
@@ -258,118 +258,16 @@ def segmentation(data_root, target_path, start_num, end_num, show_flag=False):
                 f.write('\n')
         if show_flag == True:
             img = cv2.imread(data_root + 'origin_images/%012d.png' % i)
-            yolo_points(img, label)
+            plot_yolo_points(img, label)
 
     print('this is total_1', total_1)
     print('this is total_2', total_2)
 
-def manual_pose4keypoints(data_root, target_path):
-    os.makedirs(data_root, exist_ok=True)
-    os.makedirs(target_path, exist_ok=True)
-    os.makedirs(target_path + 'images/', exist_ok=True)
-    os.makedirs(target_path + 'labels/', exist_ok=True)
-    mm2px = 530 / 0.34  # (1558)
-    img_index = input('Enter the index of img:')
-    img_index = int(img_index)
+def mask2keypoints(source_path, target_path, start_index, end_index):
 
-    cur_path = os.path.join(data_root, "images/%012d.png") % img_index
-    tar_path = os.path.join(target_path, "images/%012d.png") % img_index
-    shutil.copy(cur_path, tar_path)
 
-    # num_item = input('Enter the num of boxes in one img:')
-    #
-    # data_total = []
-    # for i in range(int(num_item)):
-    #     data = input('Enter the xylwori of one img (five datas in total):').split(" ")
-    #     data_total.append(np.array([float(j) for j in data]))
-    # data_total = np.concatenate((np.zeros((len(data_total), 1)), np.asarray(data_total)), axis=1)
-    # data_total[:, 5] = data_total[:, 5] / 180 * np.pi
-    # print(data_total)
-    # np.savetxt(os.path.join(data_root, "labels/%012d.txt") % img_index, data_total, fmt='%.8s')
 
-    data_total = np.loadtxt(os.path.join(data_root, "labels/%012d.txt") % img_index)
-    data_total[:, 5] = data_total[:, 5] / 180 * np.pi
-
-    corner_list = []
-    label_plot = []
-    label = []
-    total_1 = 0
-    total_2 = 0
-    for j in range(len(data_total)):
-        print(data_total[j])
-        # print('this is index if legos', j)
-        xpos1, ypos1 = data_total[j][1], data_total[j][2]
-        l, w = data_total[j][3], data_total[j][4]
-        yawori = data_total[j][5]
-        if l < w:
-            l = data_total[j][4]
-            w = data_total[j][3]
-            if yawori > np.pi / 2:
-                yawori = yawori - np.pi / 2
-            else:
-                yawori = yawori + np.pi / 2
-
-        # ensure the yolo sequence!
-        label_y = (xpos1 * mm2px + 6) / 480
-        label_x = (ypos1 * mm2px + 320) / 640
-        length = l * 3
-        width = w * 3
-        # ensure the yolo sequence!
-        keypoints, total_1, total_2 = find_keypoints(xpos1, ypos1, l, w, yawori, mm2px, total_1, total_2)
-        # keypoints_order = np.lexsort((keypoints[:, 0], keypoints[:, 1]))[::-1]
-        # keypoints = keypoints[keypoints_order]
-
-        element = np.concatenate(([0], [label_x, label_y], [length, width], keypoints.reshape(-1)))
-        # print(label)
-
-        corn1, corn2, corn3, corn4 = find_corner(xpos1, ypos1, l, w, yawori)
-        corner_list.append([corn1, corn2, corn3, corn4])
-        corns = corner_list[j]
-
-        col_offset = 320
-        # row_offset = (0.154 - (0.3112 - 0.154)) * mm2px + 5
-        row_offset = 0
-
-        col_list = np.array([mm2px * corns[0][1] + col_offset, mm2px * corns[3][1] + col_offset,
-                             mm2px * corns[1][1] + col_offset, mm2px * corns[2][1] + col_offset])
-        row_list = np.array([mm2px * corns[0][0] - row_offset, mm2px * corns[3][0] - row_offset,
-                             mm2px * corns[1][0] - row_offset, mm2px * corns[2][0] - row_offset])
-
-        col_list = np.sort(col_list)
-        row_list = np.sort(row_list)
-        col_list[3] = col_list[3]
-        col_list[0] = col_list[0]
-        row_list[3] = row_list[3]
-        row_list[0] = row_list[0]
-
-        label_x_plot = ((col_list[0] + col_list[3]) / 2) / 640
-        label_y_plot = (((row_list[0] + row_list[3]) / 2) + 6) / 480
-        label_y = (xpos1 * mm2px + 6) / 480
-        label_x = (ypos1 * mm2px + 320) / 640
-
-        length_plot = (col_list[3] - col_list[0]) / 640
-        width_plot = (row_list[3] - row_list[0]) / 480
-        element_plot = []
-        element_plot.append(0)
-        element_plot.append(label_x_plot)
-        element_plot.append(label_y_plot)
-        element_plot.append(length_plot)
-        element_plot.append(width_plot)
-        element_plot = np.asarray(element_plot)
-        label_plot.append(element_plot)
-
-        # change the lw to yolo_lw in label!!!!!!
-        element[3] = length_plot
-        element[4] = width_plot
-        label.append(element)
-
-    label = np.asarray(label)
-    print('this is element\n', label)
-    # print('this is plot element\n', label_plot)
-    img = cv2.imread(os.path.join(data_root, "images/%012d.png") % img_index)
-    img = yolo_box(img, label_plot)
-
-    np.savetxt(os.path.join(target_path, "labels/%012d.txt") % img_index, label, fmt='%.8s')
+    pass
 
 def train_test_split(data_root, target_path, start_num, end_num):
 
