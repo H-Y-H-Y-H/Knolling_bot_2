@@ -133,17 +133,24 @@ class visualize_env():
         rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
 
         self.objects_index = []
+        urdf_filenames = [ # Add the filenames of your URDFs here
+            "charger_1_L1.00_T1.00.urdf",
+            "charger_1_L0.65_T0.65.urdf",
+            "charger_1_L0.95_T0.95.urdf",
+        
+        ]   
+
         for i in range(self.objects_num):
-            obj_name = f'object_{i}'
-            p.loadURDF((self.urdf_path + 'box_generator/template.urdf'),
-                    basePosition=rdm_pos[i],
-                    baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
-                    flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-            self.objects_index.append(int(i + 2))
+            urdf_file = self.urdf_path + urdf_filenames[i % len(urdf_filenames)] # Cycle through the list of URDF files
+            obj_id = p.loadURDF(urdf_file,
+                                basePosition=rdm_pos[i],
+                                baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+            self.objects_index.append(obj_id)
             r = np.random.uniform(0, 0.9)
             g = np.random.uniform(0, 0.9)
             b = np.random.uniform(0, 0.9)
-            p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
+            p.changeVisualShape(obj_id, -1, rgbaColor=(r, g, b, 1))
 
         for _ in range(int(100)):
             p.stepSimulation()
@@ -154,6 +161,7 @@ class visualize_env():
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                          contactDamping=self.para_dict['base_contact_damping'],
                          contactStiffness=self.para_dict['base_contact_stiffness'])
+
 
     def create_arm(self):
         self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm1_backup.urdf",
