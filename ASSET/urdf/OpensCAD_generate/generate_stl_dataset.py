@@ -6,12 +6,12 @@ import csv
 
 # Dictionary mapping categories to their max dimensions
 category_dimensions = {
-    'plier': (10.0, 5.0),  # length, width in cm
-    'hammer': (10.0, 5.0),
-    'chisel': (10.0, 5.0),
-    'screwdriver': (10.0, 5.0),
-    'wrench': (10.0, 5.0),
-    'utilityknife': (10.0, 5.0),
+    'plier': (8.0, 4.0),  # length, width in cm
+    'hammer': (8.0, 4.0),
+    'chisel': (8.0, 4.0),
+    'screwdriver': (8.0, 4.0),
+    'wrench': (8.0, 4.0),
+    'utilityknife': (8.0, 4.0),
     'gear': (5.0, 3.6),
     'usbdriver': (5.0, 3.6),
     'motor': (5.0, 3.6),

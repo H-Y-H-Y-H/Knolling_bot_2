@@ -35,7 +35,7 @@ def generate_urdf(stl_file, urdf_directory):
     print(f"Generated URDF for {object_name}: {urdf_file_path}")
 
 def main():
-    stl_directory = 'generated_stl/charger/charger_1'
+    stl_directory = 'generated_stl'
     urdf_directory = 'urdf_file'
     os.makedirs(urdf_directory, exist_ok=True)
 

@@ -30,10 +30,10 @@ def apply_rotation(stl_mesh, axis, angle_degree):
     return stl_mesh
 
 # Specify the STL file path and the rotation parameters
-stl_file = 'electronics_stl/utility_knife/utility_knife_3.stl'
-output_file = 'electronics_stl/utility_knife/utility_knife_3_rotated.stl'
-rotation_axis = [1, 0, 0] # x, y, z axis
-rotation_angle = 90 
+stl_file = 'electronics_stl/utilityknife/utilityknife_1.stl'
+output_file = 'electronics_stl/utilityknife/utilityknife_rotated.stl'
+rotation_axis = [0, 1, 0] # x, y, z axis
+rotation_angle = 270
 
 # Load the STL file
 stl_mesh = mesh.Mesh.from_file(stl_file)
