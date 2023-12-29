@@ -18,7 +18,7 @@ from tqdm import tqdm
 from urdfpy import URDF
 import shutil
 
-from arrange_policy import configuration_zzz, random_arrangement
+from arrange_policy import configuration_zzz
 
 torch.manual_seed(42)
 
