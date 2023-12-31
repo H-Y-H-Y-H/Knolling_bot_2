@@ -4,12 +4,12 @@ from tqdm import tqdm
 configuration = [[2, 1],
                  [1, 2],
                  [1, 1]]
-num = 30
+num = 5
 
 start_evaluations = 0
-end_evaluations =   21000
-step_num = 3
-solution_num = 4 * len(configuration)
+end_evaluations =   100
+step_num = 10
+solution_num = 4
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 # def merge():
@@ -49,16 +49,15 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
 
     for m in range(solution_num):
 
-        target_path = '../../../knolling_dataset/learning_data_1019/'
-        before_path = target_path + 'labels_before_0/'
+        target_path = '../../../knolling_dataset/learning_data_1228/'
         after_path = target_path + 'labels_after_%s/' % m
-        output_path = target_path + 'num_%d_after_%d_2w.txt' % (num, m)
+        output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
 
         total_data = []
         for s in save_point:
             data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
             total_data.append(data)
-        total_data = np.asarray(total_data).reshape(-1, num * 6)
+        total_data = np.asarray(total_data).reshape(-1, num * 11)
         np.savetxt(output_path, total_data)
         # if m == 0:
         #     total_data = []
