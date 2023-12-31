@@ -3,6 +3,7 @@ import numpy as np
 import copy
 import os
 import csv
+import random
 
 # Dictionary mapping categories to their max dimensions
 category_dimensions = {
@@ -107,8 +108,13 @@ def process_stl_files(input_dir, output_dir):
                     scaled_mesh = scale_mesh(original_mesh, max_dims)
                     # Generate variations with different sizes and thicknesses
                     for i in range(10):
-                        thickness_factor = 1 - (i * 0.05)  # Decreasing thickness
-                        length_factor = 1 - (i * 0.05)     # Decreasing length
+                        # Introduce random scaling factors for X and Y axes
+                        random_scale_x = 1 + random.uniform(-0.05, 0.05)  # Random scaling for X axis
+                        random_scale_y = 1 + random.uniform(-0.05, 0.05)  # Random scaling for Y axis
+
+                        thickness_factor = (1 - (i * 0.05)) * random_scale_y  # Adjusted thickness
+                        length_factor = (1 - (i * 0.05)) * random_scale_x    # Adjusted length
+
                         modify_and_save(scaled_mesh, (length_factor, length_factor, thickness_factor), i, output_dir, file.split('.')[0])
 
 def main():

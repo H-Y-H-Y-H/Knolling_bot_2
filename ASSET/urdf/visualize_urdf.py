@@ -2,6 +2,9 @@ import numpy as np
 import pybullet as p
 import pybullet_data as pd
 import cv2
+import random
+import os
+import csv
 
 class visualize_env():
 
@@ -120,39 +123,74 @@ class visualize_env():
         p.setGravity(0, 0, -10)
 
     def create_objects(self, pos_data=None, ori_data=None, lwh_data=None):
+        # Randomly select 5-10 URDF files from a list of 300
+        all_urdf_files = os.listdir(self.object_urdf_path)
+        selected_urdf_files = random.sample(all_urdf_files, random.randint(5, 10))
 
-        rdm_ori_roll  = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.objects_num, 1))
+        # Update self.objects_num to match the number of selected URDF files
+        self.objects_num = len(selected_urdf_files)
+        self.objects_index = []
+
+        # Function to generate random color variations
+        def get_random_color_variation(base_color):
+            variation_intensity = 0.7  # Adjust this for more or less color variation
+            color_variation = np.random.uniform(1 - variation_intensity, 1 + variation_intensity, size=3)
+            if np.array_equal(base_color, np.array([0.7, 0.7, 0.7])):
+                color_variation = 1.15
+            return np.clip(base_color * color_variation, 0, 1)
+
+        # Define base colors
+        base_colors = {
+            'red': np.array([1, 0, 0]),
+            'black': np.array([0, 0, 0]),
+            'blue': np.array([0, 0, 1]),
+            'green': np.array([0, 1, 0]),
+            'grey': np.array([0.7, 0.7, 0.7])
+        }
+
+        # Function to check if a new position is too close to existing objects
+        def is_too_close(new_pos, existing_objects, min_distance=0.08):
+            for _, obj_pos in existing_objects:
+                if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
+                    return True
+            return False
+
+        # Generate random orientations for the objects
+        rdm_ori_roll = np.pi / 2 * np.ones((self.objects_num, 1))  # Fixed roll value
         rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.objects_num, 1))
-        rdm_ori_yaw   = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.objects_num, 1))
-        rdm_ori = np.concatenate((rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw), axis=1)
-        rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.objects_num, 1))
-        rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.objects_num, 1))
-        rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.objects_num, 1))
+        rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.objects_num, 1))
+        rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
+
         x_offset = np.random.uniform(self.init_offset_range[0][0], self.init_offset_range[0][1])
         y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
-        print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
-        rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
 
-        self.objects_index = []
-        urdf_filenames = [ # Add the filenames of your URDFs here
-            "charger_1_L1.00_T1.00.urdf",
-            "charger_1_L0.65_T0.65.urdf",
-            "charger_1_L0.95_T0.95.urdf",
-        
-        ]   
-
+        # Place the objects, ensuring they don't overlap
         for i in range(self.objects_num):
-            urdf_file = self.object_urdf_path + urdf_filenames[i % len(urdf_filenames)] # Cycle through the list of URDF files
-            obj_id = p.loadURDF(urdf_file,
-                                basePosition=rdm_pos[i],
-                                baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
-                                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-            self.objects_index.append(obj_id)
-            r = np.random.uniform(0, 0.9)
-            g = np.random.uniform(0, 0.9)
-            b = np.random.uniform(0, 0.9)
-            p.changeVisualShape(obj_id, -1, rgbaColor=(r, g, b, 1))
+            placement_successful = False
+            while not placement_successful:
+                # Generate a new position for the object
+                rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                new_pos = [rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z]
 
+                # Check if the new position is too close to any existing objects
+                if not is_too_close(new_pos, self.objects_index):
+                    urdf_file = self.object_urdf_path + selected_urdf_files[i % len(selected_urdf_files)]
+                    obj_id = p.loadURDF(urdf_file,
+                                        basePosition=new_pos,
+                                        baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                                        flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+                
+                    # Select a random base color and apply variation
+                    chosen_color = random.choice(list(base_colors.values()))
+                    color_variation = get_random_color_variation(chosen_color)
+                
+                    p.changeVisualShape(obj_id, -1, rgbaColor=[*color_variation, 1])
+                    self.objects_index.append((obj_id, new_pos))
+                    placement_successful = True
+
+        # Rest of the existing code for object setup
         for _ in range(int(100)):
             p.stepSimulation()
             if self.is_render == True:
@@ -160,9 +198,8 @@ class visualize_env():
                 # time.sleep(1/96)
 
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                         contactDamping=self.para_dict['base_contact_damping'],
-                         contactStiffness=self.para_dict['base_contact_stiffness'])
-
+                        contactDamping=self.para_dict['base_contact_damping'],
+                        contactStiffness=self.para_dict['base_contact_stiffness'])
 
     def create_arm(self):
         self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm1_backup.urdf",
@@ -176,47 +213,56 @@ class visualize_env():
                          contactDamping=self.para_dict['gripper_contact_damping'],
                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
 
-    def get_images(self):
-        (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
-                                                                         height=480,
-                                                                         viewMatrix=self.view_matrix,
-                                                                         projectionMatrix=self.projection_matrix,
-                                                                         renderer=p.ER_BULLET_HARDWARE_OPENGL)
-        far_range = self.camera_parameters['far']
-        near_range = self.camera_parameters['near']
-        depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
-        top_height = 0.4 - depth_data
-        my_im = image[:, :, :3]
-        temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
-        my_im[:, :, 0] = my_im[:, :, 2]
-        my_im[:, :, 2] = temp
-        img = np.copy(my_im)
+    def get_images(self, image_count, save_dir, start_index):
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)  # Create the directory if it doesn't exist
 
-        cv2.namedWindow('zzz', 0)
-        cv2.resizeWindow('zzz', 1280, 960)
-        cv2.imshow('zzz', img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        for i in range(image_count):
+            # Capture and save image
+            (width, length, image, _, _) = p.getCameraImage(width=640,
+                                                        height=480,
+                                                        viewMatrix=self.view_matrix,
+                                                        projectionMatrix=self.projection_matrix,
+                                                        renderer=p.ER_BULLET_HARDWARE_OPENGL)
+            img = image[:, :, :3]
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)  # Convert to BGR for saving with OpenCV
+            cv2.imwrite(os.path.join(save_dir, f'image_{start_index + i}.png'), img)  # Save image in the specified directory
+
+    def get_lwh_list(self, lwh_base_dir):
+        self.lwh_list = {}
+
+        for root, dirs, files in os.walk(lwh_base_dir):
+            for file in files:
+                if file.endswith(".csv"):
+                    file_path = os.path.join(root, file)
+                    with open(file_path, mode = "r") as csvfile:
+                        csv_reader = csv.DictReader(csvfile)
+                        for row in csv_reader:
+                            dimensions = row['BoundingBoxDimensions (cm)'].strip("[]").split(",")
+                            if dimensions:
+                                self.lwh_list[os.path.splitext(file)[0]] = list(map(float, dimensions))
 
     def setup(self):
-
-        p.resetSimulation()
-        self.create_scene()
-        self.create_arm()
-        self.create_objects()
-        self.get_images()
-
-        while True:
-            p.stepSimulation()
+        image_count = 0
+        save_dir = 'yolo_new_objects_images'
+        lwh_base_dir = 'OpensCAD_generate/generated_stl'
+        self.get_lwh_list(lwh_base_dir)
+        while image_count < 30:
+            p.resetSimulation()
+            self.create_scene()
+            self.create_arm()
+            self.create_objects()
+            self.get_images(1, save_dir, image_count)
+            image_count += 1
 
 if __name__ == '__main__':
 
-    np.random.seed(0)
+    np.random.seed(4)
     para_dict = {
         'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
         'save_img_flag': True,
-        'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
-        'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
+        'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0, 0], [-0, 0]],
+        'init_ori_range': [[0, 0], [0, 0], [-np.pi / 2, np.pi / 2]],
         'objects_num': 3,
         'is_render': True,
         'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
