@@ -5,6 +5,7 @@ import cv2
 import random
 import os
 import csv
+from urdfpy import URDF
 
 class visualize_env():
 
@@ -177,9 +178,10 @@ class visualize_env():
                 # Check if the new position is too close to any existing objects
                 if not is_too_close(new_pos, self.objects_index):
                     urdf_file = self.object_urdf_path + selected_urdf_files[i % len(selected_urdf_files)]
+                    urdf_file = self.object_urdf_path + 'charger_1_L0.56_T0.57.urdf'
                     obj_id = p.loadURDF(urdf_file,
                                         basePosition=new_pos,
-                                        baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                                        baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]),
                                         flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
                 
                     # Select a random base color and apply variation
@@ -196,6 +198,8 @@ class visualize_env():
             if self.is_render == True:
                 pass
                 # time.sleep(1/96)
+        # while True:
+        #     p.stepSimulation()
 
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
                         contactDamping=self.para_dict['base_contact_damping'],
@@ -262,7 +266,7 @@ if __name__ == '__main__':
         'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
         'save_img_flag': True,
         'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0, 0], [-0, 0]],
-        'init_ori_range': [[0, 0], [0, 0], [-np.pi / 2, np.pi / 2]],
+        'init_ori_range': [[0, 0], [0, 0], [0, 0]],
         'objects_num': 3,
         'is_render': True,
         'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,

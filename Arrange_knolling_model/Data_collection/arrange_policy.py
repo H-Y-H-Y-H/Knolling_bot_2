@@ -3,6 +3,7 @@ import cv2
 import pybullet as p
 import pybullet_data as pd
 from utils import *
+import copy
 
 class configuration_zzz():
 
@@ -479,7 +480,7 @@ class arrangement():
     def calculate_block(self, data, all_index):  # first: calculate, second: reorder!
 
         self.lwh_list = data[:, :3]
-        self.all_index = np.copy(all_index)
+        self.all_index = copy.deepcopy(all_index)
 
         min_result = []
         best_config = []
@@ -773,7 +774,7 @@ class arrangement():
 
         return item_pos, item_ori  # pos_list, ori_list
 
-    def sort(self, data):
+    def sort(self, data, data_name):
 
         object_lwh = data[:, :3]
         objects_class = data[:, 3]
@@ -803,6 +804,7 @@ class arrangement():
         new_object_lwh = []
         new_object_class = []
         new_object_color = []
+        new_object_name = []
         rest_index = np.arange(len(object_lwh))
         index = 0
 
@@ -822,6 +824,7 @@ class arrangement():
                                     new_object_lwh.append(object_lwh[m])
                                     new_object_class.append(class_index[cls])
                                     new_object_color.append(color_index[clr])
+                                    new_object_name.append(data_name[m])
                                     index += 1
                                     rest_index = np.delete(rest_index, np.where(rest_index == m))
                         if len(kind_index) != 0:
@@ -830,6 +833,7 @@ class arrangement():
         new_object_lwh = np.asarray(new_object_lwh).reshape(-1, 3)
         new_object_class = np.asarray(new_object_class).reshape(-1, 1)
         new_object_color = np.asarray(new_object_color).reshape(-1, 1)
+        new_object_name = np.asarray(new_object_name)
         if len(rest_index) != 0:
             # we should implement the rest of boxes!
             rest_xyz = object_lwh[rest_index]
@@ -837,16 +841,16 @@ class arrangement():
             all_index.append(list(np.arange(index, len(object_lwh))))
         new_data = np.concatenate((new_object_lwh, new_object_class, new_object_color), axis=1)
 
-        return new_data, all_index
+        return new_data, new_object_name, all_index
 
-    def generate_arrangement(self, data) ->'n*4 numpy array, length, width, class, color':
+    def generate_arrangement(self, data, data_name) ->'n*4 numpy array, length, width, class, color':
 
-        data_before, all_index = self.sort(data=data)
+        data_before, data_name_before, all_index = self.sort(data=data, data_name=data_name)
         pos_after, ori_after = self.calculate_block(data=data_before, all_index=all_index)
         # print('here')
         data_after = np.concatenate((pos_after, ori_after, data_before), axis=1)
 
-        return data_after
+        return data_after, data_name_before
 
 class visualize_env():
 

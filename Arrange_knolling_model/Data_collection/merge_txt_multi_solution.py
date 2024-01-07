@@ -4,7 +4,7 @@ from tqdm import tqdm
 configuration = [[2, 1],
                  [1, 2],
                  [1, 1]]
-num = 5
+num = 10
 
 start_evaluations = 0
 end_evaluations =   100
@@ -49,16 +49,23 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
 
     for m in range(solution_num):
 
-        target_path = '../../../knolling_dataset/learning_data_1228/'
+        target_path = '../../../knolling_dataset/learning_data_0106/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
+        output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
 
         total_data = []
+        total_data_name = []
         for s in save_point:
             data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
+            data_name = np.loadtxt(after_path + 'num_%d_%d_name.txt' % (num, int(s)), dtype=str)
             total_data.append(data)
+            total_data_name.append(data_name)
         total_data = np.asarray(total_data).reshape(-1, num * 11)
+        total_data_name = np.asarray(total_data_name, dtype=str).reshape(-1, num)
+
         np.savetxt(output_path, total_data)
+        np.savetxt(output_name_path, total_data_name, fmt='%s')
         # if m == 0:
         #     total_data = []
         #     for s in save_point:

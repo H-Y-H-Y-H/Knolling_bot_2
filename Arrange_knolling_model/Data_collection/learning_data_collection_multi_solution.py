@@ -1,5 +1,6 @@
+import csv
+
 import numpy as np
-from sort_data_collection_multi_solution import Sort_objects
 import pybullet_data as pd
 import random
 import pybullet as p
@@ -10,6 +11,8 @@ from tqdm import tqdm
 from urdfpy import URDF
 import shutil
 import json
+import csv
+import pandas
 
 from arrange_policy import configuration_zzz, arrangement
 
@@ -103,54 +106,54 @@ class Arm:
 
     def get_data_virtual(self):
 
-        length_data = np.round(np.random.uniform(low=arrange_policy['length_range'][0],
-                                                  high=arrange_policy['length_range'][1],
-                                                  size=(arrange_policy['object_num'], 1)), decimals=3)
-        width_data = np.round(np.random.uniform(low=arrange_policy['width_range'][0],
-                                                  high=arrange_policy['width_range'][1],
-                                                  size=(arrange_policy['object_num'], 1)), decimals=3)
-        height_data = np.round(np.random.uniform(low=arrange_policy['height_range'][0],
-                                                  high=arrange_policy['height_range'][1],
-                                                  size=(arrange_policy['object_num'], 1)), decimals=3)
-        class_data = np.random.randint(low=0,
-                                       high=arrange_policy['class_num'],
-                                       size=(arrange_policy['object_num'], 1))
-        color_data = np.random.randint(low=0,
-                                       high=arrange_policy['color_num'],
-                                       size=(arrange_policy['object_num'], 1))
-        data = np.concatenate((length_data, width_data, height_data, class_data, color_data), axis=1).round(decimals=3)
+        if self.arrange_policy['object_type'] == 'box':
+            length_data = np.round(np.random.uniform(low=self.arrange_policy['length_range'][0],
+                                                      high=self.arrange_policy['length_range'][1],
+                                                      size=(self.arrange_policy['object_num'], 1)), decimals=3)
+            width_data = np.round(np.random.uniform(low=self.arrange_policy['width_range'][0],
+                                                      high=self.arrange_policy['width_range'][1],
+                                                      size=(self.arrange_policy['object_num'], 1)), decimals=3)
+            height_data = np.round(np.random.uniform(low=self.arrange_policy['height_range'][0],
+                                                      high=self.arrange_policy['height_range'][1],
+                                                      size=(self.arrange_policy['object_num'], 1)), decimals=3)
+            class_data = np.random.randint(low=0,
+                                           high=self.arrange_policy['class_num'],
+                                           size=(self.arrange_policy['object_num'], 1))
+            color_data = np.random.randint(low=0,
+                                           high=self.arrange_policy['color_num'],
+                                           size=(self.arrange_policy['object_num'], 1))
+            data = np.concatenate((length_data, width_data, height_data, class_data, color_data), axis=1).round(decimals=3)
 
-        # num = int(len(data) * 0.5)
-        # exchange_index = np.random.choice(np.arange(len(data)), num, replace=False)
-        # temp = data[exchange_index, 0]
-        # data[exchange_index, 0] = data[exchange_index, 1]
-        # data[exchange_index, 1] = temp
+        elif self.arrange_policy['object_type'] == 'sundry':
+            class_index = np.random.choice(a=self.arrange_policy['max_class_num'],
+                                              size=self.arrange_policy['class_num'],
+                                              replace=False)
+            class_index_data = np.random.choice(a=class_index,
+                                          size=self.arrange_policy['object_num'])
+            class_name_list = os.listdir(self.urdf_path + 'OpensCAD_generate/generated_stl/')
+            class_name_list.sort()
+            class_name = [class_name_list[n] for n in class_index_data]
+            object_name_list = []
+            object_lwh_list = []
+            for i in range(self.arrange_policy['object_num']):
 
-        return data
+                temp_path = (self.urdf_path + 'OpensCAD_generate/generated_stl/' + class_name[i] + '/'
+                             + class_name[i] + '_' + str(np.random.randint(3) + 1) + '/')
+                object_name = np.random.choice(os.listdir(temp_path))
+                object_name_list.append(object_name)
 
-    def get_parameters(self, box_num=None, area_ratio=None, solution_num=None, kind_num=None,
-                       boxes_index=None, total_offset=None,
-                       gap_item=0.03, gap_block=0.02,
-                       real_operate=False, obs_order='1',
-                       random_offset=False, check_detection_loss=None, obs_img_from=None, use_yolo_pos=True,
-                       item_odd_prevent=None, block_odd_prevent=None, upper_left_max = None, forced_rotate_box=None,
-                       iteration_time=None):
+                object_csv_path = temp_path + object_name + '/' + object_name + '.csv'
+                object_lwh_list.append(eval(pandas.read_csv(object_csv_path).loc[0, 'BoundingBoxDimensions (cm)']))
 
-        # self.lego_num = lego_num
-        # self.total_offset = total_offset
-        # self.area_ratio = area_ratio
-        # self.solution_num = solution_num
-        # self.kind_num = kind_num
-        # self.gap_item = gap_item
-        # self.gap_block = gap_block
-        # self.num_list = box_num
-        # self.item_odd_prevent = item_odd_prevent
-        # self.block_odd_prevent = block_odd_prevent
-        # self.upper_left_max = upper_left_max
-        # self.forced_rotate_box = forced_rotate_box
-        # self.iteration_time = iteration_time
+            color_data = np.random.randint(low=0,
+                                           high=self.arrange_policy['color_num'],
+                                           size=(self.arrange_policy['object_num'], 1))
 
-        pass
+            object_lwh_list = np.around(np.asarray(object_lwh_list) * 0.01, decimals=4)
+            data = np.concatenate((object_lwh_list, class_index_data.reshape(self.arrange_policy['object_num'], 1), color_data), axis=1)
+            object_name_list = np.asarray(object_name_list)
+
+        return data, object_name_list
 
     def get_obs(self, order, evaluation):
 
@@ -166,7 +169,7 @@ class Arm:
             image = get_images()
             return image
 
-    def label2image(self, labels_data, img_index, save_urdf_path):
+    def label2image(self, labels_data, img_index, save_urdf_path, labels_name=None):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
 
@@ -220,35 +223,47 @@ class Arm:
                             rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), 1])
 
         ################### recover urdf boxes based on lw_data ###################
-        temp_box = URDF.load('../../ASSET/urdf/box_generator/template.urdf')
-        save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
-        os.makedirs(save_urdf_path_one_img, exist_ok=True)
-        for i in range(len(lw_data)):
-            temp_box.links[0].collisions[0].origin[2, 3] = 0
-            length = lw_data[i, 0]
-            width = lw_data[i, 1]
-            height = 0.012
-            temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
-            temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
-            temp_box.links[0].visuals[0].material.color = mapped_color_values[i]
-            temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
+        if self.arrange_policy['object_type'] == 'box':
+            temp_box = URDF.load('../../ASSET/urdf/box_generator/template.urdf')
+            save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
+            os.makedirs(save_urdf_path_one_img, exist_ok=True)
+            for i in range(len(lw_data)):
+                temp_box.links[0].collisions[0].origin[2, 3] = 0
+                length = lw_data[i, 0]
+                width = lw_data[i, 1]
+                height = 0.012
+                temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
+                temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
+                temp_box.links[0].visuals[0].material.color = mapped_color_values[i]
+                temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
 
-        object_idx = []
-        selected_lw_data = []
-        selected_urdf = []
-        print('position\n', pos_data)
-        print('orietation\n', ori_data)
-        print('lwh\n', lw_data)
-        for i in range(len(lw_data)):
-            print(f'this is matching urdf{i}')
-            # print(pos_data[i])
-            # print(lw_data[i])
-            # print(ori_data[i])
-            pos_data[i, 2] += 0.006
-            object_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
-                           basePosition=pos_data[i],
-                           baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-                           flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+            object_idx = []
+            print('position\n', pos_data)
+            print('orietation\n', ori_data)
+            print('lwh\n', lw_data)
+            for i in range(len(lw_data)):
+                print(f'this is matching urdf{i}')
+                pos_data[i, 2] += 0.006
+                object_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
+                               basePosition=pos_data[i],
+                               baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+                               flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+        elif self.arrange_policy['object_type'] == 'sundry':
+
+            urdf_path_one_img = self.urdf_path + 'OpensCAD_generate/urdf_file/'
+
+            object_idx = []
+            ori_data[:, 0] += np.pi / 2
+            print('position\n', pos_data)
+            print('orietation\n', ori_data)
+            print('lwh\n', lw_data)
+            for i in range(len(lw_data)):
+                print(f'this is matching urdf{i}')
+                pos_data[i, 2] += 0.006
+                object_idx.append(p.loadURDF(urdf_path_one_img + labels_name[i] + '.urdf',
+                                             basePosition=pos_data[i],
+                                             baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+                                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
@@ -259,19 +274,24 @@ class Arm:
 
         # get the standard xyz and corresponding index from files in the computer
         arranger = arrangement(self.arrange_policy)
-        data_before = self.get_data_virtual()
+        data_before, object_name_list = self.get_data_virtual()
         data_after_total = []
+        object_name_after_total = []
 
         for cfg in range(int(self.arrange_policy['area_num'] * self.arrange_policy['ratio_num'])):
 
             times = 0
             while True:
-                data_after = arranger.generate_arrangement(data=data_before)
+                data_after, data_name_after = arranger.generate_arrangement(data=data_before, data_name=object_name_list)
                 # the sequence of self.items_pos_list, self.items_ori_list are the same as those in self.xyz_list
                 data_after[:, :3] = data_after[:, :3] + self.arrange_policy['total_offset']
                 order = self.change_sequence(data_after[:, :2], flag='distance')
                 data_after = data_after[order]
                 data_after_total.append(data_after)
+
+                # new_object_name_list = [object_name_list[order[m]] for m in range(len(order))]
+                new_data_name_after = data_name_after[order]
+                object_name_after_total.append(new_data_name_after)
 
                 times += 1
                 if times >= self.arrange_policy['output_per_cfg']:
@@ -279,7 +299,7 @@ class Arm:
 
         # return self.items_pos_list[:, :2], self.items_ori_list[:, 2], self.xyz_list[:, :2], self.transform_flag
 
-        return data_after_total
+        return data_after_total, object_name_after_total
 
 
 if __name__ == '__main__':
@@ -298,15 +318,15 @@ if __name__ == '__main__':
     #
     # solution_num = 4 * len(config_dict)
 
-    target_path = '../../../knolling_dataset/learning_data_1228/'
+    target_path = '../../../knolling_dataset/learning_data_0106/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
-                    'object_num': 5, 'output_per_cfg': 4,
+                    'object_num': 10, 'output_per_cfg': 4, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
-                    'area_num': 1, 'ratio_num': 1, 'class_num': 1, 'color_num': 3, # classification range
+                    'area_num': 1, 'ratio_num': 1, 'class_num': 3, 'color_num': 1, 'max_class_num': 10, # classification range
                     'preference': 'zzz', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
                     'total_offset': [0, 0, 0], 'gap_item': 0.016, 'gap_block': 0.016 # inverval and offset of the arrangement
@@ -315,7 +335,7 @@ if __name__ == '__main__':
 
     if command == 'recover':
 
-        env = Arm(is_render=False, arrange_policy=arrange_policy)
+        env = Arm(is_render=True, arrange_policy=arrange_policy)
 
         # data = np.loadtxt(target_path + 'labels_%s/num_%d.txt' % (before_after, i))
 
@@ -323,8 +343,9 @@ if __name__ == '__main__':
         # data_before = []
         save_urdf_path = []
         for m in range(solution_num):
-            # names['data_' + str(m)] = np.loadtxt(target_path + 'labels_%s_%s/num_%d.txt' % (before_after, m, i))
             names['data_' + str(m)] = np.loadtxt(target_path + 'num_%d_after_%d.txt' % (arrange_policy['object_num'], m))
+            if arrange_policy['object_type'] == 'sundry':
+                names['name_' + str(m)] = np.loadtxt(target_path + 'num_%d_after_name_%d.txt' % (arrange_policy['object_num'], m), dtype=str)
 
             if len(names['data_' + str(m)].shape) == 1:
                 names['data_' + str(m)] = names['data_' + str(m)].reshape(1, len(names['data_' + str(m)]))
@@ -341,20 +362,10 @@ if __name__ == '__main__':
             for m in range(solution_num):
                 print(f'this is data {j}')
                 one_img_data = names['data_' + str(m)][j].reshape(-1, 11)
-                # one_img_index_flag = index_flag[j].reshape(2, -1)
-                # box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
-                # one_img_data = one_img_data[box_order].reshape(-1, )
-                # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
-                # new_data.append(one_img_data)
-                # new_index_flag.append(one_img_index_flag)
 
-                image = env.label2image(names['data_' + str(m)][j], j, save_urdf_path[m])
+                image = env.label2image(names['data_' + str(m)][j], j, save_urdf_path[m], labels_name=names['name_' + str(m)][j])
                 image = image[..., :3]
-                # print('this is shape of image', image.shape)
-                # image = np.transpose(image, (2, 0, 1))
-                # temp = image[:, :, 2]
-                # image[:, :, 2] = image[:, :, 0]
-                # image[:, :, 0] = temp
+
                 cv2.namedWindow('zzz', 0)
                 cv2.resizeWindow('zzz', 1280, 960)
                 cv2.imshow("zzz", image)
@@ -381,11 +392,12 @@ if __name__ == '__main__':
         names = locals()
         for m in range(solution_num):
             names['data_after_' + str(m)] = []
+            names['name_after_' + str(m)] = []
         j = 0
         index_point = 0
 
         while change_cfg_flag == False:
-            data_after_total = env.change_config()
+            data_after_total, object_name_after_total = env.change_config()
 
             if j + start_evaluations == int(save_point[-1]):
                 print('over!!!!!!!!!!!!')
@@ -396,22 +408,23 @@ if __name__ == '__main__':
 
             for m in range(solution_num):
 
-                # pos_after = pos_after_epoch[m]
-                # ori_after = ori_after_epoch[m]
-                # xy_after = xy_after_epoch[m]
-                # cls_after = cls_after_epoch[m]
-                # order = env.change_sequence(pos_after, flag='distance')
-                # pos_after = pos_after[order]
-                # ori_after = ori_after[order]
-                # xy_after = xy_after[order]
-                # cls_after = cls_after[order]
-
                 names['data_after_' + str(m)].append(data_after_total[m].reshape(-1))
+                names['name_after_' + str(m)].append(object_name_after_total[m])
 
                 if len(names['data_after_' + str(m)]) == int((end_evaluations - start_evaluations) / step_num):
                     names['data_after_' + str(m)] = np.asarray(names['data_after_' + str(m)])
+                    names['name_after_' + str(m)] = np.asarray(names['name_after_' + str(m)], dtype=str)
                     np.savetxt(after_path[m] + 'num_%s_%s.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['data_after_' + str(m)])
+                    np.savetxt(after_path[m] + 'num_%s_%s_name.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['name_after_' + str(m)], fmt='%s')
+
+                    # with open(after_path[m] + 'num_%s_%s_name.txt' % (arrange_policy['object_num'], int(save_point[index_point])), 'w') as f:
+                    #     for line in names['name_after_' + str(m)]:
+                    #
+                    #         f.write(str(line) + '\n')
+
                     names['data_after_' + str(m)] = []
+                    names['name_after_' + str(m)] = []
+
                     print('save data in:' + after_path[m] + 'num_%s_%s.txt' % (arrange_policy['object_num'], int(save_point[index_point])))
                     save_flag = True
             if break_flag == False:
