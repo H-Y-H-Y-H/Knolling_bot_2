@@ -53,7 +53,7 @@ class knolling_robot():
             real_xyz, _ = forward_kinematic(real_motor)
         else:
             self.conn = None
-            self.real_table_height = 0.026
+            self.real_table_height = 0.03
             self.sim_table_height = -0.014
 
         return self.conn, self.real_table_height, self.sim_table_height
@@ -78,7 +78,7 @@ class knolling_robot():
     def create_arm(self):
 
         self.arm_id = p.loadURDF(os.path.join(self.para_dict['urdf_path'], "robot_arm928/robot_arm1_backup.urdf"),
-                                 basePosition=[-0.08, 0, 0.02], useFixedBase=True,
+                                 basePosition=[-0.08, 0, -0.005], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
