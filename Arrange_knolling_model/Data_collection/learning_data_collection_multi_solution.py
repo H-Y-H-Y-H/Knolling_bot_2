@@ -136,9 +136,9 @@ class Arm:
             object_name_list = []
             object_lwh_list = []
             for i in range(self.arrange_policy['object_num']):
-
+                num_type_each_object = len(os.listdir(self.urdf_path + 'OpensCAD_generate/generated_stl/' + class_name[i] + '/'))
                 temp_path = (self.urdf_path + 'OpensCAD_generate/generated_stl/' + class_name[i] + '/'
-                             + class_name[i] + '_' + str(np.random.randint(3) + 1) + '/')
+                             + class_name[i] + '_' + str(np.random.randint(num_type_each_object) + 1) + '/')
                 object_name = np.random.choice(os.listdir(temp_path))
                 object_name_list.append(object_name)
 
@@ -253,20 +253,25 @@ class Arm:
             urdf_path_one_img = self.urdf_path + 'OpensCAD_generate/urdf_file/'
 
             object_idx = []
-            ori_data[:, 0] += np.pi / 2
+            # ori_data[:, 0] += np.pi / 2
             print('position\n', pos_data)
             print('orietation\n', ori_data)
             print('lwh\n', lw_data)
             for i in range(len(lw_data)):
                 print(f'this is matching urdf{i}')
-                pos_data[i, 2] += 0.006
+                pos_data[i, 2] += 0.026
+                if lw_data[i, 0] < lw_data[i, 1]:
+                    ori_data[i, 2] += np.pi / 2
                 object_idx.append(p.loadURDF(urdf_path_one_img + labels_name[i] + '.urdf',
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                p.changeVisualShape(object_idx[i], -1, rgbaColor=mapped_color_values[i])
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
+        for i in range(100):
+            p.stepSimulation()
 
         return self.get_obs('images', None)
 
@@ -326,7 +331,7 @@ if __name__ == '__main__':
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
                     'object_num': 10, 'output_per_cfg': 4, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
-                    'area_num': 1, 'ratio_num': 1, 'class_num': 3, 'color_num': 1, 'max_class_num': 10, # classification range
+                    'area_num': 1, 'ratio_num': 1, 'class_num': 3, 'color_num': 2, 'max_class_num': 10, # classification range
                     'preference': 'zzz', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
                     'total_offset': [0, 0, 0], 'gap_item': 0.016, 'gap_block': 0.016 # inverval and offset of the arrangement

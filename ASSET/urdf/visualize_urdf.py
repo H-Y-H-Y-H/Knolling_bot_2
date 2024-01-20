@@ -5,7 +5,7 @@ import cv2
 import random
 import os
 import csv
-from urdfpy import URDF
+# from urdfpy import URDF
 
 class visualize_env():
 
@@ -58,6 +58,7 @@ class visualize_env():
             'light_direction': [
                 0.5, 0, 1
             ],  # the direction is from the light source position to the origin of the world frame.
+
         }
         self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.150, 0, 0], #0.175
                                                                distance=0.4,
@@ -161,6 +162,8 @@ class visualize_env():
         rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.objects_num, 1))
         rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.objects_num, 1))
         rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
+        rdm_ori = np.zeros(shape=(self.objects_num, 3))
+        # rdm_ori[:, 0] = np.pi / 2
 
         x_offset = np.random.uniform(self.init_offset_range[0][0], self.init_offset_range[0][1])
         y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
@@ -178,7 +181,7 @@ class visualize_env():
                 # Check if the new position is too close to any existing objects
                 if not is_too_close(new_pos, self.objects_index):
                     urdf_file = self.object_urdf_path + selected_urdf_files[i % len(selected_urdf_files)]
-                    urdf_file = self.object_urdf_path + 'charger_1_L0.56_T0.57.urdf'
+                    # urdf_file = self.object_urdf_path + 'charger_1_L0.56_T0.57.urdf'
                     obj_id = p.loadURDF(urdf_file,
                                         basePosition=new_pos,
                                         baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]),
