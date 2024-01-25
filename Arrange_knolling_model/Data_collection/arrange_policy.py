@@ -1059,7 +1059,7 @@ class visualize_env():
                          contactStiffness=self.para_dict['base_contact_stiffness'])
 
     def create_arm(self):
-        self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm1_backup.urdf",
+        self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm.urdf",
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 

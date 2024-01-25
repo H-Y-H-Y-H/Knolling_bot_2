@@ -293,7 +293,7 @@ class LSTM_grasp_collection_env():
 
     def create_arm(self):
 
-        self.arm_id = p.loadURDF(os.path.join(self.urdf_path, "robot_arm928/robot_arm1_backup.urdf"),
+        self.arm_id = p.loadURDF(os.path.join(self.urdf_path, "robot_arm928/robot_arm.urdf"),
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
