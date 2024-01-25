@@ -275,10 +275,12 @@ class calibration_main(Arm_env):
 
             if self.para_dict['Data_collection'] == True:
 
-                trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
-                                                [0.25, 0.14, 0.04],
-                                                [0.25, -0.14, 0.04],
-                                                [0.00, -0.14, 0.04]])
+                trajectory_pos_list = np.array([[0.15, 0.00, 0.04],
+                                                [0.15, 0.00, 0.03]])
+                # trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
+                #                                 [0.25, 0.14, 0.04],
+                #                                 [0.25, -0.14, 0.04],
+                #                                 [0.00, -0.14, 0.04]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])

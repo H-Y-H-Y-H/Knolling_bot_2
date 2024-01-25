@@ -606,9 +606,6 @@ class arrangement():
                     best_rotate_flag = rotate_flag
                     best_min_xy = np.copy(min_xy)
 
-        # print(f'in iteration{i}, the min xy is {best_min_xy}')
-        # print('this is best all sequence', best_all_config)
-
         return self.reorder_block(best_config, best_all_config, best_rotate_flag, best_min_xy, odd_flag, item_odd_list, item_sequence_list)
 
     def reorder_item(self, best_config, start_pos, index_block, item_index, item_xyz, rotate_flag, item_odd_list, item_sequence):
@@ -616,10 +613,6 @@ class arrangement():
         # initiate the pos and ori
         # we don't analysis these imported oris
         # we directly define the ori is 0 or 90 degree, depending on the algorithm.
-
-        # item_row = best_config[index_block][0]
-        # item_column = best_config[index_block][1]
-        # print(item_sequence)
         item_row = item_sequence.shape[0]
         item_column = item_sequence.shape[1]
         item_odd_flag = item_odd_list[index_block]
@@ -650,22 +643,6 @@ class arrangement():
             item_sequence = item_sequence.transpose()
         else:
             item_ori[:, 2] = 0
-
-        # start_pos[0] = start_pos[0] + np.max(item_xyz, axis=0)[0] / 2
-        # start_pos[1] = start_pos[1] + np.max(item_xyz, axis=0)[1] / 2
-        #
-        #
-        # for j in range(item_row):
-        #     for k in range(item_column):
-        #         ################### check whether to transform for each item in each block!################
-        #         if self.transform_flag[item_index[index_temp[j][k]]] == 1:
-        #             print(f'the index {item_index[index_temp[j][k]]} should be rotated because of transformation')
-        #             item_ori[index_temp[j][k], 2] -= np.pi / 2
-        #         ################### check whether to transform for each item in each block!################
-        #         x_2x2 = start_pos[0] + (item_xyz[index_temp[j][k]][0]) * j + self.gap_item * j
-        #         y_2x2 = start_pos[1] + (item_xyz[index_temp[j][k]][1]) * k + self.gap_item * k
-        #         item_pos[index_temp[j][k]][0] = x_2x2
-        #         item_pos[index_temp[j][k]][1] = y_2x2
 
         start_item_x = np.array([start_pos[0]])
         start_item_y = np.array([start_pos[1]])
@@ -780,7 +757,15 @@ class arrangement():
         objects_class = data[:, 3]
         objects_color = data[:, 4]
 
-        # generate the class and color range to classify objects
+        # generate the class, color, area, ratio range to classify objects
+        if self.arrange_policy['area_classify_flag'] == False:
+            self.arrange_policy['area_num'] = 1
+        else:
+            self.arrange_policy['area_num'] = 2
+        if self.arrange_policy['ratio_classify_flag'] == False:
+            self.arrange_policy['ratio_num'] = 1
+        else:
+            self.arrange_policy['ratio_num'] = 2
         class_index = np.unique(objects_class)
         color_index = np.unique(objects_color)
 
@@ -808,27 +793,82 @@ class arrangement():
         rest_index = np.arange(len(object_lwh))
         index = 0
 
-        for cls in range(len(class_index)):
+        # for cls in range(len(class_index)):
+        #     for clr in range(len(color_index)):
+        #         for i in range(self.arrange_policy['area_num']):
+        #             for j in range(self.arrange_policy['ratio_num']):
+        #                 kind_index = []
+        #                 for m in range(len(object_lwh)):
+        #                     if m not in rest_index:
+        #                         continue
+        #                     else:
+        #                         if (s_range[i] >= s[m] >= s_range[i + 1]) and (ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]) \
+        #                             and (objects_class[m] == class_index[cls]) and (objects_color[m] == color_index[clr]):
+        #                             # print(f'boxes{m} matches in area{i}, ratio{j}!')
+        #                             kind_index.append(index)
+        #                             new_object_lwh.append(object_lwh[m])
+        #                             new_object_class.append(class_index[cls])
+        #                             new_object_color.append(color_index[clr])
+        #                             new_object_name.append(data_name[m])
+        #                             index += 1
+        #                             rest_index = np.delete(rest_index, np.where(rest_index == m))
+        #                 if len(kind_index) != 0:
+        #                     all_index.append(kind_index)
+        if self.arrange_policy['type_classify_flag'] == True:
+            for cls in range(len(class_index)):
+                kind_index = []
+                for m in range(len(object_lwh)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if (objects_class[m] == class_index[cls]):
+                            # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                            kind_index.append(index)
+                            new_object_lwh.append(object_lwh[m])
+                            new_object_class.append(class_index[cls])
+                            new_object_color.append(objects_color[m])
+                            new_object_name.append(data_name[m])
+                            index += 1
+                            rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+        if self.arrange_policy['color_classify_flag'] == True:
             for clr in range(len(color_index)):
-                for i in range(self.arrange_policy['area_num']):
-                    for j in range(self.arrange_policy['ratio_num']):
-                        kind_index = []
-                        for m in range(len(object_lwh)):
-                            if m not in rest_index:
-                                continue
-                            else:
-                                if (s_range[i] >= s[m] >= s_range[i + 1]) and (ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]) \
-                                    and (objects_class[m] == class_index[cls]) and (objects_color[m] == color_index[clr]):
-                                    # print(f'boxes{m} matches in area{i}, ratio{j}!')
-                                    kind_index.append(index)
-                                    new_object_lwh.append(object_lwh[m])
-                                    new_object_class.append(class_index[cls])
-                                    new_object_color.append(color_index[clr])
-                                    new_object_name.append(data_name[m])
-                                    index += 1
-                                    rest_index = np.delete(rest_index, np.where(rest_index == m))
-                        if len(kind_index) != 0:
-                            all_index.append(kind_index)
+                kind_index = []
+                for m in range(len(object_lwh)):
+                    if m not in rest_index:
+                        continue
+                    else:
+                        if (objects_color[m] == color_index[clr]):
+                            # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                            kind_index.append(index)
+                            new_object_lwh.append(object_lwh[m])
+                            new_object_class.append(objects_class[m])
+                            new_object_color.append(color_index[clr])
+                            new_object_name.append(data_name[m])
+                            index += 1
+                            rest_index = np.delete(rest_index, np.where(rest_index == m))
+                if len(kind_index) != 0:
+                    all_index.append(kind_index)
+        if self.arrange_policy['area_classify_flag'] == True or self.arrange_policy['ratio_classify_flag'] == True:
+            for i in range(self.arrange_policy['area_num']):
+                for j in range(self.arrange_policy['ratio_num']):
+                    kind_index = []
+                    for m in range(len(object_lwh)):
+                        if m not in rest_index:
+                            continue
+                        else:
+                            if (s_range[i] >= s[m] >= s_range[i + 1]) and (ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]):
+                                # print(f'boxes{m} matches in area{i}, ratio{j}!')
+                                kind_index.append(index)
+                                new_object_lwh.append(object_lwh[m])
+                                new_object_class.append(objects_class[m])
+                                new_object_color.append(objects_color[m])
+                                new_object_name.append(data_name[m])
+                                index += 1
+                                rest_index = np.delete(rest_index, np.where(rest_index == m))
+                    if len(kind_index) != 0:
+                        all_index.append(kind_index)
 
         new_object_lwh = np.asarray(new_object_lwh).reshape(-1, 3)
         new_object_class = np.asarray(new_object_class).reshape(-1, 1)
@@ -836,9 +876,11 @@ class arrangement():
         new_object_name = np.asarray(new_object_name)
         if len(rest_index) != 0:
             # we should implement the rest of boxes!
+            print('we should implement the rest of boxes!')
             rest_xyz = object_lwh[rest_index]
             new_object_lwh = np.concatenate((new_object_lwh, rest_xyz), axis=0)
             all_index.append(list(np.arange(index, len(object_lwh))))
+
         new_data = np.concatenate((new_object_lwh, new_object_class, new_object_color), axis=1)
 
         return new_data, new_object_name, all_index

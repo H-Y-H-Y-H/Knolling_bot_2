@@ -106,6 +106,10 @@ class Arm:
 
     def get_data_virtual(self):
 
+        # shuffle the class_num and color_num for each scenario
+        self.arrange_policy['class_num'] = np.random.randint(2, 11)
+        self.arrange_policy['color_num'] = np.random.randint(2, 6)
+
         if self.arrange_policy['object_type'] == 'box':
             length_data = np.round(np.random.uniform(low=self.arrange_policy['length_range'][0],
                                                       high=self.arrange_policy['length_range'][1],
@@ -119,17 +123,20 @@ class Arm:
             class_data = np.random.randint(low=0,
                                            high=self.arrange_policy['class_num'],
                                            size=(self.arrange_policy['object_num'], 1))
-            color_data = np.random.randint(low=0,
+            color_index_data = np.random.randint(low=0,
                                            high=self.arrange_policy['color_num'],
                                            size=(self.arrange_policy['object_num'], 1))
-            data = np.concatenate((length_data, width_data, height_data, class_data, color_data), axis=1).round(decimals=3)
+            data = np.concatenate((length_data, width_data, height_data, class_data, color_index_data), axis=1).round(decimals=3)
 
         elif self.arrange_policy['object_type'] == 'sundry':
             class_index = np.random.choice(a=self.arrange_policy['max_class_num'],
-                                              size=self.arrange_policy['class_num'],
-                                              replace=False)
+                                          size=self.arrange_policy['class_num'],
+                                          replace=False)
             class_index_data = np.random.choice(a=class_index,
-                                          size=self.arrange_policy['object_num'])
+                                                size=self.arrange_policy['object_num'])
+            # class_index_data = np.random.choice(a=self.arrange_policy['class_num'],
+            #                                     size=self.arrange_policy['object_num'],
+            #                                     replace=False)
             class_name_list = os.listdir(self.urdf_path + 'OpensCAD_generate/generated_stl/')
             class_name_list.sort()
             class_name = [class_name_list[n] for n in class_index_data]
@@ -145,12 +152,18 @@ class Arm:
                 object_csv_path = temp_path + object_name + '/' + object_name + '.csv'
                 object_lwh_list.append(eval(pandas.read_csv(object_csv_path).loc[0, 'BoundingBoxDimensions (cm)']))
 
-            color_data = np.random.randint(low=0,
-                                           high=self.arrange_policy['color_num'],
-                                           size=(self.arrange_policy['object_num'], 1))
+            color_index = np.random.choice(a=self.arrange_policy['max_color_num'],
+                                           size=self.arrange_policy['color_num'],
+                                           replace=False)
+            color_index_data = np.random.choice(a=color_index, size=self.arrange_policy['object_num'])
+            # color_index_data = np.random.randint(low=0,
+            #                                high=self.arrange_policy['color_num'],
+            #                                size=(self.arrange_policy['object_num'], 1))
 
-            object_lwh_list = np.around(np.asarray(object_lwh_list) * 0.01, decimals=4)
-            data = np.concatenate((object_lwh_list, class_index_data.reshape(self.arrange_policy['object_num'], 1), color_data), axis=1)
+            object_lwh_list = np.around(np.asarray(object_lwh_list) * 0.001, decimals=4)
+            data = np.concatenate((object_lwh_list,
+                                   class_index_data.reshape(self.arrange_policy['object_num'], 1),
+                                   color_index_data.reshape(self.arrange_policy['object_num'], 1)), axis=1)
             object_name_list = np.asarray(object_name_list)
 
         return data, object_name_list
@@ -167,6 +180,9 @@ class Arm:
 
         if order == 'images':
             image = get_images()
+            temp = np.copy(image[:, :, 0])
+            image[:, :, 0] = image[:, :, 2]
+            image[:, :, 2] = temp
             return image
 
     def label2image(self, labels_data, img_index, save_urdf_path, labels_name=None):
@@ -262,6 +278,7 @@ class Arm:
                 pos_data[i, 2] += 0.026
                 if lw_data[i, 0] < lw_data[i, 1]:
                     ori_data[i, 2] += np.pi / 2
+                # labels_name[i] = 'utilityknife_1_L0.65_T0.65'
                 object_idx.append(p.loadURDF(urdf_path_one_img + labels_name[i] + '.urdf',
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
@@ -283,10 +300,18 @@ class Arm:
         data_after_total = []
         object_name_after_total = []
 
-        for cfg in range(int(self.arrange_policy['area_num'] * self.arrange_policy['ratio_num'])):
+        # type, color, area, ratio
+
+
+        for i in range(len(policy_switch)):
+
+            arranger.arrange_policy['type_classify_flag'] = policy_switch[i][0]
+            arranger.arrange_policy['color_classify_flag'] = policy_switch[i][1]
+            arranger.arrange_policy['area_classify_flag'] = policy_switch[i][2]
+            arranger.arrange_policy['ratio_classify_flag'] = policy_switch[i][3]
 
             times = 0
-            while True:
+            while True: # generate several results for each configuration, now is 4
                 data_after, data_name_after = arranger.generate_arrangement(data=data_before, data_name=object_name_list)
                 # the sequence of self.items_pos_list, self.items_ori_list are the same as those in self.xyz_list
                 data_after[:, :3] = data_after[:, :3] + self.arrange_policy['total_offset']
@@ -302,8 +327,6 @@ class Arm:
                 if times >= self.arrange_policy['output_per_cfg']:
                     break
 
-        # return self.items_pos_list[:, :2], self.items_ori_list[:, 2], self.xyz_list[:, :2], self.transform_flag
-
         return data_after_total, object_name_after_total
 
 
@@ -312,31 +335,33 @@ if __name__ == '__main__':
     command = 'recover'
     before_after = 'after'
 
+    np.random.seed(100)
+
     start_evaluations = 0
     end_evaluations =   100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    # config_dict = [[2, 1],
-    #                [1, 2],
-    #                 [1, 1]]
-    #
-    # solution_num = 4 * len(config_dict)
-
-    target_path = '../../../knolling_dataset/learning_data_0106/'
+    target_path = '../../../knolling_dataset/learning_data_0124/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
-                    'object_num': 10, 'output_per_cfg': 4, 'object_type': 'sundry', # sundry or box
+                    'object_num': 10, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
-                    'area_num': 1, 'ratio_num': 1, 'class_num': 3, 'color_num': 2, 'max_class_num': 10, # classification range
+                    'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
+                    'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
+                    'type_classify_flag': None, 'color_classify_flag': None, # classification range
                     'preference': 'zzz', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
                     'total_offset': [0, 0, 0], 'gap_item': 0.016, 'gap_block': 0.016 # inverval and offset of the arrangement
                     }
-    solution_num = int(arrange_policy['output_per_cfg'] * arrange_policy['area_num'] * arrange_policy['ratio_num'])
+    policy_switch = [[True, False, False, False],
+                     [False, True, False, False],
+                     [False, False, True, False],
+                     [False, False, False, True]]
+    solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
 
     if command == 'recover':
 

@@ -10,19 +10,19 @@ def generate_urdf(stl_file, urdf_directory):
     </contact>
     <inertial>
       <origin rpy="0 0 0" xyz="0 0 0"/>
-      <mass value="0.0"/>
+      <mass value="0.1"/>
       <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
     </inertial>
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="{stl_file}" scale="0.01 0.01 0.01"/>
+        <mesh filename="{stl_file}" scale="0.001 0.001 0.001"/>
       </geometry>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="{stl_file}" scale="0.01 0.01 0.01"/>
+        <mesh filename="{stl_file}" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>

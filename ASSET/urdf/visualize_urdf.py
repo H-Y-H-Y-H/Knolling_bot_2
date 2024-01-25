@@ -181,7 +181,7 @@ class visualize_env():
                 # Check if the new position is too close to any existing objects
                 if not is_too_close(new_pos, self.objects_index):
                     urdf_file = self.object_urdf_path + selected_urdf_files[i % len(selected_urdf_files)]
-                    # urdf_file = self.object_urdf_path + 'charger_1_L0.56_T0.57.urdf'
+                    urdf_file = self.object_urdf_path + 'utilityknife_1_L1.02_T0.98.urdf'
                     obj_id = p.loadURDF(urdf_file,
                                         basePosition=new_pos,
                                         baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]),
@@ -209,7 +209,7 @@ class visualize_env():
                         contactStiffness=self.para_dict['base_contact_stiffness'])
 
     def create_arm(self):
-        self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm1_backup.urdf",
+        self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm1.urdf",
                                  basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
@@ -219,6 +219,7 @@ class visualize_env():
         p.changeDynamics(self.arm_id, 8, lateralFriction=self.para_dict['gripper_lateral_friction'],
                          contactDamping=self.para_dict['gripper_contact_damping'],
                          contactStiffness=self.para_dict['gripper_contact_stiffness'])
+        pass
 
     def get_images(self, image_count, save_dir, start_index):
         if not os.path.exists(save_dir):
