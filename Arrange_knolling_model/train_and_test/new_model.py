@@ -266,9 +266,7 @@ class Knolling_Transformer(nn.Module):
         self.all_steps = all_steps
 
         self.best_gap = 0.015
-
         self.canvas_factor = canvas_factor
-        self.mm2px = 530 / (0.34 * self.canvas_factor)
         self.padding_value = 1
         # self.min_overlap_area = np.inf
         self.min_overlap_num = np.inf
@@ -420,7 +418,7 @@ class Knolling_Transformer(nn.Module):
 
         return mse_loss
 
-    def calculate_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
+    def calculate_loss(self, pred_pos, tar_pos, tar_lw, tar_cls=None):
 
         MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
 
@@ -546,6 +544,7 @@ class Knolling_Transformer(nn.Module):
     def calcualte_overlap_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
 
         # Assuming tar_pos, tar_lw, pred_pos are PyTorch tensors, and self.mm2px is a scalar tensor.
+        self.mm2px = 530 / (0.34 * self.canvas_factor)
         tar_pos_px = tar_pos * self.mm2px + 10
         tar_lw_px = tar_lw * self.mm2px
         pred_pos_px = pred_pos * self.mm2px + 10

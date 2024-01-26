@@ -9,7 +9,7 @@ def main():
         wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     else:
         wandb.init(project='knolling_sundry')
-        DATAROOT = "../../../knolling_dataset/learning_data_826/"
+        DATAROOT = "../../../knolling_dataset/learning_data_0126/"
     config = wandb.config
     running_name = wandb.run.name
 
@@ -18,7 +18,7 @@ def main():
     config.num_attention_heads = 4
     config.num_layers = 4
     config.dropout_prob = 0.0
-    config.max_seq_length = 5
+    config.max_seq_length = 10
     if sweep_train_flag == False:
         config.lr = 1e-4
     config.batch_size = 512
@@ -30,11 +30,12 @@ def main():
     config.high_dim_encoder = True
     config.all_steps = False
     config.object_num = -1
-    config.canvas_factor = 2
+    config.canvas_factor = None
     config.use_overlap_loss = False
-    config.patience = 30
-    config.num_gaussian = 4
+    config.patience = 20
+    config.num_gaussian = 5
     config.dataset_path = DATAROOT
+    config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
 
     model = Knolling_Transformer(
@@ -54,8 +55,8 @@ def main():
         num_gaussians=config.num_gaussian,
         canvas_factor=config.canvas_factor,
         use_overlap_loss=config.use_overlap_loss,
-        mse_loss_factor=1,
-        overlap_loss_factor=1
+        mse_loss_factor=None, # 1
+        overlap_loss_factor=None # 1
     )
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -77,47 +78,48 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 50000
+    DATA_CUT = 1000
 
-    solution_num = 4
-    configuration_num = 1
-    config.solu_num = int(solution_num * configuration_num)
-    object_num = 30
+    policy_num = 4
+    configuration_num = 3
+    config.solu_num = int(policy_num * configuration_num)
+    object_num = 10
+    info_per_object = 8
     for f in range(config.solu_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (5, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
-        raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * 5]
+        raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * info_per_object]
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
         train_data = raw_data[:int(len(raw_data) * 0.8)]
         test_data = raw_data[int(len(raw_data) * 0.8):]
 
-        train_input = []
-        valid_input = []
-        train_label = []
-        valid_label = []
+        train_lw = []
+        valid_lw = []
+        train_pos = []
+        valid_pos = []
         train_cls = []
         valid_cls = []
         for i in range(config.max_seq_length):
-            train_input.append(train_data[:, i * 5 + 2:i * 5 + 4])
-            valid_input.append(test_data[:, i * 5 + 2:i * 5 + 4])
-            train_cls.append(train_data[:, [i * 5 + 0]])
-            valid_cls.append(test_data[:, [i * 5 + 0]])
-            train_label.append(train_data[:, i * 5:i * 5 + 2])
-            valid_label.append(test_data[:, i * 5:i * 5 + 2])
+            train_lw.append(train_data[:, i * info_per_object + 3:i * info_per_object + 5])
+            valid_lw.append(test_data[:, i * info_per_object + 3:i * info_per_object + 5])
+            train_cls.append(train_data[:, [i * info_per_object + 6]])
+            valid_cls.append(test_data[:, [i * info_per_object + 6]])
+            train_pos.append(train_data[:, i * info_per_object:i * info_per_object + 2])
+            valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
 
-        train_input = np.asarray(train_input).transpose(1, 0, 2)
-        valid_input = np.asarray(valid_input).transpose(1, 0, 2)
-        train_label = np.asarray(train_label).transpose(1, 0, 2)
-        valid_label = np.asarray(valid_label).transpose(1, 0, 2)
+        train_lw = np.asarray(train_lw).transpose(1, 0, 2)
+        valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+        train_pos = np.asarray(train_pos).transpose(1, 0, 2)
+        valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
         train_cls = np.asarray(train_cls).transpose(1, 0, 2)
         valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
-        train_input_data += list(train_input)
-        train_output_data += list(train_label)
+        train_input_data += list(train_lw)
+        train_output_data += list(train_pos)
         train_cls_data += list(train_cls)
-        valid_input_data += list(valid_input)
-        valid_output_data += list(valid_label)
+        valid_input_data += list(valid_lw)
+        valid_output_data += list(valid_pos)
         valid_cls_data += list(valid_cls)
 
     train_input_padded = pad_sequences(train_input_data, max_seq_length=config.max_seq_length)
@@ -136,15 +138,14 @@ def main():
     val_loader = DataLoader(test_dataset, batch_size=config.batch_size, shuffle=False)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=config.patience,
-                                                           verbose=True)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
+                                                           patience=config.patience, verbose=True)
 
     num_epochs = 1000
     train_loss_list = []
     valid_loss_list = []
     model.to(device)
     abort_learning = 0
-    config.max_loss_patience = 30
     min_loss = np.inf
     for epoch in range(num_epochs):
         print_flag = True
@@ -260,9 +261,9 @@ def main():
             wandb.log({"train_loss": train_loss,
                        "valid_loss": avg_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
-                       "scheduler_factor": 0.5,
+                       "scheduler_factor": config.scheduler_factor,
                        "min_loss": min_loss})
-            if abort_learning > config.max_loss_patience:
+            if abort_learning > config.patience:
                 print('abort training!')
                 break
 

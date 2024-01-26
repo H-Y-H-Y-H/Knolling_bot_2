@@ -338,7 +338,7 @@ if __name__ == '__main__':
     # np.random.seed(100)
 
     start_evaluations = 0
-    end_evaluations =   100
+    end_evaluations =   100000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
