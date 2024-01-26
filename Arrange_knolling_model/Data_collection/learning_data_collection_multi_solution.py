@@ -191,12 +191,13 @@ class Arm:
 
         total_offset = [0.016, -0.17 + 0.016, 0]
 
-        labels_data = labels_data.reshape(-1, 11)
+        labels_data = labels_data.reshape(-1, 8)
         pos_data = labels_data[:, :3]
         pos_data[:, 0] += total_offset[0]
         pos_data[:, 1] += total_offset[1]
-        lw_data = labels_data[:, 6:9]
-        ori_data = labels_data[:, 3:6]
+        lw_data = labels_data[:, 3:6]
+        # ori_data = labels_data[:, 3:6]
+        ori_data = np.zeros((len(lw_data), 3))
         color_index = labels_data[:, -1]
         color_dict = {'0': [0, 0, 0, 1], '1': [255, 255, 255, 1], '2': [255, 0, 0, 1], '3': [0, 255, 0, 1], '4': [0, 0, 255, 1]}
         class_index = labels_data[:, -2]
@@ -230,7 +231,7 @@ class Arm:
         #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
         #                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        textureId = p.loadTexture(self.urdf_path + "img_1.png")
+        textureId = p.loadTexture(self.urdf_path + "floor_1.png")
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
         # p.changeDynamics(self.arm_id, 7, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
@@ -271,7 +272,6 @@ class Arm:
             object_idx = []
             # ori_data[:, 0] += np.pi / 2
             print('position\n', pos_data)
-            print('orietation\n', ori_data)
             print('lwh\n', lw_data)
             for i in range(len(lw_data)):
                 print(f'this is matching urdf{i}')
@@ -335,14 +335,14 @@ if __name__ == '__main__':
     command = 'recover'
     before_after = 'after'
 
-    np.random.seed(100)
+    # np.random.seed(100)
 
     start_evaluations = 0
     end_evaluations =   100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = '../../../knolling_dataset/learning_data_0124/'
+    target_path = '../../../knolling_dataset/learning_data_0126/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
@@ -353,9 +353,10 @@ if __name__ == '__main__':
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
                     'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
                     'type_classify_flag': None, 'color_classify_flag': None, # classification range
-                    'preference': 'zzz', # customized setting
+                    'arrangement_policy': 'Type*3, Color*3, Area*3, Ratio*3', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
                     'total_offset': [0, 0, 0], 'gap_item': 0.016, 'gap_block': 0.016 # inverval and offset of the arrangement
+
                     }
     policy_switch = [[True, False, False, False],
                      [False, True, False, False],
@@ -391,7 +392,7 @@ if __name__ == '__main__':
             # env.get_parameters(box_num=boxes_num)
             for m in range(solution_num):
                 print(f'this is data {j}')
-                one_img_data = names['data_' + str(m)][j].reshape(-1, 11)
+                one_img_data = names['data_' + str(m)][j].reshape(-1, 8)
 
                 image = env.label2image(names['data_' + str(m)][j], j, save_urdf_path[m], labels_name=names['name_' + str(m)][j])
                 image = image[..., :3]

@@ -79,7 +79,7 @@ try:
         # cv2.imwrite("img.png",resized_color_image[112:368, 192:448])
         # add = int((640 - 480) / 2)
         # resized_color_image = cv2.copyMakeBorder(resized_color_image, add, add, 0, 0, cv2.BORDER_CONSTANT, None, value=0)
-        # cv2.imwrite("img_4.png",resized_color_image)
+        # cv2.imwrite("floor_4.png",resized_color_image)
 
         cv2.waitKey(1)
 

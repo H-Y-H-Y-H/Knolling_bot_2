@@ -193,7 +193,7 @@ class Arm:
         #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
         #                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        textureId = p.loadTexture(self.urdf_path + "img_1.png")
+        textureId = p.loadTexture(self.urdf_path + "floor_1.png")
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
         # p.changeDynamics(self.arm_id, 7, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
@@ -335,7 +335,7 @@ class Arm:
         #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
         #                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        textureId = p.loadTexture(self.urdf_path + "img_1.png")
+        textureId = p.loadTexture(self.urdf_path + "floor_1.png")
         p.changeDynamics(baseid, -1, lateralFriction=self.lateral_friction, frictionAnchor=True)
         # p.changeDynamics(self.arm_id, 7, lateralFriction=self.lateral_friction, frictionAnchor=True)
         # p.changeDynamics(self.arm_id, 8, lateralFriction=self.lateral_friction, frictionAnchor=True)
