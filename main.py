@@ -266,20 +266,19 @@ class knolling_main():
 
             self.robot.gripper(1, 0)
             offset_high = np.array([0, 0, 0.04])
-            test_offset = np.array([0, 0, 0.02]) # this is temporary offset for RL model
+            test_offset = np.array([0, 0, 0.01]) # this is temporary offset for RL model
 
             while len(crowded_index) >= 1:
                 # action = np.concatenate((self.para_dict['reset_pos'], [self.para_dict['reset_ori'][2]]))
                 action = np.array([0.042, 0, 0.005, 0])
+                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
                 for i in range(self.rl_dict['max_step']):
                     obs = self.rl_combine_obs(last_action=action)
                     trajectory = self.rl_model.model_pred(obs=obs)
                     print('this is trajectory', trajectory)
 
                     trajectory[:3] += test_offset
-
-                    last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                    last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
 
                     last_pos = self.robot.move(last_pos, last_ori, trajectory[:3], trajectory[3:])
                     last_ori = np.copy(trajectory[3:])
@@ -498,8 +497,8 @@ class knolling_main():
         self.finished_lwh = np.append(self.finished_lwh, lwh_list).reshape(-1, 3)
         self.finished_num += len(manipulator_after)
 
-        offset_low = np.array([0, 0, 0.00])
-        offset_low_place = np.array([0, 0, 0.005])
+        offset_low = np.array([0, 0, 0.005])
+        offset_low_place = np.array([0, 0, 0.010])
         offset_high = np.array([0, 0, 0.04])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
@@ -674,7 +673,7 @@ if __name__ == '__main__':
                  'real_operate': True, 'data_collection': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
-                 'lstm_enable_flag': True, 'rl_enable_flag': False,
+                 'lstm_enable_flag': True, 'rl_enable_flag': True,
                 }
 
     # visual_perception_model： lstm_grasp, yolo_grasp, yolo_seg

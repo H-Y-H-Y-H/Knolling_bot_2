@@ -318,7 +318,12 @@ class Yolo_pose_model():
                 new_lwh_list = np.concatenate((pred_result[:, 3:5], np.ones((len(pred_result), 1)) * 0.016), axis=1)
 
                 if self.para_dict['lstm_enable_flag'] == True:
-                    crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list, pred_conf)
+                    input_data = np.concatenate((manipulator_before[:, :2],
+                                                 new_lwh_list[:, :2],
+                                                 manipulator_before[:, -1].reshape(-1, 1),
+                                                 pred_conf.reshape(-1, 1)), axis=1)
+                    crowded_index, prediction, model_output = self.grasp_model.pred_test(input_data)
+
                     # yolo_baseline_threshold = 0.92
                     # prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
                     # model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
@@ -427,8 +432,12 @@ class Yolo_pose_model():
             new_lwh_list = np.concatenate((pred_result[:, 3:5], np.ones((len(pred_result), 1)) * 0.016), axis=1)
 
             if self.para_dict['lstm_enable_flag'] == True:
-                crowded_index, prediction, model_output = self.grasp_model.pred(manipulator_before, new_lwh_list,
-                                                                                pred_conf)
+                input_data = np.concatenate((manipulator_before[:, :2],
+                                             new_lwh_list[:, :2],
+                                             manipulator_before[:, -1].reshape(-1, 1),
+                                             pred_conf.reshape(-1, 1)), axis=1)
+                crowded_index, prediction, model_output = self.grasp_model.pred_test(input_data)
+
 
                 print('this is crowded_index', crowded_index)
                 print('this is prediction', prediction)

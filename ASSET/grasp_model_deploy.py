@@ -22,14 +22,10 @@ class Grasp_model():
         self.softmax = nn.Softmax(dim=2)
         self.model.eval()
 
-    def pred(self, manipulator_before, lwh_list, conf_list):
+    def pred_test(self, input_data):  # input: x, y, length, width, ori, conf
 
-        num_item = len(conf_list)
-        input_data = np.concatenate((manipulator_before[:, :2],
-                                     lwh_list[:, :2],
-                                     manipulator_before[:, -1].reshape(-1, 1),
-                                     conf_list.reshape(-1, 1)), axis=1)
-        input_data_test = np.copy(input_data)
+        num_item = len(input_data)
+
         input_data = torch.unsqueeze(torch.from_numpy(input_data), 0)
 
         self.model.eval()
@@ -47,7 +43,7 @@ class Grasp_model():
             output = output.reshape(1, 2)
         prediction = np.where(output[:, 1] < self.lstm_dict['threshold'], 0, 1)
         pred_N = np.where(output[:, 1] < self.lstm_dict['threshold'])[0]
-        # move_list = np.arange(int(num_item / 2), num_item)
-        move_list = pred_N
+        # prediction: Flag of objects 0: Ungraspable 1: graspable
+        # move_list: pred_N: ID of ungraspable object.
 
-        return move_list, prediction, output
+        return prediction

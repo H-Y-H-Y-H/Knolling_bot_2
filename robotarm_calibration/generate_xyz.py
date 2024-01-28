@@ -304,10 +304,10 @@ class calibration_main(Arm_env):
                         if len(trajectory_pos_list[j]) == 3:
                             last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                             if trajectory_pos_list[j, 2] > 0.01:
-                                time.sleep(3)
+                                time.sleep(5)
                                 pass
                             else:
-                                time.sleep(3)
+                                time.sleep(5)
                                 pass
                             last_ori = np.copy(rest_ori)
                         elif len(trajectory_pos_list[j]) == 2:
