@@ -264,6 +264,7 @@ class Yolo_pose_model():
                 color_image = np.asanyarray(color_frame.get_data())
                 color_colormap_dim = color_image.shape
                 resized_color_image = color_image
+                resized_color_image = cv2.flip(resized_color_image, -1)
 
                 # cv2.imwrite(img_path + '.png', resized_color_image)
                 # img_path_input = img_path + '.png'

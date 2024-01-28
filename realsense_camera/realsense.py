@@ -47,6 +47,8 @@ try:
 
         color_colormap_dim = color_image.shape
         resized_color_image = np.copy(color_image)
+        resized_color_image = cv2.flip(resized_color_image, -1)
+
         # resized_color_image = cv2.rotate(resized_color_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         #### add line

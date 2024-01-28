@@ -53,7 +53,7 @@ class calibration_main(Arm_env):
 
         ######################################## Texture change ########################################
         background = np.random.randint(1, 5)
-        textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
+        textureId = p.loadTexture(self.urdf_path + f"floor_{background}.png")
         p.changeVisualShape(baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         self.arm_id = p.loadURDF(os.path.join(self.urdf_path, "robot_arm928/robot_arm.urdf"),
@@ -114,7 +114,7 @@ class calibration_main(Arm_env):
                 receive_time += 1
             recall_data = recall_data.reshape(-1 ,36)
 
-            print('this is the shape of final angles real', recall_data.shape)
+            # print('this is the shape of final angles real', recall_data.shape)
             cmd_xyz = recall_data[:, :3]
             real_xyz = recall_data[:, 3:6]
             tar_xyz = recall_data[:, 6:9]
@@ -219,7 +219,7 @@ class calibration_main(Arm_env):
                     np.savetxt(f, error_motor)
                 pass
             if self.generate_dict['use_tuning'] == True:
-                print('this is cmd zzz\n', cmd_xyz[-1])
+                # print('this is cmd zzz\n', cmd_xyz[-1])
                 return cmd_xyz[-1] # return cur pos to let the manipualtor remember the improved pos
             else:
                 return tar_pos
@@ -275,12 +275,12 @@ class calibration_main(Arm_env):
 
             if self.para_dict['Data_collection'] == True:
 
-                trajectory_pos_list = np.array([[0.15, 0.00, 0.04],
-                                                [0.15, 0.00, 0.03]])
-                # trajectory_pos_list = np.array([[0.00, 0.14, 0.04],
-                #                                 [0.25, 0.14, 0.04],
-                #                                 [0.25, -0.14, 0.04],
-                #                                 [0.00, -0.14, 0.04]])
+                # trajectory_pos_list = np.array([[0.15, 0.00, 0.04],
+                #                                 [0.15, 0.00, 0.03]])
+                trajectory_pos_list = np.array([[0.00, 0.14, 0.03],
+                                                [0.25, 0.14, 0.03],
+                                                [0.25, -0.14, 0.03],
+                                                [0.00, -0.14, 0.03]])
                 # pos_x = np.random.uniform(self.generate_dict['x_range'][0], self.generate_dict['x_range'][1], self.generate_dict['collect_num'])
                 # pos_y = np.random.uniform(self.generate_dict['y_range'][0], self.generate_dict['y_range'][1], self.generate_dict['collect_num'])
                 # pos_z = np.random.uniform(self.generate_dict['z_range'][0], self.generate_dict['z_range'][1], self.generate_dict['collect_num'])
@@ -304,10 +304,10 @@ class calibration_main(Arm_env):
                         if len(trajectory_pos_list[j]) == 3:
                             last_pos = move(last_pos, last_ori, trajectory_pos_list[j], rest_ori)
                             if trajectory_pos_list[j, 2] > 0.01:
-                                # time.sleep(2)
+                                time.sleep(3)
                                 pass
                             else:
-                                # time.sleep(2)
+                                time.sleep(3)
                                 pass
                             last_ori = np.copy(rest_ori)
                         elif len(trajectory_pos_list[j]) == 2:
@@ -360,7 +360,7 @@ class calibration_main(Arm_env):
             os.makedirs((self.para_dict['dataset_path']), exist_ok=True)
 
             HOST = "192.168.0.189"  # Standard loopback interface address (localhost)
-            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -437,7 +437,7 @@ if __name__ == '__main__':
 
     generate_dict = {'real_time_flag': False, 'erase_flag': False, 'collect_num': 50, 'max_plot_num': 250,
                      'x_range': [0.05, 0.25], 'y_range': [-0.13, 0.13], 'z_range':[0.02, 0.05], 'use_tuning': True,
-                     'use_RL_dynamics': True}
+                     'use_RL_dynamics': False}
 
 
     env = calibration_main(para_dict=para_dict, generate_dict=generate_dict)

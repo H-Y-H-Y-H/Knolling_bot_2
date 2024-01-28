@@ -26,7 +26,7 @@ class knolling_robot():
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.189"  # Standard loopback interface address (localhost)
-            PORT = 8882 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
