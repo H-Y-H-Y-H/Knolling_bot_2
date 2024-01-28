@@ -5,14 +5,16 @@ from ENV.task.KnollingEnv import knolling_env
 from ENV.robot.KnollingRobot import knolling_robot
 from ASSET.arrange_model_deploy import *
 from ASSET.visual_perception import *
+from RL_motion_model.rl_model_deploy import *
 import cv2
 
 class knolling_main():
 
-    def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None, arrange_dict=None):
+    def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None, arrange_dict=None, rl_dict=None):
         # super(knolling_main, self).__init__(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
 
         self.para_dict = para_dict
+        self.rl_dict = rl_dict
         self.knolling_para = knolling_para
 
         self.task = knolling_env(para_dict=para_dict, lstm_dict=lstm_dict)
@@ -21,6 +23,15 @@ class knolling_main():
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['boxes_num'])
+        if self.para_dict['visual_perception_model'] == 'lstm_grasp':
+            # self.lstm_dict = lstm_dict
+            self.task.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
+        if self.para_dict['visual_perception_model'] == 'yolo_seg':
+            self.task.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
+        if self.para_dict['visual_perception_model'] == 'yolo_grasp':
+            self.task.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
+        if self.para_dict['rl_enable_flag'] == True:
+            self.rl_model = rl_unstack_model(rl_dict=rl_dict)
 
     def get_candidate_index(self, images, arrangement_num=8):
 
@@ -239,7 +250,53 @@ class knolling_main():
 
         return manipulator_before, manipulator_after, lwh_list_classify
 
-    def clean_grasp(self):
+    def rl_combine_obs(self, last_action):
+
+        obj_info = np.concatenate((self.manipulator_before[:, [0, 1, 5]], self.lwh_list[:, :2]), axis=1)
+        obj_info = obj_info[obj_info[:, 0].argsort()]
+        padded_obj_info = np.concatenate((obj_info, np.zeros((self.rl_dict['obj_num'] - len(obj_info), 5))), axis=0).reshape(-1, )
+        obs = np.concatenate((padded_obj_info, last_action))
+        return obs
+
+    def rl_unstack_table(self):
+
+        crowded_index = np.intersect1d(np.where(self.pred_cls == 0)[0], self.rest_index)
+
+        if self.para_dict['real_operate'] == False or True:
+
+            self.robot.gripper(1, 0)
+            offset_high = np.array([0, 0, 0.04])
+            test_offset = np.array([0, 0, 0.02]) # this is temporary offset for RL model
+
+            while len(crowded_index) >= 1:
+                # action = np.concatenate((self.para_dict['reset_pos'], [self.para_dict['reset_ori'][2]]))
+                action = np.array([0.042, 0, 0.005, 0])
+                for i in range(self.rl_dict['max_step']):
+                    obs = self.rl_combine_obs(last_action=action)
+                    trajectory = self.rl_model.model_pred(obs=obs)
+                    print('this is trajectory', trajectory)
+
+                    trajectory[:3] += test_offset
+
+                    last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+                    last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+
+                    last_pos = self.robot.move(last_pos, last_ori, trajectory[:3], trajectory[3:])
+                    last_ori = np.copy(trajectory[3:])
+                    action = np.concatenate((last_pos, [last_ori[2]]))
+
+                # lift the arm up and back to home
+                trajectory_high = np.copy(trajectory)
+                trajectory_high[:3] += offset_high
+                last_pos = self.robot.move(last_pos, last_ori, trajectory_high[:3], trajectory_high[3:])
+                self.robot.move(last_pos, last_ori, self.para_dict['reset_pos'], self.para_dict['reset_ori'])
+
+                self.exclude_objects()
+                crowded_index = np.where(self.pred_cls == 0)[0]
+
+            pass
+
+    def manual_unstack_table(self):
         if self.para_dict['real_operate'] == False:
             gripper_width = 0.020
             gripper_height = 0.034
@@ -247,7 +304,7 @@ class knolling_main():
             gripper_width = 0.024
             gripper_height = 0.04
 
-        offset_low = np.array([0, 0, 0.01])
+        offset_low = np.array([0, 0, 0.005])
         offset_high = np.array([0, 0, 0.04])
 
         crowded_index = np.intersect1d(np.where(self.pred_cls == 0)[0], self.rest_index)
@@ -407,88 +464,7 @@ class knolling_main():
             crowded_index = np.where(self.pred_cls == 0)[0]
             ######### this is temp setting, to make all objects graspable ########
 
-            ################## Check the results to determine whether to clean again #####################
-            # self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.task.get_obs()
-            # crowded_index = np.where(self.pred_cls == 0)[0]
-            # ############## exclude boxes which have been knolling ##############
-            # manipulator_before = manipulator_before[len(self.success_manipulator_after):]
-            # prediction = prediction[len(self.success_manipulator_after):]
-            # new_lwh_list = new_lwh_list[len(self.success_manipulator_after):]
-            # crowded_index = np.setdiff1d(crowded_index, np.arange(len(self.success_manipulator_after)))
-            # model_output = model_output[len(self.success_manipulator_after):]
-            # ############## exclude boxes which have been knolling ##############
-            # self.yolo_pose_model.plot_grasp(manipulator_before, prediction, model_output)
-
-            ################### Check the results to determine whether to clean again #####################
-
-            # manipulator_before = np.concatenate((self.success_manipulator_after, manipulator_before), axis=0)
-            # new_lwh_list = np.concatenate((self.success_lwh, new_lwh_list), axis=0)
-
         return
-
-    # def unstack(self):
-    #
-    #     self.offset_low = np.array([0, 0, 0.003])
-    #     self.offset_high = np.array([0, 0, 0.04])
-    #     while True:
-    #         crowded_index = np.where(self.pred_cls == 0)[0]
-    #         manipulator_before_input = self.manipulator_before[crowded_index]
-    #         lwh_list_input = self.lwh_list[crowded_index]
-    #         rays = self.task.get_ray(manipulator_before_input, lwh_list_input)
-    #         out_times = 0
-    #         fail_times = 0
-    #         for i in range(len(rays)):
-    #
-    #             trajectory_pos_list = [self.para_dict['reset_pos'], # move to the destination
-    #                                    [1, 0],  # gripper close!
-    #                                    self.offset_high + rays[i, :3],  # move directly to the above of the target
-    #                                    self.offset_low + rays[i, :3],  # decline slowly
-    #                                    self.offset_low + rays[i, 6:9],
-    #                                    self.offset_high + rays[i, 6:9],
-    #                                    self.para_dict['reset_pos'],] # unstack
-    #
-    #             trajectory_ori_list = [self.para_dict['reset_ori'],
-    #                                    [1, 0],
-    #                                    self.para_dict['reset_ori'] + rays[i, 3:6],
-    #                                    self.para_dict['reset_ori'] + rays[i, 3:6],
-    #                                    self.para_dict['reset_ori'] + rays[i, 9:12],
-    #                                    self.para_dict['reset_ori'] + rays[i, 9:12],
-    #                                    self.para_dict['reset_ori'],]
-    #
-    #             if self.para_dict['real_operate'] == True:
-    #                 last_pos = self.para_dict['reset_pos']
-    #                 last_ori = self.para_dict['reset_ori']
-    #                 left_pos = None
-    #                 right_pos = None
-    #             else:
-    #                 last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-    #                 last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-    #                 left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-    #                 right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-    #
-    #             for j in range(len(trajectory_pos_list)):
-    #                 if len(trajectory_pos_list[j]) == 3:
-    #                     last_pos = self.robot.move(last_pos, last_ori, trajectory_pos_list[j], trajectory_ori_list[j], index=j)
-    #                     last_ori = np.copy(trajectory_ori_list[j])
-    #                 elif len(trajectory_pos_list[j]) == 2:
-    #                     ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
-    #                     self.robot.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
-    #                     ####################### Detect whether the gripper is disturbed by other objects during closing the gripper ####################
-    #
-    #         self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.task.get_obs()
-    #         crowded_index = np.where(self.pred_cls == 0)[0]
-    #         if len(crowded_index) == 0:
-    #             print('unstack success!')
-    #             break
-    #
-    #         # if out_times == 0 and fail_times == 0:
-    #         #     break
-    #         # else:
-    #         #     add_num = fail_times + out_times
-    #         #     print('add additional rays', add_num)
-    #
-    #     # rewrite this variable to ensure to load data one by one
-    #     return self.img_per_epoch
 
     def knolling(self):
 
@@ -514,8 +490,6 @@ class knolling_main():
         # manipulator_before = manipulator_before[self.success_num:]
         # manipulator_after = manipulator_after[self.success_num:]
         # lwh_list = lwh_list[self.success_num:]
-
-
         start_end = np.concatenate((manipulator_before, manipulator_after), axis=1)
 
 
@@ -525,7 +499,7 @@ class knolling_main():
         self.finished_num += len(manipulator_after)
 
         offset_low = np.array([0, 0, 0.00])
-        offset_low_place = np.array([0, 0, 0.008])
+        offset_low_place = np.array([0, 0, 0.005])
         offset_high = np.array([0, 0, 0.04])
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
@@ -611,8 +585,18 @@ class knolling_main():
         p.resetSimulation()
         self.task.create_scene()
         self.arm_id = self.robot.create_arm()
+
+        # create the gripper mapping from sim to real
+        self.robot.calculate_gripper()
+
+        # setup and connect the real world robot arm
+        self.conn, self.real_table_height, self.sim_table_height = self.robot.arm_setup()
+
         if recover_flag == False:
             manipulator_before, lwh_list, pred_cls, pred_conf = self.task.create_objects(manipulator_after, lwh_after)
+            # init_obj_info = np.concatenate((manipulator_before[:, [0, 1, 5]], lwh_list[:, :2]), axis=1).reshape(-1, )
+            # init_act = np.concatenate((self.para_dict['reset_pos'], self.para_dict['reset_ori'][2]), axis=0)
+            # self.init_obs = np.concatenate((init_obj_info, init_act))
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.task.recover_objects(info_path)
@@ -621,6 +605,8 @@ class knolling_main():
 
         self.state_id = p.saveState()
         # return img_per_epoch_result
+
+
 
         if recover_flag == False:
             return manipulator_before, lwh_list, pred_cls, pred_conf
@@ -640,20 +626,16 @@ class knolling_main():
         # reset the table
         self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.reset()
 
-        # self.boxes_id_recover = np.copy(self.boxes_index)
         # self.manual_knolling() # generate the knolling after data based on manual or the model
-
-        # create the gripper mapping from sim to real
-        self.robot.calculate_gripper()
-
-        # setup and connect the real world robot arm
-        self.conn, self.real_table_height, self.sim_table_height = self.robot.arm_setup()
 
         #######################################################################################
         # 1: clean_grasp + knolling, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
         # crowded_index = np.where(self.pred_cls == 0)[0]
         while self.finished_num < self.task.num_boxes:
-            self.clean_grasp()
+            if self.para_dict['rl_enable_flag'] == True:
+                self.rl_unstack_table()
+            else:
+                self.manual_unstack_table()
             # self.unstack()
             self.knolling()
             self.exclude_objects()
@@ -665,8 +647,8 @@ class knolling_main():
 
 if __name__ == '__main__':
 
-    np.random.seed(25)
-    random.seed(25)
+    np.random.seed(1)
+    random.seed(1)
     # 记一下25！！！
 
     # default: conf 0.6, iou 0.6
@@ -676,10 +658,10 @@ if __name__ == '__main__':
                  'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.02]], 'init_offset_range': [[-0.00, 0.00], [-0., 0.]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(4, 5),
-                 'is_render': True,
+                 'boxes_num': np.random.randint(5, 6),
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -689,10 +671,10 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': False, 'data_collection': False,
+                 'real_operate': True, 'data_collection': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
-                 'lstm_enable_flag': True
+                 'lstm_enable_flag': True, 'rl_enable_flag': False,
                 }
 
     # visual_perception_model： lstm_grasp, yolo_grasp, yolo_seg
@@ -738,7 +720,10 @@ if __name__ == '__main__':
                     'arrange_x_offset': 0.03,
                     'arrange_y_offset': 0.00}
 
-    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict, arrange_dict=arrange_dict)
+    rl_dict = {'logger_id': '16', 'obj_num': para_dict['boxes_num'], 'rl_mode': 'SAC', 'max_step': 3}
+
+    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict,
+                             arrange_dict=arrange_dict, rl_dict=rl_dict)
 
     evaluation = 1
     for evaluation in range(para_dict['evaluations']):

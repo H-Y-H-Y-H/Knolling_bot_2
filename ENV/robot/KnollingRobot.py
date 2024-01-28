@@ -25,7 +25,7 @@ class knolling_robot():
 
         if self.para_dict['real_operate'] == True:
 
-            HOST = "192.168.1.112"  # Standard loopback interface address (localhost)
+            HOST = "192.168.0.189"  # Standard loopback interface address (localhost)
             PORT = 8882 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
@@ -54,7 +54,7 @@ class knolling_robot():
         else:
             self.conn = None
             self.real_table_height = 0.03
-            self.sim_table_height = -0.014
+            self.sim_table_height = 0
 
         return self.conn, self.real_table_height, self.sim_table_height
 
@@ -91,9 +91,9 @@ class knolling_robot():
 
         return self.arm_id
 
-    def gripper(self, gap, obj_width):
+    def gripper(self, flag, obj_width):
 
-        if gap > 0.5:
+        if flag > 0.5:
             self.keep_obj_width = obj_width + 0.010
         obj_width += 0.010
         if self.para_dict['real_operate'] == True:
@@ -111,10 +111,10 @@ class knolling_robot():
             motor_pos = np.poly1d(formula_parameters)
 
         if self.para_dict['real_operate'] == True:
-            if gap > 0.5:  # close
-                pos_real = np.asarray([[gap, 1600]], dtype=np.float32)
-            elif gap <= 0.5:  # open
-                pos_real = np.asarray([[gap, motor_pos(obj_width)]], dtype=np.float32)
+            if flag > 0.5:  # close
+                pos_real = np.asarray([[flag, 1600]], dtype=np.float32)
+            elif flag <= 0.5:  # open
+                pos_real = np.asarray([[flag, motor_pos(obj_width)]], dtype=np.float32)
             print('gripper', pos_real)
             self.conn.sendall(pos_real.tobytes())
             real_pos = self.conn.recv(4096)
@@ -122,7 +122,7 @@ class knolling_robot():
             # print('this is test float from buffer', test_real_pos)
 
         else:
-            if gap > 0.5:  # close
+            if flag > 0.5:  # close
                 p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
                                         targetPosition=motor_pos(obj_width) + close_open_gap,
                                         force=self.para_dict['gripper_force'])
@@ -239,3 +239,11 @@ class knolling_robot():
                 cur_pos = tar_pos
                 cur_ori = tar_ori
             return cur_pos
+
+    def get_ee_pos_ori(self):
+
+        ee_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+        ee_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+        action = np.concatenate((ee_pos, ee_ori[2]))
+
+        return action

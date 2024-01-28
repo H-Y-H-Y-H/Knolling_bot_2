@@ -96,7 +96,7 @@ class Yolo_pose_model():
         # z_mm_center = height_data[int(x_px_center), int(y_px_center)] - 0.01
         # if z_mm_center <= 0.006:
         #     z_mm_center = 0.006
-        z_mm_center = 0.006
+        z_mm_center = 0.00
 
         # this is the knolling sequence, not opencv!!!!
         keypoints_x = ((keypoints[:, 1] * 480 - 6) / self.mm2px).reshape(-1, 1)

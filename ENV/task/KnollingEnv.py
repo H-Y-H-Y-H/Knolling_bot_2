@@ -1,5 +1,4 @@
 # from arrangement import *
-from ASSET.arrange_model_deploy import *
 from ASSET.visual_perception import *
 # from ASSET.yolo_grasp_deploy import *
 from utils import *
@@ -18,79 +17,6 @@ class Sort_objects():
         self.para_dict = para_dict
         self.knolling_para = knolling_para
 
-    # def get_data_virtual(self):
-    #
-    #     xyz_list = []
-    #     length_range = np.round(np.random.uniform(self.para_dict['box_range'][0][0],
-    #                                               self.para_dict['box_range'][0][1],
-    #                                               size=(self.para_dict['boxes_num'], 1)), decimals=3)
-    #     width_range = np.round(np.random.uniform(self.para_dict['box_range'][1][0],
-    #                                              np.minimum(length_range, 0.036),
-    #                                              size=(self.para_dict['boxes_num'], 1)), decimals=3)
-    #     height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
-    #                                               self.para_dict['box_range'][2][1],
-    #                                               size=(self.para_dict['boxes_num'], 1)), decimals=3)
-    #     xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-    #     return xyz_list
-
-    # def judge(self, item_xyz, pos_before, ori_before, crowded_index):
-    #     # after this function, the sequence of item xyz, pos before and ori before changed based on ratio and area
-    #
-    #     category_num = int(self.knolling_para['area_num'] * self.knolling_para['ratio_num'] + 1)
-    #     s = item_xyz[:, 0] * item_xyz[:, 1]
-    #     s_min, s_max = np.min(s), np.max(s)
-    #     s_range = np.linspace(s_max, s_min, int(self.knolling_para['area_num'] + 1))
-    #     lw_ratio = item_xyz[:, 0] / item_xyz[:, 1]
-    #     ratio_min, ratio_max = np.min(lw_ratio), np.max(lw_ratio)
-    #     ratio_range = np.linspace(ratio_max, ratio_min, int(self.knolling_para['ratio_num'] + 1))
-    #     ratio_range_high = np.linspace(ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
-    #     ratio_range_low = np.linspace(1 / ratio_max, 1, int(self.knolling_para['ratio_num'] + 1))
-    #
-    #     # ! initiate the number of items
-    #     all_index = []
-    #     new_item_xyz = []
-    #     transform_flag = []
-    #     new_pos_before = []
-    #     new_ori_before = []
-    #     new_crowded_index = []
-    #     rest_index = np.arange(len(item_xyz))
-    #     index = 0
-    #
-    #     for i in range(self.knolling_para['area_num']):
-    #         for j in range(self.knolling_para['ratio_num']):
-    #             kind_index = []
-    #             for m in range(len(item_xyz)):
-    #                 if m not in rest_index:
-    #                     continue
-    #                 else:
-    #                     if s_range[i] >= s[m] >= s_range[i + 1]:
-    #                         if ratio_range[j] >= lw_ratio[m] >= ratio_range[j + 1]:
-    #                             transform_flag.append(0)
-    #                             # print(f'boxes{m} matches in area{i}, ratio{j}!')
-    #                             kind_index.append(index)
-    #                             new_item_xyz.append(item_xyz[m])
-    #                             new_pos_before.append(pos_before[m])
-    #                             new_ori_before.append(ori_before[m])
-    #                             new_crowded_index.append(crowded_index[m])
-    #                             index += 1
-    #                             rest_index = np.delete(rest_index, np.where(rest_index == m))
-    #             if len(kind_index) != 0:
-    #                 all_index.append(kind_index)
-    #
-    #     new_item_xyz = np.asarray(new_item_xyz).reshape(-1, 3)
-    #     new_pos_before = np.asarray(new_pos_before).reshape(-1, 3)
-    #     new_ori_before = np.asarray(new_ori_before).reshape(-1, 3)
-    #     transform_flag = np.asarray(transform_flag)
-    #     new_crowded_index = np.asarray(new_crowded_index)
-    #     if len(rest_index) != 0:
-    #         # we should implement the rest of boxes!
-    #         rest_xyz = item_xyz[rest_index]
-    #         new_item_xyz = np.concatenate((new_item_xyz, rest_xyz), axis=0)
-    #         all_index.append(list(np.arange(index, len(item_xyz))))
-    #         transform_flag = np.append(transform_flag, np.zeros(len(item_xyz) - index))
-    #
-    #     return new_item_xyz, new_pos_before, new_ori_before, all_index, transform_flag, new_crowded_index
-
 class knolling_env():
 
     def __init__(self, para_dict, knolling_para=None, lstm_dict=None, arrange_dict=None):
@@ -108,23 +34,6 @@ class knolling_env():
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
         self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
-
-
-        # if self.para_dict['use_yolo_grasp_model'] == True:
-        #     self.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
-        # if self.para_dict['use_lstm_grasp_model'] == True:
-        #     self.lstm_dict = lstm_dict
-        #     self.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
-        #                                             use_lstm=self.para_dict['use_lstm_grasp_model'])
-
-        if self.para_dict['visual_perception_model'] == 'yolo_seg':
-            self.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
-        if self.para_dict['visual_perception_model'] == 'yolo_grasp':
-            self.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
-        if self.para_dict['visual_perception_model'] == 'lstm_grasp':
-            self.lstm_dict = lstm_dict
-            self.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict,
-                                                   use_lstm=True)
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -225,7 +134,7 @@ class knolling_env():
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
         background = np.random.randint(1, 5)
-        textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
+        textureId = p.loadTexture(self.urdf_path + f"floor_{background}.png")
         p.changeVisualShape(self.baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         p.setGravity(0, 0, -10)
