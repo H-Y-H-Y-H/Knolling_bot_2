@@ -152,14 +152,14 @@ class knolling_main():
                     lwh_list_input = lwh_list.astype(np.float32)
                     ori_after = np.zeros((len(ori_before_input), 3))
 
-                    #################### exchange the length and width randomly enrich the input ##################
-                    for j in input_index:
-                        if np.random.random() < 0.5:
-                            temp = lwh_list_input[j, 1]
-                            lwh_list_input[j, 1] = lwh_list_input[j, 0]
-                            lwh_list_input[j, 0] = temp
-                            ori_after[j, 2] += np.pi / 2
-                    #################### exchange the length and width randomly enrich the input ##################
+                    # #################### exchange the length and width randomly enrich the input ##################
+                    # for j in input_index:
+                    #     if np.random.random() < 0.5:
+                    #         temp = lwh_list_input[j, 1]
+                    #         lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                    #         lwh_list_input[j, 0] = temp
+                    #         ori_after[j, 2] += np.pi / 2
+                    # #################### exchange the length and width randomly enrich the input ##################
 
                     # input include all objects(finished, success, fail),
                     pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)[:len(lwh_list_input), :]
@@ -262,38 +262,38 @@ class knolling_main():
 
         crowded_index = np.intersect1d(np.where(self.pred_cls == 0)[0], self.rest_index)
 
-        if self.para_dict['real_operate'] == False or True:
 
-            self.robot.gripper(1, 0)
-            offset_high = np.array([0, 0, 0.04])
-            test_offset = np.array([0, 0, 0.01]) # this is temporary offset for RL model
+        self.robot.gripper(1, 0)
+        offset_high = np.array([0, 0, 0.04])
+        if self.para_dict['real_operate'] == True:
+            test_offset = np.array([0, 0, 0.007]) + self.robot.real_table_height # this is temporary offset for RL model
+        else:
+            test_offset = np.array([0, 0, 0]) + self.robot.sim_table_height
 
-            while len(crowded_index) >= 1:
-                # action = np.concatenate((self.para_dict['reset_pos'], [self.para_dict['reset_ori'][2]]))
-                action = np.array([0.042, 0, 0.005, 0])
-                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-                for i in range(self.rl_dict['max_step']):
-                    obs = self.rl_combine_obs(last_action=action)
-                    trajectory = self.rl_model.model_pred(obs=obs)
-                    print('this is trajectory', trajectory)
+        while len(crowded_index) >= 1:
+            # action = np.concatenate((self.para_dict['reset_pos'], [self.para_dict['reset_ori'][2]]))
+            action = np.array([0.042, 0, 0.005, 0])
+            last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+            last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+            for i in range(self.rl_dict['max_step']):
+                obs = self.rl_combine_obs(last_action=action)
+                trajectory = self.rl_model.model_pred(obs=obs)
+                print('this is trajectory', trajectory)
 
-                    trajectory[:3] += test_offset
+                trajectory[:3] += test_offset
 
-                    last_pos = self.robot.move(last_pos, last_ori, trajectory[:3], trajectory[3:])
-                    last_ori = np.copy(trajectory[3:])
-                    action = np.concatenate((last_pos, [last_ori[2]]))
+                last_pos = self.robot.move(last_pos, last_ori, trajectory[:3], trajectory[3:])
+                last_ori = np.copy(trajectory[3:])
+                action = np.concatenate((last_pos, [last_ori[2]]))
 
-                # lift the arm up and back to home
-                trajectory_high = np.copy(trajectory)
-                trajectory_high[:3] += offset_high
-                last_pos = self.robot.move(last_pos, last_ori, trajectory_high[:3], trajectory_high[3:])
-                self.robot.move(last_pos, last_ori, self.para_dict['reset_pos'], self.para_dict['reset_ori'])
+            # lift the arm up and back to home
+            trajectory_high = np.copy(trajectory)
+            trajectory_high[:3] += offset_high
+            last_pos = self.robot.move(last_pos, last_ori, trajectory_high[:3], trajectory_high[3:])
+            self.robot.move(last_pos, last_ori, self.para_dict['reset_pos'], self.para_dict['reset_ori'])
 
-                self.exclude_objects()
-                crowded_index = np.where(self.pred_cls == 0)[0]
-
-            pass
+            self.exclude_objects()
+            crowded_index = np.where(self.pred_cls == 0)[0]
 
     def manual_unstack_table(self):
         if self.para_dict['real_operate'] == False:
@@ -497,9 +497,14 @@ class knolling_main():
         self.finished_lwh = np.append(self.finished_lwh, lwh_list).reshape(-1, 3)
         self.finished_num += len(manipulator_after)
 
-        offset_low = np.array([0, 0, 0.005])
-        offset_low_place = np.array([0, 0, 0.010])
-        offset_high = np.array([0, 0, 0.04])
+        if self.para_dict['real_operate'] == True:
+            offset_low = np.array([0, 0, 0.005]) + self.robot.real_table_height
+            offset_low_place = np.array([0, 0, 0.010]) + self.robot.real_table_height
+            offset_high = np.array([0, 0, 0.04]) + self.robot.real_table_height
+        else:
+            offset_low = np.array([0, 0, 0.005]) + self.robot.sim_table_height
+            offset_low_place = np.array([0, 0, 0.010]) + self.robot.sim_table_height
+            offset_high = np.array([0, 0, 0.04]) + self.robot.sim_table_height
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
             trajectory_pos_list = [[0, grasp_width[i]],  # gripper open!
@@ -657,10 +662,10 @@ if __name__ == '__main__':
                  'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
                  'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
+                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
-                 'is_render': False,
+                 'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'box_mass': 0.1,
                  'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
@@ -670,10 +675,10 @@ if __name__ == '__main__':
                  'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': True, 'data_collection': False,
+                 'real_operate': False, 'data_collection': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
-                 'lstm_enable_flag': True, 'rl_enable_flag': True,
+                 'lstm_enable_flag': True, 'rl_enable_flag': False,
                 }
 
     # visual_perception_model： lstm_grasp, yolo_grasp, yolo_seg

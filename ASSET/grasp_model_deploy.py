@@ -46,4 +46,4 @@ class Grasp_model():
         # prediction: Flag of objects 0: Ungraspable 1: graspable
         # move_list: pred_N: ID of ungraspable object.
 
-        return prediction
+        return prediction, output

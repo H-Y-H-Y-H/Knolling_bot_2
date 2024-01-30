@@ -26,7 +26,7 @@ def main():
     config.pos_encoding_Flag = True
     config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
     config.forward_expansion = 4
-    config.pre_trained = False
+    config.pre_trained = True
     config.high_dim_encoder = True
     config.all_steps = False
     config.object_num = -1
@@ -63,7 +63,7 @@ def main():
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'fallen-morning-156'
+        pre_name = 'rosy-morning-8'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -84,7 +84,7 @@ def main():
     configuration_num = 3
     config.solu_num = int(policy_num * configuration_num)
     object_num = 10
-    info_per_object = 8
+    info_per_object = 7
     for f in range(config.solu_num):
         dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
@@ -101,10 +101,10 @@ def main():
         train_cls = []
         valid_cls = []
         for i in range(config.max_seq_length):
-            train_lw.append(train_data[:, i * info_per_object + 3:i * info_per_object + 5])
-            valid_lw.append(test_data[:, i * info_per_object + 3:i * info_per_object + 5])
-            train_cls.append(train_data[:, [i * info_per_object + 6]])
-            valid_cls.append(test_data[:, [i * info_per_object + 6]])
+            train_lw.append(train_data[:, i * info_per_object + 2:i * info_per_object + 4])
+            valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
+            train_cls.append(train_data[:, [i * info_per_object + 5]])
+            valid_cls.append(test_data[:, [i * info_per_object + 5]])
             train_pos.append(train_data[:, i * info_per_object:i * info_per_object + 2])
             valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
 

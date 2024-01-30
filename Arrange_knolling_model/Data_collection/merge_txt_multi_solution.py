@@ -61,7 +61,7 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
         for s in save_point:
             data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
             temp_data = data.reshape(len(data), num_object_per_scenario, info_per_object_before)
-            data = np.delete(temp_data, [3, 4, 5], axis=2).reshape(len(temp_data), -1)
+            data = np.delete(temp_data, [2, 4, 5], axis=2).reshape(len(temp_data), -1)
             data_name = np.loadtxt(after_path + 'num_%d_%d_name.txt' % (num, int(s)), dtype=str)
             total_data.append(data)
             total_data_name.append(data_name)
@@ -111,7 +111,24 @@ def add_noise():
         np.savetxt(after_path + 'num_5_new.txt', new_data, fmt='%.05f')
         pass
 
-merge()
+def tuning():
+
+    num_object_per_scenario = 10
+    info_per_object = 8
+
+    for m in tqdm(range(1)):
+
+        target_path = '../../../knolling_dataset/learning_data_0126/'
+        output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
+        output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
+
+        data = np.loadtxt(target_path + 'num_%d_after_%d.txt' % (num, m)).reshape(-1, num_object_per_scenario, info_per_object)
+        output_data = np.delete(data, [2], axis=2).reshape(data.shape[0], -1)
+
+        np.savetxt(output_path, output_data)
+
+# merge()
+tuning()
 # merge_test()
 # add()
 # add_noise()

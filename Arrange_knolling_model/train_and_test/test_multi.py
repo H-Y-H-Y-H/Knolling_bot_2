@@ -175,16 +175,16 @@ if __name__ == '__main__':
     import argparse
 
     test_sweep_flag = False
-    use_yaml = True
+    use_yaml = False
     api = wandb.Api()
     # Project is specified by <entity/project-name>
 
-    DATAROOT = "../../../knolling_dataset/learning_data_804/"
+    DATAROOT = "../../../knolling_dataset/learning_data_0126/"
 
     if test_sweep_flag == False:
-        runs = api.runs("knolling_multi")
+        runs = api.runs("knolling_sundry")
         # name = 'charmed-sweep-1'
-        name = 'dandy-hill-142'
+        name = 'rosy-morning-8'
         # name = 'floral-bush-179'
     else:
         sweep = api.sweep('knolling_tuning/qtgswbjw')
@@ -201,6 +201,7 @@ if __name__ == '__main__':
             if run.name == name:
                 print("found: ", name)
                 config = {k: v for k, v in run.config.items() if not k.startswith('_')}
+        print('using model: ', name)
         print(config)
     else:
         name = 'devoted-terrain-29'
@@ -221,6 +222,7 @@ if __name__ == '__main__':
             config['num_gaussian'] = 3
             config['canvas_factor'] = 1
             config['use_overlap_loss'] = False
+        print('using model: ', name)
         print(config)
 
     config = argparse.Namespace(**config)
@@ -230,40 +232,41 @@ if __name__ == '__main__':
     train_output_data = []
     input_data = []
     output_data = []
-    valid_input_data = []
-    valid_output_data = []
+    valid_lw_data = []
+    valid_pos_data = []
     valid_cls_data = []
     total_raw_data = []
 
 
     # load the test dataset
-    file_num = 30
+    file_num = 10
     test_num_scenario = 1000
     NUM_objects = config.max_seq_length
-    solu_num = 5
+    solu_num = 12
+    info_per_object = 7
     for s in range(solu_num):
         print('load data:', NUM_objects)
 
-        if DATAROOT == "../../../knolling_dataset/learning_data_804/":
-            raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (10, s))
+        if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
+            raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
 
             raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
             total_raw_data = np.append(total_raw_data, raw_data)
             test_data = raw_data * SCALE_DATA + SHIFT_DATA
-            valid_input = []
-            valid_label = []
+            valid_lw = []
+            valid_pos = []
             valid_cls = []
             for i in range(NUM_objects):
-                valid_input.append(test_data[:, i * 5 + 2:i * 5 + 4])
-                valid_label.append(test_data[:, i * 5:i * 5 + 2])
-                valid_cls.append(test_data[:, [i * 5 + 0]])
+                valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
+                valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
+                valid_cls.append(test_data[:, [i * info_per_object + 5]])
 
-            valid_input = np.asarray(valid_input).transpose(1, 0, 2)
-            valid_label = np.asarray(valid_label).transpose(1, 0, 2)
+            valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+            valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
             valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
-            valid_input_data += list(valid_input)
-            valid_output_data += list(valid_label)
+            valid_lw_data += list(valid_lw)
+            valid_pos_data += list(valid_pos)
             valid_cls_data += list(valid_cls)
         # else:
         if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
@@ -272,24 +275,24 @@ if __name__ == '__main__':
             raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
             total_raw_data = np.append(total_raw_data, raw_data)
             test_data = raw_data * SCALE_DATA + SHIFT_DATA
-            valid_input = []
-            valid_label = []
+            valid_lw = []
+            valid_pos = []
             valid_cls = []
             for i in range(NUM_objects):
-                valid_input.append(test_data[:, i * 6 + 2:i * 6 + 4])
-                valid_label.append(test_data[:, i * 6:i * 6 + 2])
+                valid_lw.append(test_data[:, i * 6 + 2:i * 6 + 4])
+                valid_pos.append(test_data[:, i * 6:i * 6 + 2])
                 valid_cls.append(test_data[:, [i * 6 + 5]])
 
-            valid_input = np.asarray(valid_input).transpose(1, 0, 2)
-            valid_label = np.asarray(valid_label).transpose(1, 0, 2)
+            valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+            valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
             valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
-            valid_input_data += list(valid_input)
-            valid_output_data += list(valid_label)
+            valid_lw_data += list(valid_lw)
+            valid_pos_data += list(valid_pos)
             valid_cls_data += list(valid_cls)
 
-    test_input_padded = pad_sequences(valid_input_data, max_seq_length=config.max_seq_length)
-    test_label_padded = pad_sequences(valid_output_data, max_seq_length=config.max_seq_length)
+    test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.max_seq_length)
+    test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.max_seq_length)
     test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
 
     test_dataset = CustomDataset(test_input_padded, test_label_padded, test_cls_padded)
@@ -332,11 +335,11 @@ if __name__ == '__main__':
             for i in range(NUM_objects):
                 raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
                 raw_data[:, i * 6 + 6] = 0
-        if DATAROOT == "../../../knolling_dataset/learning_data_804/":
+        if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
             for i in range(NUM_objects):
-                raw_data[:, i * 5:i * 5 + 2] = outputs[:, i * 2:i * 2 + 2]
+                raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
 
-        evaluate_success_rate(raw_data, NUM_objects, config, test_sweep_flag=test_sweep_flag)
+        # evaluate_success_rate(raw_data, NUM_objects, config, test_sweep_flag=test_sweep_flag)
         log_folder = './results/%s/pred_after' % (name)
         os.makedirs(log_folder, exist_ok=True)
         print(log_folder)

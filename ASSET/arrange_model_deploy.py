@@ -558,7 +558,7 @@ class Arrange_model():
 
             # self.model.max_obj_num = len(grasp_index)
             # self.model.all_steps = False
-            predictions = self.model(input_data, tart_x_gt=input_target_data, temperature=0)
+            predictions = self.model(input_data, tart_x_gt=input_target_data, temperature=10)
             loss = self.model.maskedMSELoss(predictions, target_data)
             print('test_loss', loss)
             print('output', predictions[:, 0].flatten())

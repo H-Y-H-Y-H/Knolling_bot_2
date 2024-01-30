@@ -26,7 +26,7 @@ class knolling_robot():
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.189"  # Standard loopback interface address (localhost)
-            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -40,8 +40,8 @@ class knolling_robot():
             self.sim_table_height = 0
             num_motor = 5
             # ! reset the pos in both real and sim
-            reset_pos = np.array([0.015, 0, 0.1])
-            reset_ori = np.array([0, np.pi / 2, 0])
+            reset_pos = self.para_dict['reset_pos']
+            reset_ori = self.para_dict['reset_ori']
             cmd_motor = np.asarray(inverse_kinematic(np.copy(reset_pos), np.copy(reset_ori)), dtype=np.float32)
             print('this is the reset motor pos', cmd_motor)
             self.conn.sendall(cmd_motor.tobytes())

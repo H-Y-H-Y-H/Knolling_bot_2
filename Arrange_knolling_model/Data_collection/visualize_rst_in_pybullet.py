@@ -1,6 +1,6 @@
 import numpy as np
 
-from Arrange_knolling_model.Data_collection.sort_data_collection_multi_solution import Sort_objects
+# from Arrange_knolling_model.Data_collection.sort_data_collection_multi_solution import Sort_objects
 import pybullet_data as pd
 import random
 # from turdf import *
@@ -10,7 +10,7 @@ import cv2
 # from cam_obs_yolov8 import *
 import torch
 
-from urdfpy import URDF
+# from urdfpy import URDF
 
 from Arrange_knolling_model.Data_collection.arrange_policy import configuration_zzz
 
@@ -18,16 +18,6 @@ torch.manual_seed(42)
 np.random.seed(100)
 random.seed(100)
 
-# color_list = [[240, 207, 137,1],
-#               [240, 207, 137,1],
-#               [240, 207, 137,1],
-#               [240, 207, 137,1],
-#               [200, 162, 200,1],
-#               [200, 162, 200,1],
-#               [121, 119, 255,1],
-#               [144, 238, 144,1],
-#               [144, 238, 144,1],
-#               [144, 238, 144,1]]
 color_list = [[20, 20, 20,1],
               [20, 20, 20,1],
               [20, 20, 20,1],
@@ -40,7 +30,86 @@ color_list = [[20, 20, 20,1],
               [200, 200,200,1]]
 color_list = np.array(color_list,dtype=float)
 color_list[:,:3] = color_list[:,:3]/255
+def create_box(body_name: str,
+               position: np.ndarray,
+               orientation: np.ndarray = np.array([0, 0, 0, 1]),
+               rgba_color=None,
+               size=None,
+               mass=0.1,
+               ) -> None:
+    """
+    Create a box.
+    """
+    length = size[0]
+    width = size[1]
+    height = size[2]
 
+    visual_kwargs = {
+        "rgbaColor": rgba_color if rgba_color is not None else [np.random.random(), np.random.random(),
+                                                                np.random.random(), 1],
+        "halfExtents": [length / 2, width / 2, height / 2]
+    }
+    collision_kwargs = {
+        "halfExtents": [length / 2, width / 2, height / 2]
+    }
+
+    _create_geometry(body_name,
+                          geom_type=p.GEOM_BOX,
+                          mass=mass,
+                          position=position,
+                          orientation=orientation,
+                          lateral_friction=1.0,
+                          contact_damping=1.0,
+                          contact_stiffness=50000,
+                          visual_kwargs=visual_kwargs,
+                          collision_kwargs=collision_kwargs)
+
+
+def _create_geometry(
+        body_name: str,
+        geom_type: int,
+        mass: float = 0.0,
+        position=None,
+        orientation=None,
+        ghost: bool = False,
+        lateral_friction=None,
+        spinning_friction=None,
+        contact_damping=None,
+        contact_stiffness=None,
+        visual_kwargs={},
+        collision_kwargs={},
+) -> None:
+    """Create a geometry.
+
+    Args:
+        body_name (str): The name of the body. Must be unique in the sim.
+        geom_type (int): The geometry type. See p.GEOM_<shape>.
+        mass (float, optional): The mass in kg. Defaults to 0.
+        position (np.ndarray, optional): The position, as (x, y, z). Defaults to [0, 0, 0].
+        orientation (np.ndarray, optional): The orientation. Defaults to [0, 0, 0, 1]
+        ghost (bool, optional): Whether the body can collide. Defaults to False.
+        lateral_friction (float or None, optional): Lateral friction. If None, use the default pybullet
+            value. Defaults to None.
+        spinning_friction (float or None, optional): Spinning friction. If None, use the default pybullet
+            value. Defaults to None.
+        visual_kwargs (dict, optional): Visual kwargs. Defaults to {}.
+        collision_kwargs (dict, optional): Collision kwargs. Defaults to {}.
+    """
+    position = position if position is not None else np.zeros(3)
+    orientation = orientation if orientation is not None else np.array([0, 0, 0, 1])
+
+    baseVisualShapeIndex = p.createVisualShape(geom_type, **visual_kwargs)
+    if not ghost:
+        baseCollisionShapeIndex = p.createCollisionShape(geom_type, **collision_kwargs)
+    else:
+        baseCollisionShapeIndex = -1
+    box_id = p.createMultiBody(
+        baseVisualShapeIndex=baseVisualShapeIndex,
+        baseCollisionShapeIndex=baseCollisionShapeIndex,
+        baseMass=mass,
+        basePosition=position,
+        baseOrientation=orientation
+    )
 
 
 class Arm:
@@ -157,7 +226,7 @@ class Arm:
     def label2image(self, labels_data, img_index, save_urdf_path):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
-        labels_data = labels_data.reshape(-1, 5)
+        labels_data = labels_data.reshape(-1, info_per_object)
         pos_data = labels_data[:, :2]
         # pos_data[:,0] = np.random.uniform(0.02,0.25,pos_data[:,0].shape)
         # pos_data[:,1] = np.random.uniform(-0.12,0.12,pos_data[:,1].shape)
@@ -167,8 +236,8 @@ class Arm:
         lw_data = labels_data[:, 2:4]
         ori_data = labels_data[:, 4]
         # ori_data = np.random.random(ori_data.shape)
-
-        ori_data = np.concatenate((np.zeros((len(ori_data), 2)), ori_data.reshape(-1, 1)), axis=1)
+        ori_data =  np.zeros((len(lw_data), 3))
+        # ori_data = np.concatenate((np.zeros((len(ori_data), 2)), ori_data.reshape(-1, 1)), axis=1)
 
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
@@ -213,38 +282,41 @@ class Arm:
         #     boxes.append(URDF.load('../urdf/box_generator/box_%d.urdf' % index_flag[0, i]))
         #     xyz_list.append(boxes[i].links[0].visuals[0].geometry.box.size)
 
-        temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
-        save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
-        os.makedirs(save_urdf_path_one_img, exist_ok=True)
-        for i in range(len(lw_data)):
-            temp_box.links[0].collisions[0].origin[2, 3] = 0
-            length = lw_data[i, 0]
-            width = lw_data[i, 1]
-            height = 0.012
-            temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
-            temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
-
-            # Change the color of the boxes.
-            # Random the color
-            # temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
-            # Use the color list:
-            # temp_box.links[0].visuals[0].material.color = color_list[i]
-
-            temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
+        # temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
+        # save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
+        # os.makedirs(save_urdf_path_one_img, exist_ok=True)
+        # for i in range(len(lw_data)):
+        #     temp_box.links[0].collisions[0].origin[2, 3] = 0
+        #     length = lw_data[i, 0]
+        #     width = lw_data[i, 1]
+        #     height = 0.012
+        #     temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
+        #     temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
+        #
+        #     # Change the color of the boxes.
+        #     # Random the color
+        #     # temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
+        #     # Use the color list:
+        #     # temp_box.links[0].visuals[0].material.color = color_list[i]
+        #
+        #     temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
 
         lego_idx = []
         selected_lw_data = []
         selected_urdf = []
+        lw_data = np.concatenate((lw_data, np.ones((len(lw_data), 1)) * 0.012), axis=1)
         for i in range(len(lw_data)):
             print(f'this is matching urdf{j}')
             print(pos_data[i])
             print(lw_data[i])
             print(ori_data[i])
             pos_data[i, 2] += 0.006
-            lego_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
-                           basePosition=pos_data[i],
-                           baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-                           flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+            obj_name = f'object_{i}'
+            create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
+            # lego_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
+            #                basePosition=pos_data[i],
+            #                baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+            #                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
         ################### recover urdf boxes based on lw_data ###################
 
         return self.get_obs('images', None)
@@ -411,7 +483,8 @@ if __name__ == '__main__':
     forced_rotate_box = False
 
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-    DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
+    # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
+    DATAROOT = "../../../knolling_dataset/learning_data_0126/"
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
     images_log_path = target_path + 'images_%s/' % before_after
@@ -423,6 +496,7 @@ if __name__ == '__main__':
     # name = "classic-bush-95"
     name = 'dandy-hill-142'
     name = 'devoted-terrain-29'
+    name = 'rosy-morning-8'
     # name = 'fallen-morning-156'
     # name = "radiant-puddle-143"
 
@@ -436,8 +510,9 @@ if __name__ == '__main__':
 
 
         box_num = 10
+        info_per_object = 7
         if show_baseline == 0:
-            data = np.loadtxt(visual_path + '/num_%d_new.txt' % 30)
+            data = np.loadtxt(visual_path + '/num_%d_new.txt' % box_num)
             savefolder = '../train_and_test/results/%s/pred_after/image/' % (name)
         elif show_baseline == 1:
             data = np.loadtxt('../train_and_test/baseline/mlp_result/outputs.csv')
@@ -452,7 +527,7 @@ if __name__ == '__main__':
         if len(data.shape) == 1:
             data = data.reshape(1, len(data))
 
-        data = data[:,:box_num*6]
+        data = data[:,:box_num * info_per_object]
         print('this is len data', len(data))
         save_urdf_path = DATAROOT + '/box_urdf/num_%d/' % (box_num)
         os.makedirs(save_urdf_path, exist_ok=True)
@@ -465,7 +540,7 @@ if __name__ == '__main__':
         for j in range(len(data)):
             env.get_parameters(box_num=box_num)
             print(f'this is data {j}')
-            one_img_data = data[j].reshape(-1, 5)
+            one_img_data = data[j].reshape(-1, info_per_object)
             # one_img_index_flag = index_flag[j].reshape(2, -1)
             box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
             one_img_data = one_img_data[box_order].reshape(-1,)
