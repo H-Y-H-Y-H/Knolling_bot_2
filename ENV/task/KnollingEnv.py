@@ -138,20 +138,6 @@ class knolling_env():
         p.changeVisualShape(self.baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         p.setGravity(0, 0, -10)
-        # wall_id = []
-        # wall_pos = np.array([[self.x_low_obs - self.table_boundary, 0, 0],
-        #                      [(self.x_low_obs + self.x_high_obs) / 2, self.y_low_obs - self.table_boundary, 0],
-        #                      [self.x_high_obs + self.table_boundary, 0, 0],
-        #                      [(self.x_low_obs + self.x_high_obs) / 2, self.y_high_obs + self.table_boundary, 0]])
-        # wall_ori = np.array([[0, 1.57, 0],
-        #                      [0, 1.57, 1.57],
-        #                      [0, 1.57, 0],
-        #                      [0, 1.57, 1.57]])
-        # for i in range(len(wall_pos)):
-        #     wall_id.append(p.loadURDF(os.path.join(self.urdf_path, "plane_2.urdf"), basePosition=wall_pos[i],
-        #                               baseOrientation=p.getQuaternionFromEuler(wall_ori[i]), useFixedBase=1,
-        #                               flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-        #     p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
 
     def get_data_virtual(self):
 
@@ -192,8 +178,7 @@ class knolling_env():
                     if self.para_dict['object'] == 'box':
                         create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
                     elif self.para_dict['object'] == 'polygon':
-                        p.loadURDF(
-                            ('../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % np.random.uniform(0, 600, 1)[0]),
+                        p.loadURDF(('../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % np.random.uniform(0, 600, 1)[0]),
                             basePosition=rdm_pos[i],
                             baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
@@ -239,9 +224,7 @@ class knolling_env():
                         pass
                         # time.sleep(1/96)
 
-            p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                             contactDamping=self.para_dict['base_contact_damping'],
-                             contactStiffness=self.para_dict['base_contact_stiffness'])
+            p.changeDynamics(self.baseid, -1, lateralFriction=1, contactDamping=1, contactStiffness=50000)
 
             return manipulator_init, lwh_list_init, pred_cls, pred_conf
 
@@ -264,9 +247,7 @@ class knolling_env():
                 self.objects_index.reverse()
             self.create_entry_num += 1
 
-            p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                             contactDamping=self.para_dict['base_contact_damping'],
-                             contactStiffness=self.para_dict['base_contact_stiffness'])
+            p.changeDynamics(self.baseid, -1, lateralFriction=1, contactDamping=1, contactStiffness=50000)
 
     def delete_objects(self, manipulator_after=None):
 
@@ -279,9 +260,7 @@ class knolling_env():
                 self.gt_pos_ori = []
                 self.gt_ori_qua = []
                 for i in range(len(self.objects_index)):
-                    p.changeDynamics(self.objects_index[i], -1, lateralFriction=self.para_dict['box_lateral_friction'],
-                                     contactDamping=self.para_dict['box_contact_damping'],
-                                     contactStiffness=self.para_dict['box_contact_stiffness'])
+                    p.changeDynamics(self.objects_index[i], -1, lateralFriction=1, contactDamping=1, contactStiffness=50000)
                     cur_qua = np.asarray(p.getBasePositionAndOrientation(self.objects_index[i])[1])
                     cur_ori = np.asarray(p.getEulerFromQuaternion(cur_qua))
                     cur_pos = np.asarray(p.getBasePositionAndOrientation(self.objects_index[i])[0])
@@ -356,9 +335,7 @@ class knolling_env():
                     pass
                     # time.sleep(1 / 96)
 
-            p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
-                             contactDamping=self.para_dict['base_contact_damping'],
-                             contactStiffness=self.para_dict['base_contact_stiffness'])
+            p.changeDynamics(self.baseid, -1, lateralFriction=1, contactDamping=1, contactStiffness=50000)
         else:
             pos_data = config_data[:, :3]
             ori_data = config_data[:, 3:6]
@@ -378,65 +355,6 @@ class knolling_env():
                 # b = np.random.uniform(0, 0.9)
                 # p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
             pass
-
-    def gaussian_center(self, stack_center):
-
-        x_blured = stack_center[0] + np.linspace(self.x_range[0], self.x_range[1], self.grid_size ** 2)
-        y_blured = stack_center[1] + np.linspace(self.y_range[0], self.y_range[1], self.grid_size ** 2)
-        flattened_prob = self.kernel.flatten()
-        selected_indices = np.random.choice(len(flattened_prob), self.num_rays, p=flattened_prob)
-        selected_x = x_blured[selected_indices].reshape(-1, 1)
-        selected_y = y_blured[selected_indices].reshape(-1, 1)
-        center_list = np.concatenate((selected_x, selected_y), axis=1)
-
-        return center_list
-
-    def get_ray(self, pos_ori, lwh):
-
-        self.angular_distance = np.pi / 8
-        self.num_rays = 1
-        if self.para_dict['real_operate'] == True:
-            self.ray_height = 0.015
-        else:
-            self.ray_height = 0.01
-
-        stack_center = np.mean(pos_ori[:, :2], axis=0)
-        far_box_index = np.argmax(np.linalg.norm(pos_ori[:, :2] - stack_center, axis=1))
-        far_box_pos = pos_ori[far_box_index, :2]
-        # radius_start = (np.linalg.norm(stack_center - far_box_pos) +
-        #           np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
-        #           np.linalg.norm([self.gripper_width, self.gripper_height]) / 2 +
-        #           self.gripper_interval)
-        radius_end = (np.linalg.norm(stack_center - far_box_pos))
-        radius_start = (np.linalg.norm(stack_center - far_box_pos) +
-                        np.max(np.linalg.norm(lwh[:, :2], axis=1) / 2) +
-                        self.gripper_width / 2)
-        # radius_end = 0
-        center_list = self.gaussian_center(stack_center)
-        angle_center_stack = np.arctan2(stack_center[1] - self.table_center[1], stack_center[0] - self.table_center[0])
-        # angle_list = np.random.uniform(-np.pi, np.pi, self.num_rays)
-        angle_list = np.random.uniform(angle_center_stack - (self.num_rays // 2) * self.angular_distance,
-                                       angle_center_stack + (self.num_rays // 2) * self.angular_distance, self.num_rays)
-
-        x_offset_start = np.cos(angle_list) * radius_start
-        y_offset_start = np.sin(angle_list) * radius_start
-        x_offset_end = np.cos(angle_list) * radius_end
-        y_offset_end = np.sin(angle_list) * radius_end
-
-        angle_list += np.pi / 2
-        large_angle_index = np.where(angle_list > np.pi)[0]
-        angle_list[large_angle_index] -= np.pi
-        small_angle_index = np.where(angle_list < -np.pi)[0]
-        angle_list[small_angle_index] += np.pi
-
-        start_pos = np.array([center_list[:, 0] + x_offset_start, center_list[:, 1] + y_offset_start]).T
-        end_pos = np.array([center_list[:, 0] - x_offset_end, center_list[:, 1] - y_offset_end]).T
-
-        rays = np.concatenate((start_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1),
-                               end_pos.reshape(-1, 2), np.ones(self.num_rays).reshape(-1, 1) * self.ray_height,
-                               np.zeros((self.num_rays, 2)), angle_list.reshape(-1, 1)), axis=1)
-        return rays
 
     def get_obs(self, epoch=None, look_flag=False, baseline_flag=False, sub_index=0, img_path=None):
 

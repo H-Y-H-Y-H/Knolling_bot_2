@@ -1,11 +1,6 @@
-import numpy as np
-
 from utils import *
 from ENV.task.KnollingEnv import knolling_env
 from ENV.robot.KnollingRobot import knolling_robot
-from ASSET.arrange_model_deploy import *
-from ASSET.visual_perception import *
-from RL_motion_model.rl_model_deploy import *
 import cv2
 
 class knolling_main():
@@ -22,15 +17,17 @@ class knolling_main():
 
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
+            from ASSET.arrange_model_deploy import Arrange_model
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['boxes_num'])
         if self.para_dict['visual_perception_model'] == 'lstm_grasp':
             # self.lstm_dict = lstm_dict
+            from ASSET.visual_perception import Yolo_pose_model
             self.task.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
-        if self.para_dict['visual_perception_model'] == 'yolo_seg':
-            self.task.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
         if self.para_dict['visual_perception_model'] == 'yolo_grasp':
+            from ASSET.yolo_grasp_deploy import Yolo_grasp_model
             self.task.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
         if self.para_dict['rl_enable_flag'] == True:
+            from RL_motion_model.rl_model_deploy import rl_unstack_model
             self.rl_model = rl_unstack_model(rl_dict=rl_dict)
 
     def get_candidate_index(self, images, arrangement_num=8):
@@ -98,155 +95,102 @@ class knolling_main():
         # test for all objects!!!!!!!!
         success_index = np.arange(len(pos_before))
 
-        if self.para_dict['use_knolling_model'] == True:
+        if offline_flag == True:
 
-            if offline_flag == True:
+            demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
+            record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
+            lwh_list_classify = lwh_list
+            # lwh_list_classify = record_data[:, 2:4]
+            # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
+            # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
 
-                demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
-                record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
-                lwh_list_classify = lwh_list
-                # lwh_list_classify = record_data[:, 2:4]
-                # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
-                # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
+            recover_config = np.concatenate((demo_data[:, :2],
+                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
+                                             np.zeros((len(demo_data), 2)),
+                                             demo_data[:, -1].reshape(len(demo_data), 1),
+                                             demo_data[:, 2:4],
+                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
+            self.task.recover_objects(config_data=recover_config)
 
-                recover_config = np.concatenate((demo_data[:, :2],
-                                                 np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
-                                                 np.zeros((len(demo_data), 2)),
-                                                 demo_data[:, -1].reshape(len(demo_data), 1),
-                                                 demo_data[:, 2:4],
-                                                 np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
-                self.task.recover_objects(config_data=recover_config)
-
-                manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
-                manipulator_after = recover_config[:, :6]
-
-            else:
-
-                if self.finished_num > 0:
-                    create_pos = np.concatenate((self.success_manipulator_after[:, :3], pos_before[self.finished_num:, :]), axis=0)
-                    create_ori = np.concatenate((self.success_manipulator_after[:, 3:6], ori_before[self.finished_num:, :]), axis=0)
-                    create_lwh = np.concatenate((self.finished_lwh[:, :3], lwh_list[self.finished_num:, :]), axis=0)
-                    create_ori[:len(self.success_manipulator_after), 2] = 0
-                else:
-                    create_pos = np.copy(pos_before)
-                    create_ori = np.copy(ori_before)
-                    create_lwh = np.copy(lwh_list)
-
-                ################### recreate the new object ####################
-                self.task.create_objects(pos_data=create_pos, ori_data=create_ori, lwh_data=create_lwh)
-                ################### recreate the new object ####################
-
-                candidate_num = 10  # provide several candidates to select the best output
-                candidate_img = []
-                candidate_after = []
-                candidate_before = []
-                candidate_lwh = []
-                self.before_arrange_state = p.saveState()
-
-                lwh_list = np.around(lwh_list, decimals=3)
-                for i in range(candidate_num):
-                    # input_index = np.setdiff1d(np.arange(len(pos_before)), success_index)
-                    input_index = np.copy(success_index)
-                    pos_before_input = pos_before.astype(np.float32)
-                    ori_before_input = ori_before.astype(np.float32)
-                    lwh_list_input = lwh_list.astype(np.float32)
-                    ori_after = np.zeros((len(ori_before_input), 3))
-
-                    # #################### exchange the length and width randomly enrich the input ##################
-                    # for j in input_index:
-                    #     if np.random.random() < 0.5:
-                    #         temp = lwh_list_input[j, 1]
-                    #         lwh_list_input[j, 1] = lwh_list_input[j, 0]
-                    #         lwh_list_input[j, 0] = temp
-                    #         ori_after[j, 2] += np.pi / 2
-                    # #################### exchange the length and width randomly enrich the input ##################
-
-                    # input include all objects(finished, success, fail),
-                    pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)[:len(lwh_list_input), :]
-
-                    manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
-                    manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
-
-                    # manipulator_before = np.concatenate((pos_before_input, ori_before_input), axis=1)
-                    # manipulator_after = np.concatenate((pos_after.astype(np.float32), ori_after), axis=1)
-                    lwh_list_classify = np.copy(lwh_list_input)
-                    # rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
-                    # # manipulator_after[rotate_index, -1] += np.pi / 2
-                    # ##################### add offset to the knolling data #####################
-                    manipulator_after[:, 0] += self.arrange_dict['arrange_x_offset']
-                    manipulator_after[:, 1] += self.arrange_dict['arrange_y_offset']
-                    # ##################### add offset to the knolling data #####################
-
-                    recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
-                    self.task.recover_objects(config_data=recover_config, recover_index=input_index)
-
-                    manipulator_before = manipulator_before[input_index]
-                    manipulator_after = manipulator_after[input_index]
-                    lwh_list_classify = lwh_list_classify[input_index]
-
-                    candidate_img.append(self.task.get_obs(look_flag=True, epoch=i, img_path=None))
-                    candidate_before.append(manipulator_before)
-                    candidate_after.append(manipulator_after)
-                    candidate_lwh.append(lwh_list_classify)
-
-                candidate_index = self.get_candidate_index(candidate_img, candidate_num)
-                manipulator_before = candidate_before[candidate_index]
-                manipulator_after = candidate_after[candidate_index]
-                lwh_list_classify = candidate_lwh[candidate_index]
-
-            p.restoreState(self.before_arrange_state)
-            print('here')
+            manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
+            manipulator_after = recover_config[:, :6]
 
         else:
-            # determine the center of the tidy configuration
-            if len(self.lwh_list) <= 2:
-                print('the number of item is too low, no need to knolling!')
 
-            Manual_classfier = Manual_config(self.knolling_para)
-            lwh_list_classify, pos_before_classify, ori_before_classify, all_index_classify, transform_flag_classify, crowded_index_classify = Manual_classfier.judge(
-                lwh_list, pos_before, ori_before, success_index)
-            Manual_classfier.get_manual_para(lwh_list_classify, all_index_classify, transform_flag_classify)
-            pos_after_classify, ori_after_classify = Manual_classfier.calculate_block()
-            # after this step the length and width of one box in self.lwh_list may exchanged!!!!!!!!!!!
-            # but the order of self.lwh_list doesn't change!!!!!!!!!!!!!!
-            # the order of pos after and ori after is based on lwh list!!!!!!!!!!!!!!
-
-            ################## change order based on distance between boxes and upper left corner ##################
-            order = change_sequence(pos_before_classify)
-            pos_before_classify = pos_before_classify[order]
-            ori_before_classify = ori_before_classify[order]
-            lwh_list_classify = lwh_list_classify[order]
-            pos_after_classify = pos_after_classify[order]
-            ori_after_classify = ori_after_classify[order]
-            crowded_index_classify = crowded_index_classify[order]
-            ################## change order based on distance between boxes and upper left corner ##################
-
-            x_low = np.min(pos_after_classify, axis=0)[0]
-            x_high = np.max(pos_after_classify, axis=0)[0]
-            y_low = np.min(pos_after_classify, axis=0)[1]
-            y_high = np.max(pos_after_classify, axis=0)[1]
-            center = np.array([(x_low + x_high) / 2, (y_low + y_high) / 2, 0])
-            x_length = abs(x_high - x_low)
-            y_length = abs(y_high - y_low)
-            # print(x_low, x_high, y_low, y_high)
-            if self.knolling_para['random_offset'] == True:
-                self.knolling_para['total_offset'] = np.array([random.uniform(self.task.x_low_obs + x_length / 2, self.task.x_high_obs - x_length / 2),
-                                              random.uniform(self.task.y_low_obs + y_length / 2, self.task.y_high_obs - y_length / 2), 0.0])
+            if self.finished_num > 0:
+                create_pos = np.concatenate((self.success_manipulator_after[:, :3], pos_before[self.finished_num:, :]), axis=0)
+                create_ori = np.concatenate((self.success_manipulator_after[:, 3:6], ori_before[self.finished_num:, :]), axis=0)
+                create_lwh = np.concatenate((self.finished_lwh[:, :3], lwh_list[self.finished_num:, :]), axis=0)
+                create_ori[:len(self.success_manipulator_after), 2] = 0
             else:
-                pass
-            pos_after_classify += np.array([0, 0, 0.006])
-            pos_after_classify = pos_after_classify + self.knolling_para['total_offset']
+                create_pos = np.copy(pos_before)
+                create_ori = np.copy(ori_before)
+                create_lwh = np.copy(lwh_list)
 
-            ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
-            items_ori_list_arm = np.copy(ori_after_classify)
-            for i in range(len(lwh_list_classify)):
-                if lwh_list_classify[i, 0] <= lwh_list_classify[i, 1]:
-                    ori_after_classify[i, 2] += np.pi / 2
-            ########## after generate the neat configuration, pay attention to the difference of urdf ori and manipulator after ori! ############
+            ################### recreate the new object ####################
+            self.task.create_objects(pos_data=create_pos, ori_data=create_ori, lwh_data=create_lwh)
+            ################### recreate the new object ####################
 
-            manipulator_before = np.concatenate((pos_before_classify, ori_before_classify), axis=1)
-            manipulator_after = np.concatenate((pos_after_classify, ori_after_classify), axis=1)
-            print('this is manipulator after\n', manipulator_after)
+            candidate_num = 10  # provide several candidates to select the best output
+            candidate_img = []
+            candidate_after = []
+            candidate_before = []
+            candidate_lwh = []
+            self.before_arrange_state = p.saveState()
+
+            lwh_list = np.around(lwh_list, decimals=3)
+            for i in range(candidate_num):
+                # input_index = np.setdiff1d(np.arange(len(pos_before)), success_index)
+                input_index = np.copy(success_index)
+                pos_before_input = pos_before.astype(np.float32)
+                ori_before_input = ori_before.astype(np.float32)
+                lwh_list_input = lwh_list.astype(np.float32)
+                ori_after = np.zeros((len(ori_before_input), 3))
+
+                # #################### exchange the length and width randomly enrich the input ##################
+                # for j in input_index:
+                #     if np.random.random() < 0.5:
+                #         temp = lwh_list_input[j, 1]
+                #         lwh_list_input[j, 1] = lwh_list_input[j, 0]
+                #         lwh_list_input[j, 0] = temp
+                #         ori_after[j, 2] += np.pi / 2
+                # #################### exchange the length and width randomly enrich the input ##################
+
+                # input include all objects(finished, success, fail),
+                pos_after = self.arrange_model.pred(pos_before_input, ori_before_input, lwh_list_input, input_index)[:len(lwh_list_input), :]
+
+                manipulator_before = np.concatenate((pos_before_input[input_index], ori_before_input[input_index]), axis=1)
+                manipulator_after = np.concatenate((pos_after[input_index].astype(np.float32), ori_after), axis=1)
+
+                # manipulator_before = np.concatenate((pos_before_input, ori_before_input), axis=1)
+                # manipulator_after = np.concatenate((pos_after.astype(np.float32), ori_after), axis=1)
+                lwh_list_classify = np.copy(lwh_list_input)
+                # rotate_index = np.where(lwh_list_classify[:, 1] > lwh_list_classify[:, 0])[0]
+                # # manipulator_after[rotate_index, -1] += np.pi / 2
+                # ##################### add offset to the knolling data #####################
+                manipulator_after[:, 0] += self.arrange_dict['arrange_x_offset']
+                manipulator_after[:, 1] += self.arrange_dict['arrange_y_offset']
+                # ##################### add offset to the knolling data #####################
+
+                recover_config = np.concatenate((manipulator_after, lwh_list_classify), axis=1)
+                self.task.recover_objects(config_data=recover_config, recover_index=input_index)
+
+                manipulator_before = manipulator_before[input_index]
+                manipulator_after = manipulator_after[input_index]
+                lwh_list_classify = lwh_list_classify[input_index]
+
+                candidate_img.append(self.task.get_obs(look_flag=True, epoch=i, img_path=None))
+                candidate_before.append(manipulator_before)
+                candidate_after.append(manipulator_after)
+                candidate_lwh.append(lwh_list_classify)
+
+            candidate_index = self.get_candidate_index(candidate_img, candidate_num)
+            manipulator_before = candidate_before[candidate_index]
+            manipulator_after = candidate_after[candidate_index]
+            lwh_list_classify = candidate_lwh[candidate_index]
+
+        p.restoreState(self.before_arrange_state)
+        print('here')
 
         return manipulator_before, manipulator_after, lwh_list_classify
 
@@ -425,7 +369,7 @@ class knolling_main():
                     trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
                     trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
                     # reset the manipulator to read the image
-                    trajectory_ori_list.append([0, math.pi / 2, 0])
+                    trajectory_ori_list.append([0, np.pi / 2, 0])
 
                 # only once!
                 if once_flag == True:
@@ -528,10 +472,6 @@ class knolling_main():
             if i == 0:
                 last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
                 last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-                left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
-                right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])
-            else:
-                pass
 
             for j in range(len(trajectory_pos_list)):
                 if len(trajectory_pos_list[j]) == 3:
@@ -598,9 +538,7 @@ class knolling_main():
 
         if recover_flag == False:
             manipulator_before, lwh_list, pred_cls, pred_conf = self.task.create_objects(manipulator_after, lwh_after)
-            # init_obj_info = np.concatenate((manipulator_before[:, [0, 1, 5]], lwh_list[:, :2]), axis=1).reshape(-1, )
-            # init_act = np.concatenate((self.para_dict['reset_pos'], self.para_dict['reset_ori'][2]), axis=0)
-            # self.init_obs = np.concatenate((init_obj_info, init_act))
+
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.task.recover_objects(info_path)
@@ -609,8 +547,6 @@ class knolling_main():
 
         self.state_id = p.saveState()
         # return img_per_epoch_result
-
-
 
         if recover_flag == False:
             return manipulator_before, lwh_list, pred_cls, pred_conf
@@ -657,25 +593,17 @@ if __name__ == '__main__':
 
     # default: conf 0.6, iou 0.6
     np.set_printoptions(precision=5)
-    para_dict = {
-                 'start_num': 0, 'end_num': 10, 'thread': 9, 'evaluations': 1,
-                 'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
-                 'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
+    para_dict = {'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
+                 'arm_reset_pos': np.array([0, 0, 0.12]), 'arm_reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
                  'boxes_num': np.random.randint(5, 6),
                  'is_render': True,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
-                 'box_mass': 0.1,
-                 'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,
-                 'move_threshold': 0.001, 'move_force': 3,
-                 'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
-                 'box_lateral_friction': 1, 'box_contact_damping': 1, 'box_contact_stiffness': 50000,
-                 'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': False, 'data_collection': False,
+                 'real_operate': False,
                  'object': 'box', # box, polygon
                  'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
                  'lstm_enable_flag': True, 'rl_enable_flag': False,
@@ -730,10 +658,4 @@ if __name__ == '__main__':
                              arrange_dict=arrange_dict, rl_dict=rl_dict)
 
     evaluation = 1
-    for evaluation in range(para_dict['evaluations']):
-        # env.get_parameters(evaluations=evaluation,
-        #                    knolling_generate_parameters=knolling_generate_parameters,
-        #                    dynamic_parameters=dynamic_parameters,
-        #                    general_parameters=general_parameters,
-        #                    knolling_env=knolling_env)
-        main_env.step()
+    main_env.step()

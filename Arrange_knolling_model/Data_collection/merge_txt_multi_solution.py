@@ -7,8 +7,8 @@ configuration = [[2, 1],
 num = 10
 
 start_evaluations = 0
-end_evaluations =   1000000
-step_num = 100
+end_evaluations =   100
+step_num = 10
 solution_num = 12
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -45,13 +45,10 @@ save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + 
 def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
                                                      # cfg1_0, cfg1_1, cfg1_2,
                                                      # cfg2_0, cfg2_1, cfg2_2
-
-    num_object_per_scenario = 10
-    info_per_object_before = 11
-    info_per_object_after = 8
+    info_per_object = 7
     for m in tqdm(range(solution_num)):
 
-        target_path = '../../../knolling_dataset/learning_data_0126/'
+        target_path = '../../../knolling_dataset/learning_data_0131/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
         output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
@@ -60,12 +57,10 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
         total_data_name = []
         for s in save_point:
             data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
-            temp_data = data.reshape(len(data), num_object_per_scenario, info_per_object_before)
-            data = np.delete(temp_data, [2, 4, 5], axis=2).reshape(len(temp_data), -1)
             data_name = np.loadtxt(after_path + 'num_%d_%d_name.txt' % (num, int(s)), dtype=str)
             total_data.append(data)
             total_data_name.append(data_name)
-        total_data = np.asarray(total_data).reshape(-1, num * info_per_object_after)
+        total_data = np.asarray(total_data).reshape(-1, num * info_per_object)
         total_data_name = np.asarray(total_data_name, dtype=str).reshape(-1, num)
 
         np.savetxt(output_path, total_data)
@@ -127,8 +122,8 @@ def tuning():
 
         np.savetxt(output_path, output_data)
 
-# merge()
-tuning()
+merge()
+# tuning()
 # merge_test()
 # add()
 # add_noise()

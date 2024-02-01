@@ -8,7 +8,7 @@ import os
 import cv2
 import torch
 from tqdm import tqdm
-from urdfpy import URDF
+# from urdfpy import URDF
 import shutil
 import json
 import csv
@@ -317,6 +317,7 @@ class Arm:
                 data_after[:, :3] = data_after[:, :3] + self.arrange_policy['total_offset']
                 order = self.change_sequence(data_after[:, :2], flag='distance')
                 data_after = data_after[order]
+                data_after = np.delete(data_after, [2, 3, 4, 5], axis=1)
                 data_after_total.append(data_after)
 
                 # new_object_name_list = [object_name_list[order[m]] for m in range(len(order))]
@@ -332,17 +333,17 @@ class Arm:
 
 if __name__ == '__main__':
 
-    command = 'recover'
+    command = 'knolling'
     before_after = 'after'
 
     # np.random.seed(100)
 
     start_evaluations = 0
-    end_evaluations =   100000
+    end_evaluations =   100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = '../../../knolling_dataset/learning_data_0126/'
+    target_path = '../../../knolling_dataset/learning_data_0131/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 

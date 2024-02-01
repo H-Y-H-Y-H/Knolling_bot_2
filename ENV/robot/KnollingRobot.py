@@ -40,8 +40,8 @@ class knolling_robot():
             self.sim_table_height = 0
             num_motor = 5
             # ! reset the pos in both real and sim
-            reset_pos = self.para_dict['reset_pos']
-            reset_ori = self.para_dict['reset_ori']
+            reset_pos = self.para_dict['arm_reset_pos']
+            reset_ori = self.para_dict['arm_reset_ori']
             cmd_motor = np.asarray(inverse_kinematic(np.copy(reset_pos), np.copy(reset_ori)), dtype=np.float32)
             print('this is the reset motor pos', cmd_motor)
             self.conn.sendall(cmd_motor.tobytes())
@@ -60,10 +60,10 @@ class knolling_robot():
 
     def to_home(self):
 
-        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
+        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['arm_reset_pos'],
                                                   maxNumIterations=200,
                                                   targetOrientation=p.getQuaternionFromEuler(
-                                                      self.para_dict['reset_ori']))
+                                                      self.para_dict['arm_reset_ori']))
 
         # after reset the position of the robot arm manually, we should add the force to keep the arm
         for motor_index in range(5):
@@ -81,12 +81,8 @@ class knolling_robot():
                                  basePosition=[-0.08, 0, -0.01], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
-                         contactDamping=self.para_dict['gripper_contact_damping'],
-                         contactStiffness=self.para_dict['gripper_contact_stiffness'])
-        p.changeDynamics(self.arm_id, 8, lateralFriction=self.para_dict['gripper_lateral_friction'],
-                         contactDamping=self.para_dict['gripper_contact_damping'],
-                         contactStiffness=self.para_dict['gripper_contact_stiffness'])
+        p.changeDynamics(self.arm_id, 7, lateralFriction=1, contactDamping=1, contactStiffness=50000)
+        p.changeDynamics(self.arm_id, 8, lateralFriction=1, contactDamping=1, contactStiffness=50000)
         self.to_home()
 
         return self.arm_id
@@ -98,7 +94,6 @@ class knolling_robot():
         obj_width += 0.010
         if self.para_dict['real_operate'] == True:
             obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
-            # motor_pos_range = np.array([2050, 2150, 2250, 2350, 2450, 2550, 2650])
             motor_pos_range = np.array([2100, 2200, 2250, 2350, 2450, 2550, 2650])
 
             formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
@@ -125,18 +120,18 @@ class knolling_robot():
             if flag > 0.5:  # close
                 p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
                                         targetPosition=motor_pos(obj_width) + close_open_gap,
-                                        force=self.para_dict['gripper_force'])
+                                        force=3)
                 p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
                                         targetPosition=motor_pos(obj_width) + close_open_gap,
-                                        force=self.para_dict['gripper_force'])
+                                        force=3)
             else:  # open
                 p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
                                         targetPosition=motor_pos(obj_width),
-                                        force=self.para_dict['gripper_force'])
+                                        force=3)
                 p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
                                         targetPosition=motor_pos(obj_width),
-                                        force=self.para_dict['gripper_force'])
-            for i in range(self.para_dict['gripper_sim_step']):
+                                        force=3)
+            for i in range(10):
                 p.stepSimulation()
                 if self.para_dict['is_render'] == True:
                     time.sleep(1 / 48)
@@ -211,10 +206,10 @@ class knolling_robot():
             if index == 5 and task == 'knolling':
                 p.setJointMotorControl2(self.arm_id, 7, p.POSITION_CONTROL,
                                         targetPosition=self.motor_pos(self.keep_obj_width) + self.close_open_gap,
-                                        force=self.para_dict['gripper_force'] * 10)
+                                        force=30)
                 p.setJointMotorControl2(self.arm_id, 8, p.POSITION_CONTROL,
                                         targetPosition=self.motor_pos(self.keep_obj_width) + self.close_open_gap,
-                                        force=self.para_dict['gripper_force'] * 10)
+                                        force=30)
             #################### ensure the gripper will not drift while lifting the boxes ###########################
 
             while True:
@@ -225,8 +220,7 @@ class knolling_robot():
                                                           targetOrientation=p.getQuaternionFromEuler(tar_ori))
                 for motor_index in range(5):
                     p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                            targetPosition=ik_angles0[motor_index], maxVelocity=100,
-                                            force=self.para_dict['move_force'])
+                                            targetPosition=ik_angles0[motor_index], maxVelocity=100, force=3)
                 for i in range(10):
                     p.stepSimulation()
                     if self.para_dict['is_render'] == True:
