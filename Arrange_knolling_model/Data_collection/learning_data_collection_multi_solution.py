@@ -190,12 +190,13 @@ class Arm:
         # index_flag = index_flag.reshape(2, -1)
 
         total_offset = [0.016, -0.17 + 0.016, 0]
+        labels_data = labels_data.reshape(-1, 7)
+        obj_num = np.sum(np.any(labels_data, axis=1))
 
-        labels_data = labels_data.reshape(-1, 8)
-        pos_data = labels_data[:, :3]
+        pos_data = np.concatenate((labels_data[:, :2], np.ones((len(labels_data), 1)) * 0.003), axis=1)
         pos_data[:, 0] += total_offset[0]
         pos_data[:, 1] += total_offset[1]
-        lw_data = labels_data[:, 3:6]
+        lw_data = labels_data[:, 2:5]
         # ori_data = labels_data[:, 3:6]
         ori_data = np.zeros((len(lw_data), 3))
         color_index = labels_data[:, -1]
@@ -273,7 +274,7 @@ class Arm:
             # ori_data[:, 0] += np.pi / 2
             print('position\n', pos_data)
             print('lwh\n', lw_data)
-            for i in range(len(lw_data)):
+            for i in range(obj_num):
                 print(f'this is matching urdf{i}')
                 pos_data[i, 2] += 0.026
                 if lw_data[i, 0] < lw_data[i, 1]:
@@ -338,18 +339,18 @@ if __name__ == '__main__':
 
     # np.random.seed(100)
 
-    start_evaluations = 0
-    end_evaluations =   100
+    start_evaluations = 450000
+    end_evaluations =   500000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = '../../../knolling_dataset/learning_data_0131/'
+    target_path = '../../../knolling_dataset/learning_data_0126_6/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
-                    'object_num': 10, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
+                    'object_num': 6, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
                     'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
@@ -393,7 +394,7 @@ if __name__ == '__main__':
             # env.get_parameters(box_num=boxes_num)
             for m in range(solution_num):
                 print(f'this is data {j}')
-                one_img_data = names['data_' + str(m)][j].reshape(-1, 8)
+                one_img_data = names['data_' + str(m)][j].reshape(-1, 7)
 
                 image = env.label2image(names['data_' + str(m)][j], j, save_urdf_path[m], labels_name=names['name_' + str(m)][j])
                 image = image[..., :3]

@@ -4,7 +4,7 @@ from tqdm import tqdm
 configuration = [[2, 1],
                  [1, 2],
                  [1, 1]]
-num = 10
+num = 6
 
 start_evaluations = 0
 end_evaluations =   100
@@ -18,7 +18,7 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
     info_per_object = 7
     for m in tqdm(range(solution_num)):
 
-        target_path = '../../../knolling_dataset/learning_data_0131/'
+        target_path = '../../../knolling_dataset/learning_data_0126_6/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
         output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
@@ -92,7 +92,31 @@ def tuning():
 
         np.savetxt(output_path, output_data)
 
+def manual_padding():
+
+    info_per_object = 7
+    max_seq_length = 10
+    num_per_config = 1000
+    num_list = np.random.choice(np.arange(4, max_seq_length + 1), num_per_config)
+    for m in tqdm(range(solution_num)):
+
+        target_path = '../../../knolling_dataset/learning_data_0131/'
+        raw_data = np.loadtxt(target_path + 'num_%d_after_%d.txt' % (num, m))
+        raw_name = np.loadtxt(target_path + 'num_%d_after_name_%d.txt' % (num, m), dtype=str)
+
+        mask_data = ~(np.arange(max_seq_length * info_per_object) < (num_list * info_per_object)[:, None])
+        raw_data[mask_data] = 0
+        mask_name = ~(np.arange(max_seq_length) < (num_list)[:, None])
+        raw_name[mask_name] = 'Null'
+
+        output_path = target_path + 'num_%d_after_%d_mask.txt' % (num, m)
+        output_name_path = target_path + 'num_%d_after_name_%d_mask.txt' % (num, m)
+
+        np.savetxt(output_path, raw_data)
+        np.savetxt(output_name_path, raw_name, fmt='%s')
+
 merge()
+# manual_padding()
 # tuning()
 # merge_test()
 # add()

@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from new_model import *
+from model_structure import *
 import wandb
 
 
@@ -9,7 +9,7 @@ def main():
         wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     else:
         wandb.init(project='knolling_sundry')
-        DATAROOT = "../../../knolling_dataset/learning_data_0126/"
+        DATAROOT = "../../../knolling_dataset/learning_data_0131/"
     config = wandb.config
     running_name = wandb.run.name
 

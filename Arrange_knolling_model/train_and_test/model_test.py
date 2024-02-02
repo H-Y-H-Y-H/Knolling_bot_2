@@ -2,7 +2,7 @@ import os
 import yaml
 import numpy as np
 
-from new_model import *
+from model_structure import *
 from torch.utils.data import DataLoader, random_split
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

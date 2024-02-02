@@ -418,14 +418,6 @@ class Knolling_Transformer(nn.Module):
             out = torch.cat(outputs, dim=0)
             return out
 
-
-    def maskedMSELoss(self, predictions, target, ignore_index = -100):
-        mask = target.ne(ignore_index)
-        mse_loss = (predictions - target).pow(2) * mask
-        mse_loss = mse_loss.sum() / mask.sum()
-
-        return mse_loss
-
     def calculate_loss(self, pred_pos, tar_pos, tar_lw, tar_cls=None):
 
         MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
