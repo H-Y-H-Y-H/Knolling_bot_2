@@ -78,7 +78,7 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000
+    config.DATA_CUT = 1000
 
     policy_num = 4
     configuration_num = 3
@@ -88,8 +88,11 @@ def main():
     for f in range(config.solu_num):
         dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
-        raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :config.max_seq_length * info_per_object]
+        raw_data = np.loadtxt(dataset_path)[:config.DATA_CUT, :config.max_seq_length * info_per_object]
+        num_list = np.random.choice(np.arange(4, 11), len(raw_data))
+        mask = ~(np.arange(config.max_seq_length * info_per_object) < (num_list * info_per_object)[:, None])
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
+        raw_data[mask] = 0 # this is the customized padding process
 
         train_data = raw_data[:int(len(raw_data) * 0.8)]
         test_data = raw_data[int(len(raw_data) * 0.8):]

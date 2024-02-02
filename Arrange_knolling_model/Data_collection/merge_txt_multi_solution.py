@@ -12,36 +12,6 @@ step_num = 10
 solution_num = 12
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-# def merge():
-#
-#     target_path = '../../knolling_dataset/learning_data_1013/'
-#
-#     for cfg in range(len(configuration)):
-#
-#         save_path = target_path + 'cfg_%s/' % cfg
-#         for m in range(solution_num):
-#
-#             before_path = target_path + 'cfg_%s/' % cfg + 'labels_before_0/'
-#             after_path = target_path + 'cfg_%s/' % cfg + 'labels_after_%s/' % m
-#
-#             total_data = []
-#             for s in save_point:
-#                 data = np.loadtxt(after_path + 'num_%d_%d.txt' % (num, int(s)))
-#                 total_data.append(data)
-#             total_data = np.asarray(total_data).reshape(-1, num * 5)
-#             np.savetxt(save_path + 'num_%d_after_%d.txt' % (num, m), total_data)
-#
-#             if m == 0:
-#                 total_data = []
-#                 for s in save_point:
-#                     data = np.loadtxt(before_path + 'num_%d_%d.txt' % (num, int(s)))
-#                     total_data.append(data)
-#                 total_data = np.asarray(total_data).reshape(-1, num * 5)
-#                 np.savetxt(save_path + 'num_%d_before_0.txt' % num, total_data)
-#                 # total_data = np.asarray(total_data).reshape(-1, num * 5)
-#                 # np.savetxt(before_path + 'num_%d.txt' % num, total_data)
-
-
 def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
                                                      # cfg1_0, cfg1_1, cfg1_2,
                                                      # cfg2_0, cfg2_1, cfg2_2

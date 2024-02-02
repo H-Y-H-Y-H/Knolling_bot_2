@@ -25,9 +25,17 @@ DATAROOT = "../../../knolling_dataset/learning_data_1019_5w/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
+    # for i in tqdm(range(len(sequences))):
+    #     seq = sequences[i]
+    #     if len(seq) < max_seq_length:
+    #         padding_length = max_seq_length - len(seq)
+    #         padded_seq = list(seq) + [[pad_value] * 2 for _ in range(padding_length)]
+    #         padded_sequences.append(padded_seq)
+    #     else:
+    #         padded_sequences.append(seq)
     for i in tqdm(range(len(sequences))):
         seq = sequences[i]
-        if len(seq) < max_seq_length:
+        if np.sum(np.any(seq != 0, axis=1)) < max_seq_length:
             padding_length = max_seq_length - len(seq)
             padded_seq = list(seq) + [[pad_value] * 2 for _ in range(padding_length)]
             padded_sequences.append(padded_seq)
