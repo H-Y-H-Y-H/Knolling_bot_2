@@ -61,10 +61,10 @@ try:
         second_point = int((640 - 640 * y_ratio) / 2 + int(640 * y_ratio)), int((480 - 480 * x_ratio) / 2) + int(480 * x_ratio)
         print(first_point)
         print(second_point)
-        resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
-
-        resized_color_image = cv2.line(resized_color_image, (320, 0), (320, 480), (255, 255, 0), 1)
-        resized_color_image = cv2.line(resized_color_image, (0, 240), (640, 240), (255, 255, 0), 1)
+        # resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
+        #
+        # resized_color_image = cv2.line(resized_color_image, (320, 0), (320, 480), (255, 255, 0), 1)
+        # resized_color_image = cv2.line(resized_color_image, (0, 240), (640, 240), (255, 255, 0), 1)
 
         # resized_color_image = cv2.line(resized_color_image, (240, 0), (240, 640), (255, 255, 0), 1)
         # resized_color_image = cv2.line(resized_color_image, (0, 320), (480, 320), (255, 255, 0), 1)
@@ -78,7 +78,7 @@ try:
         cv2.resizeWindow('RealSense', 1280, 960)
         cv2.imshow('RealSense', resized_color_image)
         # cv2.imshow('RealSense', color_image)
-        # cv2.imwrite("img.png",resized_color_image[112:368, 192:448])
+        cv2.imwrite("img.png",resized_color_image)
         # add = int((640 - 480) / 2)
         # resized_color_image = cv2.copyMakeBorder(resized_color_image, add, add, 0, 0, cv2.BORDER_CONSTANT, None, value=0)
         # cv2.imwrite("floor_4.png",resized_color_image)

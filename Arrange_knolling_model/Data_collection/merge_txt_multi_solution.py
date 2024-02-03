@@ -7,8 +7,8 @@ configuration = [[2, 1],
 num = 6
 
 start_evaluations = 0
-end_evaluations =   100
-step_num = 10
+end_evaluations =   500000
+step_num = 100
 solution_num = 12
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 

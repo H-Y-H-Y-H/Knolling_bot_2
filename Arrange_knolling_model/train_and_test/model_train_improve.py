@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from model_structure import *
+from model_structure_improve import *
 import wandb
 
 
@@ -13,7 +13,7 @@ def main():
     config = wandb.config
     running_name = wandb.run.name
 
-    config.forwardtype = 1
+    config.forwardtype = 0
     config.map_embed_d_dim = 32
     config.num_attention_heads = 4
     config.num_layers = 4
