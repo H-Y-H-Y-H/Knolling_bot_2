@@ -119,7 +119,7 @@ class visualize_env():
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
         background = np.random.randint(1, 5)
-        textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
+        textureId = p.loadTexture(self.urdf_path + f"floor_{background}.png")
         p.changeVisualShape(self.baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
 
         p.setGravity(0, 0, -10)
@@ -210,7 +210,7 @@ class visualize_env():
 
     def create_arm(self):
         self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm.urdf",
-                                 basePosition=[-0.08, 0, 0.02], useFixedBase=True,
+                                 basePosition=[-0.08, 0, -0.01], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],

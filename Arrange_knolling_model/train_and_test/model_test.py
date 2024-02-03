@@ -184,7 +184,7 @@ if __name__ == '__main__':
     if test_sweep_flag == False:
         runs = api.runs("knolling_sundry")
         # name = 'charmed-sweep-1'
-        name = 'rosy-morning-8'
+        name = 'legendary-galaxy-31'
         # name = 'floral-bush-179'
     else:
         sweep = api.sweep('knolling_tuning/qtgswbjw')

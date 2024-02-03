@@ -63,7 +63,7 @@ def main():
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'rosy-morning-8'
+        pre_name = 'legendary-galaxy-31'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -89,10 +89,10 @@ def main():
         dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
         print('load data:', dataset_path)
         raw_data = np.loadtxt(dataset_path)[:config.DATA_CUT, :config.max_seq_length * info_per_object]
-        num_list = np.random.choice(np.arange(4, 11), len(raw_data))
-        mask = ~(np.arange(config.max_seq_length * info_per_object) < (num_list * info_per_object)[:, None])
+        # num_list = np.random.choice(np.arange(4, 11), len(raw_data))
+        # mask = ~(np.arange(config.max_seq_length * info_per_object) < (num_list * info_per_object)[:, None])
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
-        raw_data[mask] = 0 # this is the customized padding process
+        # raw_data[mask] = 0 # this is the customized padding process
 
         train_data = raw_data[:int(len(raw_data) * 0.8)]
         test_data = raw_data[int(len(raw_data) * 0.8):]
