@@ -63,7 +63,7 @@ def main():
     config.model_params = num_params
 
     if config.pre_trained:
-        pre_name = 'legendary-galaxy-31'
+        pre_name = 'rosy-morning-8'
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
@@ -78,7 +78,7 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 1000
+    config.DATA_CUT = 10000
 
     policy_num = 4
     configuration_num = 3

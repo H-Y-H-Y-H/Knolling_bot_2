@@ -4,7 +4,7 @@ from tqdm import tqdm
 configuration = [[2, 1],
                  [1, 2],
                  [1, 1]]
-num = 6
+num = 8
 
 start_evaluations = 0
 end_evaluations =   500000
@@ -18,7 +18,7 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
     info_per_object = 7
     for m in tqdm(range(solution_num)):
 
-        target_path = '../../../knolling_dataset/learning_data_0126_6/'
+        target_path = '../../../knolling_dataset/learning_data_0126_8/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
         output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
