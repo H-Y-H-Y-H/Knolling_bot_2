@@ -1,5 +1,5 @@
 import numpy as np
-
+import json
 # from Arrange_knolling_model.Data_collection.sort_data_collection_multi_solution import Sort_objects
 import pybullet_data as pd
 import random
@@ -224,20 +224,24 @@ class Arm:
             return image
 
     def label2image(self, labels_data, img_index, save_urdf_path):
-        # print(index_flag)
-        # index_flag = index_flag.reshape(2, -1)
-        labels_data = labels_data.reshape(-1, info_per_object)
-        pos_data = labels_data[:, :2]
-        # pos_data[:,0] = np.random.uniform(0.02,0.25,pos_data[:,0].shape)
-        # pos_data[:,1] = np.random.uniform(-0.12,0.12,pos_data[:,1].shape)
 
+        labels_data = labels_data.reshape(-1, 7)
 
-        pos_data = np.concatenate((pos_data, np.zeros(len(pos_data)).reshape(-1, 1)), axis=1)
-        lw_data = labels_data[:, 2:4]
-        ori_data = labels_data[:, 4]
-        # ori_data = np.random.random(ori_data.shape)
-        ori_data =  np.zeros((len(lw_data), 3))
-        # ori_data = np.concatenate((np.zeros((len(ori_data), 2)), ori_data.reshape(-1, 1)), axis=1)
+        pos_data = np.concatenate((labels_data[:, :2], np.ones((len(labels_data), 1)) * 0.003), axis=1)
+        lw_data = labels_data[:, 2:5]
+        # ori_data = labels_data[:, 3:6]
+        ori_data = np.zeros((len(lw_data), 3))
+        color_index = labels_data[:, -1]
+        class_index = labels_data[:, -2]
+
+        # Converting dictionary keys to integers
+        dict_map = {i: v for i, (k, v) in enumerate(color_dict.items())}
+
+        # Mapping array values to dictionary values
+        rdm_color_index = np.random.choice(10, len(color_index))
+        mapped_color_values = []
+        for i in range(len(color_index)):
+            mapped_color_values.append(dict_map[color_index[i]][rdm_color_index[i]])
 
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
@@ -256,63 +260,33 @@ class Arm:
             lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, 0, 0], useFixedBase=1,
+        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-        # self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm_fixed.urdf",
-        #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
-        #                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         textureId = p.loadTexture(self.urdf_path + "floor_1.png")
+        p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
+                            rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1),
+                                       1])
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
-        p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
-                            rgbaColor=[0.9, 0.9,0.9,1])
 
         ################### recover urdf boxes based on lw_data ###################
-        boxes = []
-        xyz_list = []
-        new_pos_data = []
-        new_ori_data = []
-        # for i in range(len(index_flag[0])):
-        #     boxes.append(URDF.load('../urdf/box_generator/box_%d.urdf' % index_flag[0, i]))
-        #     xyz_list.append(boxes[i].links[0].visuals[0].geometry.box.size)
-
-        # temp_box = URDF.load(self.urdf_path + 'box_generator/template.urdf')
-        # save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
-        # os.makedirs(save_urdf_path_one_img, exist_ok=True)
-        # for i in range(len(lw_data)):
-        #     temp_box.links[0].collisions[0].origin[2, 3] = 0
-        #     length = lw_data[i, 0]
-        #     width = lw_data[i, 1]
-        #     height = 0.012
-        #     temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
-        #     temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
-        #
-        #     # Change the color of the boxes.
-        #     # Random the color
-        #     # temp_box.links[0].visuals[0].material.color = [np.random.random(), np.random.random(), np.random.random(), 1]
-        #     # Use the color list:
-        #     # temp_box.links[0].visuals[0].material.color = color_list[i]
-        #
-        #     temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
-
-        lego_idx = []
-        selected_lw_data = []
-        selected_urdf = []
-        lw_data = np.concatenate((lw_data, np.ones((len(lw_data), 1)) * 0.012), axis=1)
+        obj_name = []
         for i in range(len(lw_data)):
             print(f'this is matching urdf{j}')
             print(pos_data[i])
             print(lw_data[i])
             print(ori_data[i])
             pos_data[i, 2] += 0.006
-            obj_name = f'object_{i}'
-            create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
-            # lego_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
-            #                basePosition=pos_data[i],
-            #                baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-            #                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+            obj_name.append(f'object_{i}')
+            create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
+            p.changeVisualShape(obj_name[i], -1, rgbaColor=mapped_color_values[i] + [1])
+
         ################### recover urdf boxes based on lw_data ###################
+
+        # shutil.rmtree(save_urdf_path_one_img)
+        for i in range(100):
+            p.stepSimulation()
 
         return self.get_obs('images', None)
 
@@ -464,22 +438,10 @@ if __name__ == '__main__':
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 
-    area_num = 2
-    ratio_num = 1
-
-    item_odd_prevent = True
-
-    # always true
-    block_odd_prevent = True
-    # always true
-
-    upper_left_max = True
-
-    forced_rotate_box = False
-
+    object_num = 6
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
     # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
-    DATAROOT = "../../../knolling_dataset/learning_data_0126/"
+    DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % object_num
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
     images_log_path = target_path + 'images_%s/' % before_after
@@ -503,11 +465,12 @@ if __name__ == '__main__':
         env = Arm(is_render=True)
         visual_path = '../train_and_test/results/%s/pred_after'%(name)
 
+        with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
+            color_dict = json.load(f)
 
-        box_num = 10
         info_per_object = 7
         if show_baseline == 0:
-            data = np.loadtxt(visual_path + '/num_%d_new.txt' % box_num)
+            data = np.loadtxt(visual_path + '/num_%d_new.txt' % object_num)
             savefolder = '../train_and_test/results/%s/pred_after/image/' % (name)
         elif show_baseline == 1:
             data = np.loadtxt('../train_and_test/baseline/mlp_result/outputs.csv')
@@ -522,9 +485,9 @@ if __name__ == '__main__':
         if len(data.shape) == 1:
             data = data.reshape(1, len(data))
 
-        data = data[:,:box_num * info_per_object]
+        data = data[:, :object_num * info_per_object]
         print('this is len data', len(data))
-        save_urdf_path = DATAROOT + '/box_urdf/num_%d/' % (box_num)
+        save_urdf_path = DATAROOT + '/box_urdf/num_%d/' % (object_num)
         os.makedirs(save_urdf_path, exist_ok=True)
 
         new_data = []
@@ -533,7 +496,7 @@ if __name__ == '__main__':
         # for j in [ 81434, 100777,  88176, 148385,  9905,  23617,  95448, 103549, 113927,  17746]:
         # for j in [88176,  9905,  81434]:
         for j in range(len(data)):
-            env.get_parameters(box_num=box_num)
+            env.get_parameters(box_num=object_num)
             print(f'this is data {j}')
             one_img_data = data[j].reshape(-1, info_per_object)
             # one_img_index_flag = index_flag[j].reshape(2, -1)
