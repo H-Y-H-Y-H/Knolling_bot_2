@@ -4,13 +4,14 @@ import os
 from model_structure import *
 import wandb
 
+DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
+
 
 def main():
     if sweep_train_flag == True:
         wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     else:
         wandb.init(project='knolling_sundry')
-        DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
     config = wandb.config
     running_name = wandb.run.name
 
@@ -21,7 +22,7 @@ def main():
     config.dropout_prob = 0.0
     config.max_seq_length = 10
     if sweep_train_flag == False:
-        config.lr = 1e-4
+        config.lr = 1e-3
     config.batch_size = 512
     config.log_pth = 'data/%s/' % running_name
     config.pos_encoding_Flag = True
@@ -30,7 +31,6 @@ def main():
     config.pre_trained = True
     config.high_dim_encoder = True
     config.all_steps = False
-    config.object_num = -1
     config.canvas_factor = None
     config.use_overlap_loss = False
     config.patience = 20
@@ -52,15 +52,12 @@ def main():
             config.forward_expansion = read_data['forward_expansion']
             config.forwardtype = read_data['forwardtype']
             config.high_dim_encoder = read_data['high_dim_encoder']
-            # config.log_pth = read_data['log_pth']
-            config.lr = read_data['lr']
             config.map_embed_d_dim = read_data['map_embed_d_dim']
             config.max_seq_length = read_data['max_seq_length']
             config.num_attention_heads = read_data['num_attention_heads']
             # config.model_params = read_data['model_params']
             # config.num_data = read_data['num_data']
             config.num_layers = read_data['num_layers']
-            config.object_num = read_data['object_num']
             config.pos_encoding_Flag = read_data['pos_encoding_Flag']
         PATH = 'data/%s/best_model.pt' % pre_name
         checkpoint = torch.load(PATH, map_location=device)
@@ -104,8 +101,8 @@ def main():
 
     config.DATA_CUT = 100000
 
-    policy_num = 4
-    configuration_num = 3
+    policy_num = 1#4
+    configuration_num = 1#3
     config.solu_num = int(policy_num * configuration_num)
     info_per_object = 7
     for f in range(config.solu_num):
@@ -201,7 +198,6 @@ def main():
             # Forward pass
             # object number > masked number
             output_batch = model(input_batch,
-                                 # obj_num=object_num,
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss

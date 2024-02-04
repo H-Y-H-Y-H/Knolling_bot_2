@@ -179,12 +179,12 @@ if __name__ == '__main__':
     api = wandb.Api()
     # Project is specified by <entity/project-name>
 
-    DATAROOT = "../../../knolling_dataset/learning_data_0126/"
+    DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
     if test_sweep_flag == False:
         runs = api.runs("knolling_sundry")
         # name = 'charmed-sweep-1'
-        name = 'legendary-galaxy-31'
+        name = 'iconic-plant-8'
         # name = 'floral-bush-179'
     else:
         sweep = api.sweep('knolling_tuning/qtgswbjw')
@@ -242,54 +242,54 @@ if __name__ == '__main__':
     file_num = 10
     test_num_scenario = 1000
     NUM_objects = config.max_seq_length
-    solu_num = 12
+    solu_num = 1#12
     info_per_object = 7
     for s in range(solu_num):
         print('load data:', NUM_objects)
 
-        if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
-            raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
+        # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
+        raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
 
-            raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
-            total_raw_data = np.append(total_raw_data, raw_data)
-            test_data = raw_data * SCALE_DATA + SHIFT_DATA
-            valid_lw = []
-            valid_pos = []
-            valid_cls = []
-            for i in range(NUM_objects):
-                valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
-                valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
-                valid_cls.append(test_data[:, [i * info_per_object + 5]])
+        raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        total_raw_data = np.append(total_raw_data, raw_data)
+        test_data = raw_data * SCALE_DATA + SHIFT_DATA
+        valid_lw = []
+        valid_pos = []
+        valid_cls = []
+        for i in range(NUM_objects):
+            valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
+            valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
+            valid_cls.append(test_data[:, [i * info_per_object + 5]])
 
-            valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
-            valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
-            valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
+        valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+        valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
+        valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
-            valid_lw_data += list(valid_lw)
-            valid_pos_data += list(valid_pos)
-            valid_cls_data += list(valid_cls)
+        valid_lw_data += list(valid_lw)
+        valid_pos_data += list(valid_pos)
+        valid_cls_data += list(valid_cls)
         # else:
-        if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
-            raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
-
-            raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
-            total_raw_data = np.append(total_raw_data, raw_data)
-            test_data = raw_data * SCALE_DATA + SHIFT_DATA
-            valid_lw = []
-            valid_pos = []
-            valid_cls = []
-            for i in range(NUM_objects):
-                valid_lw.append(test_data[:, i * 6 + 2:i * 6 + 4])
-                valid_pos.append(test_data[:, i * 6:i * 6 + 2])
-                valid_cls.append(test_data[:, [i * 6 + 5]])
-
-            valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
-            valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
-            valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
-
-            valid_lw_data += list(valid_lw)
-            valid_pos_data += list(valid_pos)
-            valid_cls_data += list(valid_cls)
+        # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
+        #     raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
+        #
+        #     raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        #     total_raw_data = np.append(total_raw_data, raw_data)
+        #     test_data = raw_data * SCALE_DATA + SHIFT_DATA
+        #     valid_lw = []
+        #     valid_pos = []
+        #     valid_cls = []
+        #     for i in range(NUM_objects):
+        #         valid_lw.append(test_data[:, i * 6 + 2:i * 6 + 4])
+        #         valid_pos.append(test_data[:, i * 6:i * 6 + 2])
+        #         valid_cls.append(test_data[:, [i * 6 + 5]])
+        #
+        #     valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+        #     valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
+        #     valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
+        #
+        #     valid_lw_data += list(valid_lw)
+        #     valid_pos_data += list(valid_pos)
+        #     valid_cls_data += list(valid_cls)
 
     test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.max_seq_length)
     test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.max_seq_length)
@@ -331,10 +331,10 @@ if __name__ == '__main__':
         raw_data = total_raw_data.reshape(test_num_scenario * solu_num, -1)
         outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
 
-        if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
-            for i in range(NUM_objects):
-                raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
-                raw_data[:, i * 6 + 6] = 0
+        # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
+        #     for i in range(NUM_objects):
+        #         raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
+        #         raw_data[:, i * 6 + 6] = 0
         if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
             for i in range(NUM_objects):
                 raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]

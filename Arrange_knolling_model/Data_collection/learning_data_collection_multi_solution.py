@@ -24,6 +24,7 @@ class Arm:
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
+        self.obj_urdf = '../../../knolling_dataset/'
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
         if self.is_render:
@@ -185,7 +186,7 @@ class Arm:
             image[:, :, 2] = temp
             return image
 
-    def label2image(self, labels_data, img_index, save_urdf_path, labels_name=None):
+    def label2image(self, labels_data, labels_name=None):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
 
@@ -239,34 +240,35 @@ class Arm:
                          angularDamping=0.5)
 
         ################### recover urdf boxes based on lw_data ###################
-        if self.arrange_policy['object_type'] == 'box':
-            temp_box = URDF.load('../../ASSET/urdf/box_generator/template.urdf')
-            save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
-            os.makedirs(save_urdf_path_one_img, exist_ok=True)
-            for i in range(len(lw_data)):
-                temp_box.links[0].collisions[0].origin[2, 3] = 0
-                length = lw_data[i, 0]
-                width = lw_data[i, 1]
-                height = 0.012
-                temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
-                temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
-                temp_box.links[0].visuals[0].material.color = mapped_color_values[i]
-                temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
+        # if self.arrange_policy['object_type'] == 'box':
+        #     temp_box = URDF.load('../../ASSET/urdf/box_generator/template.urdf')
+        #     save_urdf_path_one_img = save_urdf_path + 'img_%d/' % img_index
+        #     os.makedirs(save_urdf_path_one_img, exist_ok=True)
+        #     for i in range(len(lw_data)):
+        #         temp_box.links[0].collisions[0].origin[2, 3] = 0
+        #         length = lw_data[i, 0]
+        #         width = lw_data[i, 1]
+        #         height = 0.012
+        #         temp_box.links[0].visuals[0].geometry.box.size = [length, width, height]
+        #         temp_box.links[0].collisions[0].geometry.box.size = [length, width, height]
+        #         temp_box.links[0].visuals[0].material.color = mapped_color_values[i]
+        #         temp_box.save(save_urdf_path_one_img + 'box_%d.urdf' % (i))
+        #
+        #     object_idx = []
+        #     print('position\n', pos_data)
+        #     print('orietation\n', ori_data)
+        #     print('lwh\n', lw_data)
+        #     for i in range(len(lw_data)):
+        #         print(f'this is matching urdf{i}')
+        #         pos_data[i, 2] += 0.006
+        #         object_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
+        #                        basePosition=pos_data[i],
+        #                        baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+        #                        flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
 
-            object_idx = []
-            print('position\n', pos_data)
-            print('orietation\n', ori_data)
-            print('lwh\n', lw_data)
-            for i in range(len(lw_data)):
-                print(f'this is matching urdf{i}')
-                pos_data[i, 2] += 0.006
-                object_idx.append(p.loadURDF(save_urdf_path_one_img + 'box_%d.urdf' % (i),
-                               basePosition=pos_data[i],
-                               baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-                               flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-        elif self.arrange_policy['object_type'] == 'sundry':
+        if self.arrange_policy['object_type'] == 'sundry':
 
-            urdf_path_one_img = self.urdf_path + 'OpensCAD_generate/urdf_file/'
+            urdf_path_one_img = self.obj_urdf + 'OpensCAD_generate/urdf_file/'
             object_idx = []
             print('position\n', pos_data)
             print('lwh\n', lw_data)
@@ -275,7 +277,7 @@ class Arm:
                 print(f'this is matching urdf{i}')
                 object_name = labels_name[i].split('_')[0]
                 object_index = labels_name[i].split('_')[1]
-                csv_path = (self.urdf_path + 'OpensCAD_generate/generated_stl/' + object_name + '/' +
+                csv_path = (self.obj_urdf + 'OpensCAD_generate/generated_stl/' + object_name + '/' +
                             object_name + '_' + object_index + '/' + labels_name[i] + '/' + labels_name[i] + '.csv')
                 csv_lwh = np.asarray(eval(pandas.read_csv(csv_path).loc[0, 'BoundingBoxDimensions (cm)'])) * 0.001
                 pos_data[i, 2] = csv_lwh[2] / 2
@@ -286,7 +288,7 @@ class Arm:
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-                p.changeVisualShape(object_idx[i], -1, rgbaColor=mapped_color_values[i] + [1])
+                p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
         ################### recover urdf boxes based on lw_data ###################
 
@@ -339,7 +341,8 @@ if __name__ == '__main__':
 
     command = 'recover'
     before_after = 'after'
-
+    obj_num = 10
+    SHIFT_DATASET_ID = 3
     # np.random.seed(100)
 
     start_evaluations = 450000
@@ -347,13 +350,13 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = '../../../knolling_dataset/learning_data_0126_6/'
+    target_path = f'../../../knolling_dataset/learning_data_0126_{obj_num}/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
-                    'object_num': 6, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
+                    'object_num': obj_num, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
                     'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
@@ -367,7 +370,7 @@ if __name__ == '__main__':
                      [False, True, False, False],
                      [False, False, True, False],
                      [False, False, False, True]]
-    solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
+    solution_num =1 #int(arrange_policy['output_per_cfg'] * len(policy_switch))
 
     if command == 'recover':
 
@@ -379,7 +382,7 @@ if __name__ == '__main__':
         names = locals()
         # data_before = []
         save_urdf_path = []
-        for m in range(solution_num):
+        for m in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID + solution_num):
             print('load data')
             names['data_' + str(m)] = np.loadtxt(target_path + 'num_%d_after_%d.txt' % (arrange_policy['object_num'], m))
             if arrange_policy['object_type'] == 'sundry':
@@ -390,16 +393,14 @@ if __name__ == '__main__':
 
             box_num = arrange_policy['object_num']
             print('this is len data', len(names['data_' + str(m)]))
-            save_urdf_path.append(target_path + 'box_urdf/num_%s_%d/' % (m, box_num))
-            os.makedirs(save_urdf_path[m], exist_ok=True)
 
         for j in range(start_evaluations, end_evaluations):
             # env.get_parameters(box_num=boxes_num)
-            for m in range(solution_num):
+            for m in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+solution_num):
                 print(f'this is data {j}')
                 one_img_data = names['data_' + str(m)][j].reshape(-1, 7)
 
-                image = env.label2image(names['data_' + str(m)][j], j, save_urdf_path[m], labels_name=names['name_' + str(m)][j])
+                image = env.label2image(names['data_' + str(m)][j], labels_name=names['name_' + str(m)][j])
                 image = image[..., :3]
 
                 cv2.namedWindow('zzz', 0)

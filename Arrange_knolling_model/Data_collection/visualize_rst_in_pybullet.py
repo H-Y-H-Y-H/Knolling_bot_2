@@ -280,7 +280,7 @@ class Arm:
             pos_data[i, 2] += 0.006
             obj_name.append(f'object_{i}')
             create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
-            p.changeVisualShape(obj_name[i], -1, rgbaColor=mapped_color_values[i] + [1])
+            p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
         ################### recover urdf boxes based on lw_data ###################
 
@@ -438,7 +438,7 @@ if __name__ == '__main__':
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 
-    object_num = 6
+    object_num = 10
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
     # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
     DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % object_num
@@ -451,9 +451,9 @@ if __name__ == '__main__':
 
     # name = "devoted-terraqin-29"
     # name = "classic-bush-95"
-    name = 'dandy-hill-142'
-    name = 'devoted-terrain-29'
-    name = 'rosy-morning-8'
+    # name = 'dandy-hill-142'
+    # name = 'devoted-terrain-29'
+    name = 'iconic-plant-8'
     # name = 'fallen-morning-156'
     # name = "radiant-puddle-143"
 
