@@ -126,49 +126,47 @@ class Yolo_seg_model():
 
         if real_flag == True:
             model = self.para_dict['yolo_model_path']
-            pipeline = rs.pipeline()
-            config = rs.config()
+            # pipeline = rs.pipeline()
+            # config = rs.config()
+            #
+            # # Get device product line for setting a supporting resolution
+            # pipeline_wrapper = rs.pipeline_wrapper(pipeline)
+            # pipeline_profile = config.resolve(pipeline_wrapper)
+            # device = pipeline_profile.get_device()
+            # device_product_line = str(device.get_info(rs.camera_info.product_line))
+            #
+            # found_rgb = False
+            # for s in device.sensors:
+            #     if s.get_info(rs.camera_info.name) == 'RGB Camera':
+            #         found_rgb = True
+            #         break
+            # if not found_rgb:
+            #     print("The demo requires Depth camera with Color sensor")
+            #     exit(0)
+            #
+            # # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+            # config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+            # # config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 6)
+            # # Start streaming
+            # pipeline.start(config)
+            #
+            # mean_floor = (160, 160, 160)
+            # origin_point = np.array([0, -0.20])
 
-            # Get device product line for setting a supporting resolution
-            pipeline_wrapper = rs.pipeline_wrapper(pipeline)
-            pipeline_profile = config.resolve(pipeline_wrapper)
-            device = pipeline_profile.get_device()
-            device_product_line = str(device.get_info(rs.camera_info.product_line))
-
-            found_rgb = False
-            for s in device.sensors:
-                if s.get_info(rs.camera_info.name) == 'RGB Camera':
-                    found_rgb = True
-                    break
-            if not found_rgb:
-                print("The demo requires Depth camera with Color sensor")
-                exit(0)
-
-            # config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-            config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-            # config.enable_stream(rs.stream.color, 1280, 720, rs.format.bgr8, 6)
-            # Start streaming
-            pipeline.start(config)
-
-            mean_floor = (160, 160, 160)
-            origin_point = np.array([0, -0.20])
+            cap = cv2.VideoCapture(8)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # set the resolution width
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 
             total_pred_result = []
             while True:
                 # Wait for a coherent pair of frames: depth and color
-                frames = pipeline.wait_for_frames()
-                color_frame = frames.get_color_frame()
-                color_image = np.asanyarray(color_frame.get_data())
-                color_colormap_dim = color_image.shape
-                resized_color_image = color_image
-
-                cv2.imwrite(img_path + '.png', resized_color_image)
-                img_path_input = img_path + '.png'
-                args = dict(model=model, source=img_path_input, conf=0.3, iou=0.8)
+                ret, resized_color_image = cap.read()
+                args = dict(model=model, source=resized_color_image, conf=0.3, iou=0.8)
                 from ultralytics import YOLO
                 images = YOLO(model)(**args)
 
-                origin_img = cv2.imread(img_path_input)
+                origin_img = cv2.imread(resized_color_image)
                 use_xylw = False  # use lw or keypoints to export length and width
                 one_img = images[0]
 

@@ -256,7 +256,7 @@ class Arm:
             lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, -0.2, 0], useFixedBase=1,
+        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, 0, 0], useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
         # self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm_fixed.urdf",
         #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
@@ -265,11 +265,6 @@ class Arm:
         textureId = p.loadTexture(self.urdf_path + "floor_1.png")
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
-        # p.changeDynamics(self.arm_id, 7, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
-        # p.changeDynamics(self.arm_id, 8, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
-        # p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
-        #                     rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1),
-        #                                1])
         p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
                             rgbaColor=[0.9, 0.9,0.9,1])
 
@@ -401,7 +396,7 @@ class Arm:
             lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, -0.2, 0], useFixedBase=1,
+        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, 0, 0], useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
         # self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm_fixed.urdf",
         #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,

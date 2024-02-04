@@ -5,7 +5,6 @@ import cv2
 import numpy as np
 
 from utils import *
-# import pyrealsense2 as rs
 from ASSET.grasp_model_deploy import *
 
 

@@ -1,3 +1,4 @@
+import yaml
 from datetime import datetime
 import os
 from model_structure import *
@@ -9,7 +10,7 @@ def main():
         wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     else:
         wandb.init(project='knolling_sundry')
-        DATAROOT = "../../../knolling_dataset/learning_data_0126_6/"
+        DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
     config = wandb.config
     running_name = wandb.run.name
 
@@ -18,7 +19,7 @@ def main():
     config.num_attention_heads = 4
     config.num_layers = 4
     config.dropout_prob = 0.0
-    config.max_seq_length = 6
+    config.max_seq_length = 10
     if sweep_train_flag == False:
         config.lr = 1e-4
     config.batch_size = 512
@@ -26,17 +27,43 @@ def main():
     config.pos_encoding_Flag = True
     config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
     config.forward_expansion = 4
-    config.pre_trained = False
+    config.pre_trained = True
     config.high_dim_encoder = True
     config.all_steps = False
     config.object_num = -1
     config.canvas_factor = None
     config.use_overlap_loss = False
     config.patience = 20
-    config.num_gaussian = 5
+    config.num_gaussian = 3
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
+
+    if config.pre_trained:
+        pre_name = 'devoted-terrain-29'
+        if pre_name == 'devoted-terrain-29':
+            with open('data/%s/config-%s.yaml' % (pre_name, pre_name)) as f:
+                read_data = yaml.safe_load(f)
+
+            config.all_zero_target = read_data['all_zero_target']
+            # config.all_steps = read_data['all_steps']
+            config.batch_size = read_data['batch_size']
+            config.dropout_prob = read_data['dropout_prob']
+            config.forward_expansion = read_data['forward_expansion']
+            config.forwardtype = read_data['forwardtype']
+            config.high_dim_encoder = read_data['high_dim_encoder']
+            # config.log_pth = read_data['log_pth']
+            config.lr = read_data['lr']
+            config.map_embed_d_dim = read_data['map_embed_d_dim']
+            config.max_seq_length = read_data['max_seq_length']
+            config.num_attention_heads = read_data['num_attention_heads']
+            # config.model_params = read_data['model_params']
+            # config.num_data = read_data['num_data']
+            config.num_layers = read_data['num_layers']
+            config.object_num = read_data['object_num']
+            config.pos_encoding_Flag = read_data['pos_encoding_Flag']
+        PATH = 'data/%s/best_model.pt' % pre_name
+        checkpoint = torch.load(PATH, map_location=device)
 
     model = Knolling_Transformer(
         input_length=config.max_seq_length,
@@ -59,14 +86,11 @@ def main():
         overlap_loss_factor=None # 1
     )
 
+    if config.pre_trained:
+        model.load_state_dict(checkpoint)
+
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
-
-    if config.pre_trained:
-        pre_name = 'rosy-morning-8'
-        PATH = 'data/%s/best_model.pt' % pre_name
-        checkpoint = torch.load(PATH, map_location=device)
-        model.load_state_dict(checkpoint)
 
     # load dataset
     train_input_data = []
@@ -78,7 +102,7 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 200000
+    config.DATA_CUT = 100000
 
     policy_num = 4
     configuration_num = 3

@@ -200,14 +200,17 @@ class Arm:
         # ori_data = labels_data[:, 3:6]
         ori_data = np.zeros((len(lw_data), 3))
         color_index = labels_data[:, -1]
-        color_dict = {'0': [0, 0, 0, 1], '1': [255, 255, 255, 1], '2': [255, 0, 0, 1], '3': [0, 255, 0, 1], '4': [0, 0, 255, 1]}
         class_index = labels_data[:, -2]
 
         # Converting dictionary keys to integers
-        dict_map = {int(k): v for k, v in color_dict.items()}
+        dict_map = {i: v for i, (k, v) in enumerate(color_dict.items())}
 
         # Mapping array values to dictionary values
-        mapped_color_values = [dict_map[value] for value in color_index]
+        rdm_color_index = np.random.choice(10, len(color_index))
+        mapped_color_values = []
+        for i in range(len(color_index)):
+            mapped_color_values.append(dict_map[color_index[i]][rdm_color_index[i]])
+        # mapped_color_values = [dict_map[value] for value in color_index]
 
         p.resetSimulation()
         p.setGravity(0, 0, -9.8)
@@ -226,19 +229,14 @@ class Arm:
             lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", basePosition=[0, -0.2, 0], useFixedBase=1,
+        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-        # self.arm_id = p.loadURDF(self.urdf_path + "robot_arm928/robot_arm_fixed.urdf",
-        #                          basePosition=[-0.08, 0, 0.02], useFixedBase=True,
-        #                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         textureId = p.loadTexture(self.urdf_path + "floor_1.png")
-        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
-                         angularDamping=0.5)
-        # p.changeDynamics(self.arm_id, 7, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
-        # p.changeDynamics(self.arm_id, 8, lateralFriction=1, spinningFriction=1, rollingFriction=0, linearDamping=0, angularDamping=0)
         p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
                             rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), 1])
+        p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
+                         angularDamping=0.5)
 
         ################### recover urdf boxes based on lw_data ###################
         if self.arrange_policy['object_type'] == 'box':
@@ -269,22 +267,27 @@ class Arm:
         elif self.arrange_policy['object_type'] == 'sundry':
 
             urdf_path_one_img = self.urdf_path + 'OpensCAD_generate/urdf_file/'
-
             object_idx = []
-            # ori_data[:, 0] += np.pi / 2
             print('position\n', pos_data)
             print('lwh\n', lw_data)
             for i in range(obj_num):
+
                 print(f'this is matching urdf{i}')
-                pos_data[i, 2] += 0.026
+                object_name = labels_name[i].split('_')[0]
+                object_index = labels_name[i].split('_')[1]
+                csv_path = (self.urdf_path + 'OpensCAD_generate/generated_stl/' + object_name + '/' +
+                            object_name + '_' + object_index + '/' + labels_name[i] + '/' + labels_name[i] + '.csv')
+                csv_lwh = np.asarray(eval(pandas.read_csv(csv_path).loc[0, 'BoundingBoxDimensions (cm)'])) * 0.001
+                pos_data[i, 2] = csv_lwh[2] / 2
+
                 if lw_data[i, 0] < lw_data[i, 1]:
                     ori_data[i, 2] += np.pi / 2
-                # labels_name[i] = 'utilityknife_1_L0.65_T0.65'
                 object_idx.append(p.loadURDF(urdf_path_one_img + labels_name[i] + '.urdf',
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-                p.changeVisualShape(object_idx[i], -1, rgbaColor=mapped_color_values[i])
+                p.changeVisualShape(object_idx[i], -1, rgbaColor=mapped_color_values[i] + [1])
+
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
@@ -344,13 +347,13 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = '../../../knolling_dataset/learning_data_0126_10/'
+    target_path = '../../../knolling_dataset/learning_data_0126_6/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
-                    'object_num': 10, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
+                    'object_num': 6, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
                     'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
@@ -370,7 +373,8 @@ if __name__ == '__main__':
 
         env = Arm(is_render=True, arrange_policy=arrange_policy)
 
-        # data = np.loadtxt(target_path + 'labels_%s/num_%d.txt' % (before_after, i))
+        with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
+            color_dict = json.load(f)
 
         names = locals()
         # data_before = []
@@ -389,8 +393,6 @@ if __name__ == '__main__':
             save_urdf_path.append(target_path + 'box_urdf/num_%s_%d/' % (m, box_num))
             os.makedirs(save_urdf_path[m], exist_ok=True)
 
-        # new_data = []
-        # new_index_flag = []
         for j in range(start_evaluations, end_evaluations):
             # env.get_parameters(box_num=boxes_num)
             for m in range(solution_num):
