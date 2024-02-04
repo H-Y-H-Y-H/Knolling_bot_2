@@ -9,7 +9,7 @@ def main():
         wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     else:
         wandb.init(project='knolling_sundry')
-        DATAROOT = "../../../knolling_dataset/learning_data_0126/"
+        DATAROOT = "../../../knolling_dataset/learning_data_0126_6/"
     config = wandb.config
     running_name = wandb.run.name
 
@@ -18,7 +18,7 @@ def main():
     config.num_attention_heads = 4
     config.num_layers = 4
     config.dropout_prob = 0.0
-    config.max_seq_length = 10
+    config.max_seq_length = 6
     if sweep_train_flag == False:
         config.lr = 1e-4
     config.batch_size = 512
@@ -26,7 +26,7 @@ def main():
     config.pos_encoding_Flag = True
     config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
     config.forward_expansion = 4
-    config.pre_trained = True
+    config.pre_trained = False
     config.high_dim_encoder = True
     config.all_steps = False
     config.object_num = -1
@@ -78,15 +78,14 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 10000
+    config.DATA_CUT = 200000
 
     policy_num = 4
     configuration_num = 3
     config.solu_num = int(policy_num * configuration_num)
-    object_num = 10
     info_per_object = 7
     for f in range(config.solu_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (object_num, f)
+        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (config.max_seq_length, f)
         print('load data:', dataset_path)
         raw_data = np.loadtxt(dataset_path)[:config.DATA_CUT, :config.max_seq_length * info_per_object]
         # num_list = np.random.choice(np.arange(4, 11), len(raw_data))

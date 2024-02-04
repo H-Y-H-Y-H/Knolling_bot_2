@@ -4,7 +4,7 @@ from tqdm import tqdm
 configuration = [[2, 1],
                  [1, 2],
                  [1, 1]]
-num = 8
+num = 10
 
 start_evaluations = 0
 end_evaluations =   500000
@@ -18,7 +18,7 @@ def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
     info_per_object = 7
     for m in tqdm(range(solution_num)):
 
-        target_path = '../../../knolling_dataset/learning_data_0126_8/'
+        target_path = '../../../knolling_dataset/learning_data_0126/'
         after_path = target_path + 'labels_after_%s/' % m
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
         output_name_path = target_path + 'num_%d_after_name_%d.txt' % (num, m)
@@ -81,7 +81,7 @@ def tuning():
     num_object_per_scenario = 10
     info_per_object = 8
 
-    for m in tqdm(range(1)):
+    for m in tqdm(range(12)):
 
         target_path = '../../../knolling_dataset/learning_data_0126/'
         output_path = target_path + 'num_%d_after_%d.txt' % (num, m)
@@ -115,9 +115,9 @@ def manual_padding():
         np.savetxt(output_path, raw_data)
         np.savetxt(output_name_path, raw_name, fmt='%s')
 
-merge()
+# merge()
 # manual_padding()
-# tuning()
+tuning()
 # merge_test()
 # add()
 # add_noise()
