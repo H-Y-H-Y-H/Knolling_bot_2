@@ -233,7 +233,7 @@ if __name__ == '__main__':
     valid_cls_data = []
     total_raw_data = []
 
-
+    SHOW_GT = False
     # load the test dataset
     file_num = 10
     test_num_scenario = 1000
@@ -328,13 +328,9 @@ if __name__ == '__main__':
         raw_data = total_raw_data.reshape(test_num_scenario * solu_num, -1)
         outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
 
-        # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
-        #     for i in range(NUM_objects):
-        #         raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
-        #         raw_data[:, i * 6 + 6] = 0
-        # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
-        for i in range(NUM_objects):
-            raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
+        if not SHOW_GT:
+            for i in range(NUM_objects):
+                raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
 
         # evaluate_success_rate(raw_data, NUM_objects, config, test_sweep_flag=test_sweep_flag)
         log_folder = './results/%s/pred_after' % (name)

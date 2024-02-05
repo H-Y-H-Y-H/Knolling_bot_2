@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 SHIFT_DATA = 100
 SCALE_DATA = 100
@@ -240,6 +240,41 @@ class ProximityAwareLoss(nn.Module):
         total_loss = primary_loss + proximity_penalty
         return total_loss
 
+def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=1):
+    # Calculate half dimensions for easier overlap checking
+    half_sizes = obj_length_width / 2.0
+
+    # Expand dimensions to calculate pairwise differences between all objects
+    pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+    half_sizes_expanded = half_sizes.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+
+    # Compute differences in positions and sum of half sizes for all pairs
+    pos_diff = torch.abs(pred_pos_expanded - pred_pos_expanded.transpose(1, 2))  # Shape: [Batchsize, 10, 10, 2]
+    size_sum = half_sizes_expanded + half_sizes_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
+
+    # Calculate overlap in each dimension
+    overlap = size_sum - pos_diff  # Shape: [Batchsize, 10, 10, 2]
+    overlap = torch.clamp(overlap, min=0)  # Remove negative values, no overlap
+
+    # Calculate area of overlap for each pair of objects
+    overlap_indicator = (overlap[...,0]>0)&(overlap[...,1]>0)
+    overlap_area = overlap[..., 0] * overlap[..., 1] *overlap_indicator.float() # Shape: [Batchsize, 10, 10]
+
+    # Multiply overlap area by 10 to heavily penalize collisions
+    overlap_area *= overlap_loss_weight
+
+    batch_size, num_objects, _ = pred_pos.shape
+    collision_mask = ~torch.eye(num_objects, dtype=torch.bool,device=device).unsqueeze(0).repeat(batch_size, 1, 1)
+    overlap_area *= collision_mask
+
+    # Calculate collision loss as the sum of all overlap areas
+    collision_loss = overlap_area.sum(dim=[1, 2]).float()  # Sum over all pairs
+
+    # Optionally, normalize the collision loss by the number of pairs to stabilize training
+    num_pairs = num_objects * (num_objects - 1) / 2
+    collision_loss = collision_loss / num_pairs
+
+    return collision_loss
 
 class Knolling_Transformer(nn.Module):
     def __init__(
@@ -426,7 +461,7 @@ class Knolling_Transformer(nn.Module):
 
         pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-        overlap_loss = self.calculate_collision_loss(pred_pos_raw,obj_length_width).mean()
+        overlap_loss = calculate_collision_loss(pred_pos_raw,obj_length_width,self.overlap_loss_weight).mean()
         total_loss = MSE_loss + overlap_loss
 
         # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
@@ -443,40 +478,7 @@ class Knolling_Transformer(nn.Module):
         return mse_loss
 
 
-    def calculate_collision_loss(self, pred_pos, obj_length_width):
-        # Calculate half dimensions for easier overlap checking
-        half_sizes = obj_length_width / 2.0
 
-        # Expand dimensions to calculate pairwise differences between all objects
-        pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
-        half_sizes_expanded = half_sizes.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
-
-        # Compute differences in positions and sum of half sizes for all pairs
-        pos_diff = pred_pos_expanded - pred_pos_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
-        size_sum = half_sizes_expanded + half_sizes_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
-
-        # Calculate overlap in each dimension
-        overlap = size_sum - pos_diff  # Shape: [Batchsize, 10, 10, 2]
-        overlap = torch.clamp(overlap, min=0)  # Remove negative values, no overlap
-
-        # Calculate area of overlap for each pair of objects
-        overlap_area = overlap[..., 0] * overlap[..., 1]  # Shape: [Batchsize, 10, 10]
-
-        # Multiply overlap area by 10 to heavily penalize collisions
-        overlap_area *= self.overlap_loss_weight
-
-        batch_size, num_objects, _ = pred_pos.shape
-        collision_mask = ~torch.eye(num_objects, dtype=torch.bool,device=device).unsqueeze(0).repeat(batch_size, 1, 1)
-        overlap_area *= collision_mask
-
-        # Calculate collision loss as the sum of all overlap areas
-        collision_loss = overlap_area.sum(dim=[1, 2]).float()  # Sum over all pairs
-
-        # Optionally, normalize the collision loss by the number of pairs to stabilize training
-        num_pairs = num_objects * (num_objects - 1) / 2
-        collision_loss = collision_loss / num_pairs
-
-        return collision_loss
 
 
 
