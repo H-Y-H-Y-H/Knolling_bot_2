@@ -11,7 +11,8 @@ import cv2
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
-
+SHIFT_DATA = 100
+SCALE_DATA = 100
 # input min&max: [0.016, 0.048]
 # label min&max: [-0.14599999962002042, 0.294500007390976]
 # input_min,input_max = 0.016,0.048
@@ -261,7 +262,7 @@ class Knolling_Transformer(nn.Module):
             canvas_factor=1,
             use_overlap_loss=True,
             mse_loss_factor=1,
-            overlap_loss_factor=1
+            overlap_loss_factor=10
     ):
 
         super(Knolling_Transformer, self).__init__()
@@ -279,7 +280,7 @@ class Knolling_Transformer(nn.Module):
         self.min_overlap_num = np.inf
         self.use_overlap_loss = use_overlap_loss
         self.mse_loss_factor = mse_loss_factor
-        self.overlap_loss_factor = overlap_loss_factor
+        self.overlap_loss_weight = overlap_loss_factor
 
         self.max_obj_num = max_obj_num# maximun 10
         self.num_gaussians = num_gaussians
@@ -414,20 +415,24 @@ class Knolling_Transformer(nn.Module):
             out = torch.cat(outputs, dim=0)
             return out
 
-    def calculate_loss(self, pred_pos, tar_pos, tar_lw):
+    def calculate_loss(self, pred_pos, tar_pos, obj_length_width):
 
         MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
 
-        # tar_lw_raw = ((tar_lw - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        # tar_pos_raw = ((tar_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        # pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        # The length and width of objects:
+        obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-        total_loss = MSE_loss
+        # The predicted position of objects:
+
+        pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+
+        overlap_loss = self.calculate_collision_loss(pred_pos_raw,obj_length_width).mean()
+        total_loss = MSE_loss + overlap_loss
 
         # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
         # total_loss = MSE_loss + scaled_overlap_loss
 
-        return total_loss
+        return total_loss, overlap_loss
 
     def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100):
 
@@ -436,6 +441,44 @@ class Knolling_Transformer(nn.Module):
         mse_loss = mse_loss.sum() / mask.sum()
 
         return mse_loss
+
+
+    def calculate_collision_loss(self, pred_pos, obj_length_width):
+        # Calculate half dimensions for easier overlap checking
+        half_sizes = obj_length_width / 2.0
+
+        # Expand dimensions to calculate pairwise differences between all objects
+        pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+        half_sizes_expanded = half_sizes.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+
+        # Compute differences in positions and sum of half sizes for all pairs
+        pos_diff = pred_pos_expanded - pred_pos_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
+        size_sum = half_sizes_expanded + half_sizes_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
+
+        # Calculate overlap in each dimension
+        overlap = size_sum - pos_diff  # Shape: [Batchsize, 10, 10, 2]
+        overlap = torch.clamp(overlap, min=0)  # Remove negative values, no overlap
+
+        # Calculate area of overlap for each pair of objects
+        overlap_area = overlap[..., 0] * overlap[..., 1]  # Shape: [Batchsize, 10, 10]
+
+        # Multiply overlap area by 10 to heavily penalize collisions
+        overlap_area *= self.overlap_loss_weight
+
+        batch_size, num_objects, _ = pred_pos.shape
+        collision_mask = ~torch.eye(num_objects, dtype=torch.bool,device=device).unsqueeze(0).repeat(batch_size, 1, 1)
+        overlap_area *= collision_mask
+
+        # Calculate collision loss as the sum of all overlap areas
+        collision_loss = overlap_area.sum(dim=[1, 2]).float()  # Sum over all pairs
+
+        # Optionally, normalize the collision loss by the number of pairs to stabilize training
+        num_pairs = num_objects * (num_objects - 1) / 2
+        collision_loss = collision_loss / num_pairs
+
+        return collision_loss
+
+
 
     def calculate_distance_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
 
