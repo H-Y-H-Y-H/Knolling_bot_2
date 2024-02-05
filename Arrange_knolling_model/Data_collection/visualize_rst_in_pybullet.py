@@ -9,7 +9,9 @@ import os
 import cv2
 # from cam_obs_yolov8 import *
 import torch
-
+import sys
+sys.path.append('../train_and_test')
+from model_structure import *
 # from urdfpy import URDF
 
 from Arrange_knolling_model.Data_collection.arrange_policy import configuration_zzz
@@ -438,7 +440,7 @@ if __name__ == '__main__':
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 
-    object_num = 3
+    object_num = 10
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
     # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
     DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % (10)
@@ -449,11 +451,7 @@ if __name__ == '__main__':
     os.makedirs(images_log_path, exist_ok=True)
     os.makedirs(preprocess_label_path, exist_ok=True)
 
-
-
-    name = 'giddy-sun-26'
-
-
+    name = 'bright-sweep-13'
 
     show_baseline = 0
     show_results_flag = True
@@ -512,6 +510,12 @@ if __name__ == '__main__':
             cv2.resizeWindow('zzz', 1280, 960)
             cv2.imshow("zzz", image)
             print('This is the data: \n', data[j])
+            data_reshape = data[j].reshape(-1, 7)
+            pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
+            length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
+
+            collision_loss = calculate_collision_loss(pred_pos, length_width)
+            print(collision_loss)
 
             cv2.waitKey()
             cv2.destroyAllWindows()

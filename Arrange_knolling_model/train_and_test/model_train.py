@@ -12,24 +12,26 @@ def main():
     #     wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     # else:
 
-    wandb.init(project='knolling0204')
+    wandb.init(project=proj_name)
     config = wandb.config
     running_name = wandb.run.name
 
     if not sweep_train_flag:
         config.map_embed_d_dim = 32
-        config.num_attention_heads = 4
+        config.num_attention_heads = 16
         config.num_layers = 10
         config.lr = 1e-3
-        config.num_gaussian = 16
+        config.num_gaussian = 32
         config.SCALE_DATA = 100
         config.SHIFT_DATA = 100
+        config.overlap_loss_factor = 10000
+        config.batch_size = 128
 
     SCALE_DATA = config.SCALE_DATA
     SHIFT_DATA = config.SHIFT_DATA
     config.forwardtype = 1
     config.dropout_prob = 0.0
-    config.max_seq_length = 6
+    config.max_seq_length = 3
     config.inputouput_size = 10
     config.log_pth = 'data/%s/' % running_name
     config.pos_encoding_Flag = True
@@ -39,20 +41,30 @@ def main():
     config.high_dim_encoder = True
     config.all_steps = False
     config.canvas_factor = None
-    config.use_overlap_loss = False
     config.patience = 20
-    config.batch_size = 512
+
 
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
+
+    # import json
+    #
+    # # Save config to a JSON file
+    # config_file_path = 'config.json'
+    # with open(config_file_path, 'w') as json_file:
+    #     json.dump(config, json_file)
+    #
+    # # Log the config file to wandb
+    # wandb.init(project='your_project_name', config=config)
+    # wandb.save(config_file_path)
+
 
     # if config.pre_trained:
     #     pre_name = 'devoted-terrain-29'
     #     if pre_name == 'devoted-terrain-29':
     #         with open('data/%s/config-%s.yaml' % (pre_name, pre_name)) as f:
     #             read_data = yaml.safe_load(f)
-    #
     #         config.all_zero_target = read_data['all_zero_target']
     #         # config.all_steps = read_data['all_steps']
     #         config.batch_size = read_data['batch_size']
@@ -85,16 +97,14 @@ def main():
         all_steps=config.all_steps,
         max_obj_num=config.max_seq_length,
         num_gaussians=config.num_gaussian,
-        canvas_factor=config.canvas_factor,
-        use_overlap_loss=config.use_overlap_loss,
-        mse_loss_factor=None, # 1
-        overlap_loss_factor=None # 1
+        overlap_loss_factor= config.overlap_loss_factor # 1
     )
 
 
-    PATH = 'data/%s/best_model.pt' % pre_name
-    checkpoint = torch.load(PATH, map_location=device)
+
     if config.pre_trained:
+        PATH = 'data/%s/best_model.pt' % pre_name
+        checkpoint = torch.load(PATH, map_location=device)
         model.load_state_dict(checkpoint)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -110,11 +120,11 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 100000 #1 000 000 data
+    config.DATA_CUT = 10000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
-    policy_num = 4
-    configuration_num = 3
+    policy_num = 1
+    configuration_num = 1
     config.solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
@@ -178,6 +188,9 @@ def main():
     num_epochs = 1000
     train_loss_list = []
     valid_loss_list = []
+    train_loss2_list = []
+    valid_loss2_list = []
+
     model.to(device)
     abort_learning = 0
     min_loss = np.inf
@@ -185,6 +198,7 @@ def main():
         print_flag = True
         model.train()
         train_loss = 0
+        train_loss_overlap = 0
 
         for input_batch, target_batch in train_loader:
             optimizer.zero_grad()
@@ -206,27 +220,34 @@ def main():
 
             # Forward pass
             # object number > masked number
-            output_batch = model(input_batch,
+            output_batch, pi, sigma, mu = model(input_batch,
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss = model.calculate_loss(output_batch, target_batch, input_batch)
-
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+            overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0,1),target_batch[:model.max_obj_num].transpose(0,1))
+            overlap_loss = overlap_loss.mean()
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
+                print('loss and overlap loss:',loss.item())
                 print_flag = False
 
             loss.backward()
             optimizer.step()
             train_loss += loss.item()
+            train_loss_overlap += overlap_loss.item()
         train_loss = train_loss / len(train_loader)
+        train_loss_overlap = train_loss_overlap/len(train_loader)
         train_loss_list.append(train_loss)
+        train_loss2_list.append(train_loss_overlap)
         # Validate
         model.eval()
         print_flag = True
         with torch.no_grad():
             total_loss = 0
+            valid_overlap_loss = 0
             for input_batch, target_batch in val_loader:
                 input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
                 target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
@@ -254,30 +275,39 @@ def main():
 
                 # Forward pass
                 # object number > masked number
-                output_batch = model(input_batch,
-                                     # obj_num=object_num,
-                                     tart_x_gt=input_target_batch)
+                output_batch, pi, sigma, mu = model(input_batch,
+                                                    tart_x_gt=input_target_batch)
 
                 # Calculate loss
-                loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+                # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0, 1),
+                                                        target_batch[:model.max_obj_num].transpose(0, 1))
+                overlap_loss = overlap_loss.mean()
 
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
+                    print('loss and overlap loss:', v_loss.item(), overlap_loss.item())
+
                     print_flag = False
 
-                total_loss += loss.item()
+                total_loss += v_loss.item()
+                valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
+            valid_overlap_loss = valid_overlap_loss/len(val_loader)
             scheduler.step(avg_loss)
 
-            # train_loss_list.append(avg_loss)
             valid_loss_list.append(avg_loss)
+            valid_loss2_list.append(valid_overlap_loss)
 
             if avg_loss < min_loss:
                 min_loss = avg_loss
                 PATH = config.log_pth + '/best_model.pt'
                 torch.save(model.state_dict(), PATH)
                 abort_learning = 0
+            if avg_loss>10e8:
+                abort_learning=100
             else:
                 abort_learning += 1
 
@@ -288,7 +318,9 @@ def main():
                   f" no_improvements: {abort_learning}")
 
             wandb.log({"train_loss": train_loss,
+                       "train_overlap_loss":train_loss_overlap,
                        "valid_loss": avg_loss,
+                       "valid_overlap_loss": valid_overlap_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
                        "scheduler_factor": config.scheduler_factor,
                        "min_loss": min_loss,
@@ -299,27 +331,29 @@ def main():
 
 if __name__ == '__main__':
 
-    sweep_train_flag = False
-
+    sweep_train_flag = True
+    proj_name = "knolling0204_10_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
             "metric": {"goal": "minimize", "name": "min_loss"},
             "parameters": {
-                "mse_loss_factor": {"max": 2.0, "min": 0.1},
-                "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-                "lr": {"values": [1e-3, 1e-4]},
-                "map_embed_d_dim": {"values": [32,128]},
-                "num_attention_heads": {"values": [4,8]},
-                "num_layers":{"values":[4,10,16]},
+                # "mse_loss_factor": {"max": 2.0, "min": 0.1},
+                # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
+                "lr": {"values": [1e-3]},
+                "map_embed_d_dim": {"values": [32]},
+                "num_attention_heads": {"values": [4,8,16,32]},
+                "num_layers":{"values":[2,4,8,16]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[3,8,16,32,64]}
+                "num_gaussian":{"values":[4]},
+                "overlap_loss_factor":{"values":[10000000]},
+                "batch_size":{"values":[64,256,512]}
             },
         }
 
-        sweep_id = wandb.sweep(sweep=sweep_configuration, project="knolling0204")
+        sweep_id = wandb.sweep(sweep=sweep_configuration, project=proj_name)
 
         wandb.agent(sweep_id, function=main, count=100)
     else:

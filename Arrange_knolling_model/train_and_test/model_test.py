@@ -132,19 +132,21 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             input_target_batch.masked_fill_(mask, -100)
 
             # Forward pass
-            predictions = model(input_batch, tart_x_gt=input_target_batch, temperature=0)
+            predictions, pi, sigma, mu = model(input_batch,
+                                 tart_x_gt=input_target_batch)
 
             target_batch[num_obj:] = -100
-            loss = model.calculate_loss(predictions, target_batch, input_batch)
-            # target_batch_demo = target_batch.cpu().detach().numpy().reshape(5, 2)
-            # predictions_demo = predictions.cpu().detach().numpy().reshape(5, 2)
-            # input_demo = input_batch.cpu().detach().numpy().reshape(5, 2)
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            overlap_loss = calculate_collision_loss(predictions[:model.max_obj_num].transpose(0, 1),
+                                                    target_batch[:model.max_obj_num].transpose(0, 1))
+            overlap_loss = overlap_loss.mean()
 
             print('output', predictions[:, 0].flatten())
             print('target', target_batch[:, 0].flatten())
             total_loss += loss.item()
 
             print('test_loss', loss)
+            print('overlap_loss',overlap_loss)
 
             predictions = predictions.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
@@ -181,10 +183,8 @@ if __name__ == '__main__':
 
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
-    runs = api.runs("knolling0204")
-    # name = 'charmed-sweep-1'
-    name = 'giddy-sun-26'
-    # name = 'floral-bush-179'
+    runs = api.runs("knolling0204_10_overlap")
+    name = 'pretty-sweep-1'
 
 
     model_name = "best_model.pt"
@@ -232,7 +232,7 @@ if __name__ == '__main__':
     valid_cls_data = []
     total_raw_data = []
 
-
+    SHOW_GT = False
     # load the test dataset
     file_num = 10
     test_num_scenario = 1000
@@ -311,8 +311,7 @@ if __name__ == '__main__':
                 all_steps=config.all_steps,
                 max_obj_num=config.max_seq_length,
                 num_gaussians=config.num_gaussian,
-                canvas_factor=config.canvas_factor,
-                use_overlap_loss=config.use_overlap_loss
+                overlap_loss_factor=config.overlap_loss_factor  # 1
             )
 
         # Number of parameters: 87458
@@ -327,13 +326,9 @@ if __name__ == '__main__':
         raw_data = total_raw_data.reshape(test_num_scenario * solu_num, -1)
         outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
 
-        # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
-        #     for i in range(NUM_objects):
-        #         raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
-        #         raw_data[:, i * 6 + 6] = 0
-        # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
-        for i in range(NUM_objects):
-            raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
+        if not SHOW_GT:
+            for i in range(NUM_objects):
+                raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
 
         # evaluate_success_rate(raw_data, NUM_objects, config, test_sweep_flag=test_sweep_flag)
         log_folder = './results/%s/pred_after' % (name)
@@ -375,9 +370,6 @@ if __name__ == '__main__':
                 all_steps = config.all_steps,
                 max_obj_num = config.max_seq_length,
                 num_gaussians=config.num_gaussian,
-                canvas_factor=config.canvas_factor,
-                use_overlap_loss=config.use_overlap_loss,
-                mse_loss_factor=config.mse_loss_factor,
                 overlap_loss_factor=config.overlap_loss_factor
             )
 

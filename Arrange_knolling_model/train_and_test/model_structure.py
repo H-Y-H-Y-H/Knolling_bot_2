@@ -9,9 +9,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
-
+SHIFT_DATA = 100
+SCALE_DATA = 100
 # input min&max: [0.016, 0.048]
 # label min&max: [-0.14599999962002042, 0.294500007390976]
 # input_min,input_max = 0.016,0.048
@@ -239,6 +240,41 @@ class ProximityAwareLoss(nn.Module):
         total_loss = primary_loss + proximity_penalty
         return total_loss
 
+def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=1):
+    # Calculate half dimensions for easier overlap checking
+    half_sizes = obj_length_width / 2.0
+
+    # Expand dimensions to calculate pairwise differences between all objects
+    pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+    half_sizes_expanded = half_sizes.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+
+    # Compute differences in positions and sum of half sizes for all pairs
+    pos_diff = torch.abs(pred_pos_expanded - pred_pos_expanded.transpose(1, 2))  # Shape: [Batchsize, 10, 10, 2]
+    size_sum = half_sizes_expanded + half_sizes_expanded.transpose(1, 2)  # Shape: [Batchsize, 10, 10, 2]
+
+    # Calculate overlap in each dimension
+    overlap = size_sum - pos_diff  # Shape: [Batchsize, 10, 10, 2]
+    overlap = torch.clamp(overlap, min=0)  # Remove negative values, no overlap
+
+    # Calculate area of overlap for each pair of objects
+    overlap_indicator = (overlap[...,0]>0)&(overlap[...,1]>0)
+    overlap_area = overlap[..., 0] * overlap[..., 1] *overlap_indicator.float() # Shape: [Batchsize, 10, 10]
+
+    # Multiply overlap area by 10 to heavily penalize collisions
+    overlap_area *= overlap_loss_weight
+
+    batch_size, num_objects, _ = pred_pos.shape
+    collision_mask = ~torch.eye(num_objects, dtype=torch.bool,device=device).unsqueeze(0).repeat(batch_size, 1, 1)
+    overlap_area *= collision_mask
+
+    # Calculate collision loss as the sum of all overlap areas
+    collision_loss = overlap_area.sum(dim=[1, 2]).float()  # Sum over all pairs
+
+    # Optionally, normalize the collision loss by the number of pairs to stabilize training
+    num_pairs = num_objects * (num_objects - 1) / 2
+    collision_loss = collision_loss / num_pairs
+
+    return collision_loss
 
 class Knolling_Transformer(nn.Module):
     def __init__(
@@ -257,11 +293,8 @@ class Knolling_Transformer(nn.Module):
             high_dim_encoder=False,
             all_steps = False,
             max_obj_num = 10,
-            num_gaussians=3,
-            canvas_factor=1,
-            use_overlap_loss=True,
-            mse_loss_factor=1,
-            overlap_loss_factor=1
+            num_gaussians=4,
+            overlap_loss_factor=10
     ):
 
         super(Knolling_Transformer, self).__init__()
@@ -273,13 +306,10 @@ class Knolling_Transformer(nn.Module):
         self.all_steps = all_steps
 
         self.best_gap = 0.015
-        self.canvas_factor = canvas_factor
         self.padding_value = 1
         # self.min_overlap_area = np.inf
         self.min_overlap_num = np.inf
-        self.use_overlap_loss = use_overlap_loss
-        self.mse_loss_factor = mse_loss_factor
-        self.overlap_loss_factor = overlap_loss_factor
+        self.overlap_loss_weight = overlap_loss_factor
 
         self.max_obj_num = max_obj_num# maximun 10
         self.num_gaussians = num_gaussians
@@ -314,7 +344,7 @@ class Knolling_Transformer(nn.Module):
 
         # self.bn1 = nn.BatchNorm1d(map_embed_d_dim)
         self.l0_out = nn.Linear(map_embed_d_dim, map_embed_d_dim//4)
-        self.l1_out = nn.Linear(map_embed_d_dim//4, output_size*num_gaussians*3)
+        self.l1_out = nn.Linear(map_embed_d_dim//4, num_gaussians*(2+2+1))
 
         self.acti = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
@@ -344,10 +374,13 @@ class Knolling_Transformer(nn.Module):
             x = self.l2(x)
             x = self.acti(x)
             out = self.l_out(x)
+            return out
+
 
         elif self.forwardtype == 2:
             out = self.decoder(enc_x, tart_x_gt_high)
             out = self.l_out(out)
+            return out
 
         else:
             # Autoregressive decoding
@@ -355,6 +388,10 @@ class Knolling_Transformer(nn.Module):
             # out = torch.zeros(enc_x.size(-1)).to(
             #     enc_x.device)  # Initialize with the correct shape and move to the same device as enc_x
             outputs = []
+            pis = []  # Collect pi for all timesteps
+            sigmas = []  # Collect sigma for all timesteps
+            mus = []  # Collect mu for all timesteps
+
             results = 0
             for t in range(self.max_obj_num):
                 tart_x_gt_high = self.position_encoder(tart_x)
@@ -362,42 +399,35 @@ class Knolling_Transformer(nn.Module):
 
                 x = self.l0_out(dec_output)
                 x = self.l1_out(x)
-                x = x.view(x.shape[0],x.shape[1],x.shape[2]//(self.num_gaussians*3),self.num_gaussians*3)
-                means, std_devs, weights = torch.split(x, split_size_or_sections=x.shape[-1] // 3, dim=-1)
+                x = x.view(x.shape[0], x.shape[1], self.num_gaussians, 5)
+                # Split along the last dimension to extract means, std_devs, and weights
+                means = x[:, :, :, :2]  # First two are means for x and y
+                std_devs = torch.exp(x[:, :, :, 2:4])  # Next two are std devs for x and y, ensure positivity
+                weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
 
-                std_devs = torch.exp(std_devs)
-                weights = F.softmax(weights, dim=-1)
-                # tensor([[0.4365, 0.2660, 0.2975],
-                #         [0.2866, 0.3864, 0.3270]], device='cuda:0', grad_fn= < SelectBackward0 >)
+                pis.append(weights[t].unsqueeze(0))
+                sigmas.append(std_devs[t].unsqueeze(0))
+                mus.append(means[t].unsqueeze(0))
+
                 if temperature != 0:
                     # Apply temperature to weights
-                    weights = torch.exp(weights / temperature)
+                    weights = torch.exp(weights[t] / temperature)
                     weights /= weights.sum(dim=-1, keepdim=True)
 
-                # Reshape the weights to a 2D tensor to apply torch.multinomial
-                weights = weights.view(-1, weights.shape[-1])
+                # return the idx of selecting Gaussion
                 indices = torch.multinomial(weights, 1)
 
-                # Reshape indices back to the original dimensions
-                indices = indices.view(*weights.shape[:-1])
+                # Gather the chosen means and std_devs based on sampled indices
+                # Batch is the second dimension, we adjust gathering for means and std_devs
+                chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                chosen_std_devs = torch.gather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
 
-                # Reshape the means and std_devs to match the indices dimensions
-                means = means.view(-1, means.shape[-1])
-                std_devs = std_devs.view(-1, std_devs.shape[-1])
-
-                # Use the indices to gather the means and std_devs
-                chosen_means = torch.gather(means, 1, indices.view(-1, 1))
-                chosen_std_devs = torch.gather(std_devs, 1, indices.view(-1, 1))
-
-                # Reshape the means and std_devs back to the original dimensions
-                chosen_means = chosen_means.view(*x.shape[:-1])
-                chosen_std_devs = chosen_std_devs.view(*x.shape[:-1])
+                # Generate output for the current step
                 out = chosen_means + chosen_std_devs * torch.randn_like(chosen_means)
+                out = out.squeeze()
 
-                if t == self.max_obj_num-1:
-                    results = out
-                out = out[t]
                 outputs.append(out.unsqueeze(0))
+
 
                 if t == 0:
                     tart_x = torch.cat((out.unsqueeze(0), tart_x[1:]), dim=0)
@@ -405,29 +435,62 @@ class Knolling_Transformer(nn.Module):
                 elif t < tart_x.size(0):
                     tart_x = torch.cat((torch.cat(outputs), tart_x[t + 1:]), dim=0)
 
+            # Concatenate collected pi, sigma, mu for all timesteps
+            pi = torch.cat(pis, dim=0)
+            sigma = torch.cat(sigmas, dim=0)
+            mu = torch.cat(mus, dim=0)
+
             if self.all_steps:
-                return results
+                return results, pi, sigma, mu
 
             elif self.max_obj_num < tart_x.size(0):
                 pad_data_shape = outputs[0].shape
                 outputs = outputs + [torch.zeros(pad_data_shape, device=device) for _ in range(tart_x.size(0) - self.max_obj_num)]
             out = torch.cat(outputs, dim=0)
-            return out
+            return out, pi, sigma, mu
 
-    def calculate_loss(self, pred_pos, tar_pos, tar_lw):
+    def calculate_loss(self, pred_pos, tar_pos, obj_length_width):
 
         MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
 
-        # tar_lw_raw = ((tar_lw - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        # tar_pos_raw = ((tar_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        # pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        # The length and width of objects:
+        obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-        total_loss = MSE_loss
+        # The predicted position of objects:
+
+        pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+
+        overlap_loss = calculate_collision_loss(pred_pos_raw,obj_length_width,self.overlap_loss_weight).mean()
+        total_loss = MSE_loss + overlap_loss
 
         # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
         # total_loss = MSE_loss + scaled_overlap_loss
 
-        return total_loss
+        return total_loss, overlap_loss
+
+    def mdn_loss_function(self, pi, sigma, mu, y):
+        # Reshape y to match the Gaussian components (Num_of_objects, Batch_size, 1, 2)
+        y = y.unsqueeze(2)  # Assuming y has shape (Num_of_objects, Batch_size, 2)
+
+        # Calculate the mixture of Gaussian probabilities
+        # Assuming sigma is positive and represents standard deviation
+        norm = torch.distributions.Normal(mu, sigma)
+        prob = norm.log_prob(y)  # This computes the log probability of y for each Gaussian
+
+        # prob shape is (Num_of_objects, Batch_size, Num_of_Gaussian,2), need to sum log probs over dimensions
+        log_prob = prob.sum(dim=-1)  # New shape: [Num_of_objects, Batch_size, Num_of_Gaussian]
+
+        # Weighting log probabilities by the mixing coefficients (pi)
+        # Adding a small value to pi to avoid log(0)
+        weighted_log_prob = log_prob + torch.log(pi + 1e-9)
+
+        # Using logsumexp to sum across Gaussians for numerical stability
+        # This combines the weighted log probabilities for all Gaussians for each object in the batch
+        loss = torch.logsumexp(weighted_log_prob, dim=2)  # Shape: [Num_of_objects, Batch_size]
+
+        # Taking the negative and averaging over all objects and all batch items
+        loss = -loss.mean()
+        return loss
 
     def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100):
 
@@ -436,6 +499,11 @@ class Knolling_Transformer(nn.Module):
         mse_loss = mse_loss.sum() / mask.sum()
 
         return mse_loss
+
+
+
+
+
 
     def calculate_distance_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
 
@@ -572,79 +640,20 @@ class Knolling_Transformer(nn.Module):
             self.min_overlap_num = avg_overlap_num
             print('this is min overlap num:', self.min_overlap_num)
 
-        # tar_pos_px = tar_pos.detach().cpu().numpy() * self.mm2px + 10
-        # tar_lw_px = tar_lw.detach().cpu().numpy() * self.mm2px
-        # pred_pos_px = pred_pos.detach().cpu().numpy() * self.mm2px + 10
-        #
-        # data_pred = np.concatenate(((pred_pos_px[:, :, 0] - tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-        #                            (pred_pos_px[:, :, 1] - tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-        #                            (pred_pos_px[:, :, 0] + tar_lw_px[:, :, 0] / 2)[:, :, np.newaxis],
-        #                            (pred_pos_px[:, :, 1] + tar_lw_px[:, :, 1] / 2)[:, :, np.newaxis],
-        #                            ), axis=2).astype(np.int32)
-        #
-        # # Iterate through each rectangle and draw them on the canvas
-        # penalty_list = []
-        # avg_overlap_area = []
-        # avg_overlap_num = []
-        # for i in range(data_pred.shape[0]):
-        #
-        #     x_offset_px = np.min(data_pred[i, :, 0])
-        #     y_offset_px = np.min(data_pred[i, :, 1])
-        #     data_pred[i, :, [0, 2]] -= x_offset_px
-        #     data_pred[i, :, [1, 3]] -= y_offset_px
-        #     x_max_px = np.max(data_pred[i, :, 2])
-        #     y_max_px = np.max(data_pred[i, :, 3])
-        #     # canvas_tar = np.zeros((canvas_height, canvas_width), dtype=np.uint8)
-        #     canvas_pred = np.zeros((x_max_px, y_max_px), dtype=np.uint8)
-        #
-        #     for j in range(data_pred.shape[1]):
-        #         # corner_data_tar = data_tar[i, j]
-        #         corner_data_pred = data_pred[i, j]
-        #         # canvas_tar[corner_data_tar[0]:corner_data_tar[2], corner_data_tar[1]:corner_data_tar[3]] += padding_value
-        #         canvas_pred[corner_data_pred[0]:corner_data_pred[2], corner_data_pred[1]:corner_data_pred[3]] += self.padding_value
-        #         # canvas = cv2.rectangle(canvas, (corner_data[0], corner_data[1]), (corner_data[2], corner_data[3]), 255, -1)
-        #
-        #     # if np.max(canvas_pred) <= 0 or np.any(data_pred[i, :, 0] <= 0) or np.any(data_pred[i, :, 1] <= 0):
-        #     #     avg_overlap_area.append(100)
-        #     #     avg_overlap_num.append(100)
-        #     #     penalty_list.append(100)
-        #     # else:
-        #     #     overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-        #     #     if overlap_area < self.min_overlap_area:
-        #     #         self.min_overlap_area = overlap_area
-        #     #         print('this is max_overlap_area', self.min_overlap_area)
-        #     #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
-        #     #     avg_overlap_area.append(overlap_area)
-        #     #     avg_overlap_num.append(overlap_num)
-        #     #     penalty_list.append(overlap_num * overlap_area)
-        #
-        #     # overlap_area = np.clip(len(np.where(canvas_pred > self.padding_value)[0]) / self.overlap_area_factor, 1, None)
-        #     # if overlap_area < self.min_overlap_area:
-        #     #     self.min_overlap_area = overlap_area
-        #     #     print('this is max_overlap_area', self.min_overlap_area)
-        #     overlap_num = np.clip(int(np.max(canvas_pred) / self.padding_value), 1, None)
-        #     # avg_overlap_area.append(overlap_area)
-        #     avg_overlap_num.append(overlap_num)
-        #     penalty_list.append(overlap_num)
-        # # avg_overlap_area = np.mean(np.asarray(avg_overlap_area))
-        # avg_overlap_num = np.mean(np.asarray(avg_overlap_num))
-        # penalty = np.mean(np.asarray(penalty_list))
-        # if avg_overlap_num < self.min_overlap_num:
-        #     self.min_overlap_num = avg_overlap_num
-        #     print('this is min overlap num:', self.min_overlap_num)
-
-
         return penalty
 
 if __name__ == "__main__":
+    from datetime import datetime
 
-    max_length = 10
+    inputouput_size = 10
+    max_seq_length =3
     d_dim = 32
     layers_num = 4
     heads_num = 4
+    num_gaussian = 4
     print(d_dim,layers_num,heads_num)
     model = Knolling_Transformer(
-        input_length=max_length,
+        input_length=inputouput_size,
         input_size=2,
         map_embed_d_dim=d_dim,
         num_layers=layers_num,
@@ -654,132 +663,222 @@ if __name__ == "__main__":
         all_zero_target=0,
         pos_encoding_Flag = True,
         forwardtype= 1,
-        high_dim_encoder = True
+        high_dim_encoder = True,
+        all_steps=False,
+        max_obj_num=max_seq_length,
+        num_gaussians=num_gaussian,
+        overlap_loss_factor=0  # 1
     )
 
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, verbose=True) #tainloss
 
+    DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
-    BATCH_SIZE = 64
     EPOCHS = 10000
-    NUM_objects = 10
     noise_std = 0.1
-    partial_dataset = 1000
-    dataset_path = DATAROOT + 'cfg_1/'
-    raw_data = np.loadtxt(dataset_path + 'labels_after/num_%d.txt' % NUM_objects)[:partial_dataset]*SCALE_DATA+SHIFT_DATA
-    # raw_data +=1
-    train_data = raw_data[:int(len(raw_data) * 0.8)]
-    test_data = raw_data[int(len(raw_data) * 0.8):]
-    print('NUM OBJECT: ', NUM_objects)
-    print('BATCH: ',    BATCH_SIZE)
-    print('noise_std ', noise_std)
-    print('partial data ', partial_dataset)
+    batch_size =512
+    lr=1e-3
+    scheduler_factor=0.1
+    patience=20
 
+    train_input_data = []
+    train_output_data = []
+    train_cls_data = []
+    input_data = []
+    output_data = []
+    valid_input_data = []
+    valid_output_data = []
+    valid_cls_data = []
 
-    train_input = []
-    test_input = []
-    train_label = []
-    test_label = []
-    for i in range(NUM_objects):
-        train_input.append(train_data[:, i * 5 + 2:i * 5 + 4])
-        test_input.append(test_data[:, i * 5 + 2:i * 5 + 4])
-        train_label.append(train_data[:, i * 5:i * 5 + 2])
-        test_label.append(test_data[:, i * 5:i * 5 + 2])
+    DATA_CUT = 10000 #1 000 000 data
 
+    SHIFT_DATASET_ID = 3
+    policy_num = 1
+    configuration_num = 1
+    solu_num = int(policy_num * configuration_num)
+    info_per_object = 7
 
-    train_input = np.asarray(train_input).transpose(1, 0, 2)
-    test_input = np.asarray(test_input).transpose(1, 0, 2)
-    train_label = np.asarray(train_label).transpose(1, 0, 2)
-    test_label = np.asarray(test_label).transpose(1, 0, 2)
+    for f in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+solu_num):
+        # dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (inputouput_size, f)
+        # print('load data:', dataset_path)
+        # raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :max_seq_length * info_per_object]
+        raw_data =np.loadtxt(DATAROOT+'test_data.txt')
 
-    train_input = pad_sequences(train_input, max_seq_length=max_length)
-    test_input  = pad_sequences(test_input , max_seq_length=max_length)
-    train_label = pad_sequences(train_label, max_seq_length=max_length)
-    test_label  = pad_sequences(test_label , max_seq_length=max_length)
+        raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
-    train_dataset = CustomDataset(train_input, train_label)
-    test_dataset = CustomDataset(test_input, test_label)
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        train_data = raw_data[:int(len(raw_data) * 0.8)]
+        test_data = raw_data[int(len(raw_data) * 0.8):]
+
+        train_lw = []
+        valid_lw = []
+        train_pos = []
+        valid_pos = []
+        train_cls = []
+        valid_cls = []
+        for i in range(max_seq_length):
+            train_lw.append(train_data[:, i * info_per_object + 2:i * info_per_object + 4])
+            valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
+            train_cls.append(train_data[:, [i * info_per_object + 5]])
+            valid_cls.append(test_data[:, [i * info_per_object + 5]])
+            train_pos.append(train_data[:, i * info_per_object:i * info_per_object + 2])
+            valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
+
+        train_lw = np.asarray(train_lw).transpose(1, 0, 2)
+        valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
+        train_pos = np.asarray(train_pos).transpose(1, 0, 2)
+        valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
+        train_cls = np.asarray(train_cls).transpose(1, 0, 2)
+        valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
+
+        train_input_data += list(train_lw)
+        train_output_data += list(train_pos)
+        train_cls_data += list(train_cls)
+        valid_input_data += list(valid_lw)
+        valid_output_data += list(valid_pos)
+        valid_cls_data += list(valid_cls)
+
+    train_input_padded = pad_sequences(train_input_data,  max_seq_length=10)
+    train_label_padded = pad_sequences(train_output_data, max_seq_length=10)
+    test_input_padded = pad_sequences(valid_input_data,   max_seq_length=10)
+    test_label_padded = pad_sequences(valid_output_data,  max_seq_length=10)
+
+    train_dataset = CustomDataset(train_input_padded, train_label_padded)
+    test_dataset = CustomDataset(test_input_padded, test_label_padded)
+
+    num_data = (len(train_dataset), len(test_dataset))
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_factor,
+                                                           patience=patience, verbose=True)
+
+    num_epochs = 1000
+    train_loss_list = []
+    valid_loss_list = []
+    train_loss2_list = []
+    valid_loss2_list = []
 
     model.to(device)
-    # Training loop
-
-    noise_std = torch.tensor(noise_std).to(device)
-
-    for epoch in range(EPOCHS):
-        prin_flag = True
+    abort_learning = 0
+    min_loss = np.inf
+    for epoch in range(num_epochs):
+        print_flag = True
         model.train()
+        train_loss = 0
+        train_loss_overlap = 0
+
         for input_batch, target_batch in train_loader:
-            # Zero the gradients
             optimizer.zero_grad()
 
             input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
             target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
-            input_batch = input_batch.transpose(1,0)
-            target_batch = target_batch.transpose(1,0)
+            input_batch = input_batch.transpose(1, 0)
+            target_batch = target_batch.transpose(1, 0)
 
-            # zero to False
             target_batch_atten_mask = (target_batch == 0).bool()
             target_batch.masked_fill_(target_batch_atten_mask, -100)
 
-            # Mask the target:
-            mask_point = np.random.randint(0, target_batch.size(0)+1)
-            # mask_point = 0
+            # create all -100 input for decoder
             mask = torch.ones_like(target_batch, dtype=torch.bool)
-            mask[:mask_point] = False
             input_target_batch = torch.clone(target_batch)
 
-            # Add noise
-            input_target_batch = torch.normal(input_target_batch, noise_std)
-            input_batch = torch.normal(input_batch, noise_std)
-
+            # input_target_batch = torch.normal(input_target_batch, noise_std)
             input_target_batch.masked_fill_(mask, -100)
 
-            label_mask = torch.ones_like(target_batch, dtype=torch.bool)
-            label_mask[:(mask_point+1)] = False
-            target_batch.masked_fill_(label_mask, -100)
-
             # Forward pass
-
-            output_batch = model(input_batch, input_target_batch)
+            # object number > masked number
+            output_batch, pi, sigma, mu = model(input_batch,
+                                 tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss = model.maskedMSELoss(output_batch, target_batch)
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+            overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0,1),target_batch[:model.max_obj_num].transpose(0,1))
+            overlap_loss = overlap_loss.mean()
+            if epoch % 10 == 0 and print_flag:
+                print('output', output_batch[:, 0].flatten())
+                print('target', target_batch[:, 0].flatten())
+                print('loss and overlap loss:',loss.item())
+                print_flag = False
 
-            if epoch %10 ==0 and prin_flag:
-                # print('-')
-                # print('output',output_batch[:,0].flatten())
-                # print('target',target_batch[:,0].flatten())
-                prin_flag = False
-
-            # Backward pass
             loss.backward()
-
-            # Update weights
             optimizer.step()
+            train_loss += loss.item()
+            train_loss_overlap += overlap_loss.item()
+        train_loss = train_loss / len(train_loader)
+        train_loss_overlap = train_loss_overlap/len(train_loader)
+        train_loss_list.append(train_loss)
+        train_loss2_list.append(train_loss_overlap)
+        # Validate
+        model.eval()
+        print_flag = True
+        with torch.no_grad():
+            total_loss = 0
+            valid_overlap_loss = 0
+            for input_batch, target_batch in val_loader:
+                input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
+                target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
+                input_batch = input_batch.transpose(1, 0)
+                target_batch = target_batch.transpose(1, 0)
 
+                # # zero to False
+                # input_batch_atten_mask = (input_batch == 0).bool()
+                # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
+                # input_batch.masked_fill_(input_batch_atten_mask, -100)
 
-        # Validation
-        # model.eval()
-        # validation_loss = 0.0
-        # with torch.no_grad():
-        #     for input_batch, target_batch in test_loader:
-        #         input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
-        #         target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
-        #
-        #         # Forward pass
-        #         input_batch = input_batch.transpose(1, 0)
-        #         target_batch = target_batch.transpose(1, 0)
-        #         output_batch = model(input_batch)
-        #
-        #         # Calculate loss
-        #         loss = criterion(output_batch, target_batch)
-        #         validation_loss += loss.item()
-        #
-        # validation_loss /= len(test_loader)
-        # print(f"Epoch {epoch + 1}/{EPOCHS}, Training Loss: {loss.item()}, Validation Loss: {validation_loss}")
+                target_batch_atten_mask = (target_batch == 0).bool()
+                target_batch.masked_fill_(target_batch_atten_mask, -100)
 
-        print(f"Epoch {epoch + 1}/{EPOCHS}, Training Loss: {loss.item()}")
-        scheduler.step(loss.item())
+                # create all -100 input for decoder
+                mask = torch.ones_like(target_batch, dtype=torch.bool)
+                input_target_batch = torch.clone(target_batch)
+
+                # input_target_batch = torch.normal(input_target_batch, noise_std)
+                input_target_batch.masked_fill_(mask, -100)
+
+                # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
+                # label_mask[:object_num] = False
+                # target_batch.masked_fill_(label_mask, -100)
+
+                # Forward pass
+                # object number > masked number
+                output_batch, pi, sigma, mu = model(input_batch,
+                                                    tart_x_gt=input_target_batch)
+
+                # Calculate loss
+                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+                # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0, 1),
+                                                        target_batch[:model.max_obj_num].transpose(0, 1))
+                overlap_loss = overlap_loss.mean()
+
+                if epoch % 10 == 0 and print_flag:
+                    print('val_output', output_batch[:, 0].flatten())
+                    print('val_target', target_batch[:, 0].flatten())
+                    print('loss and overlap loss:', v_loss.item(), overlap_loss.item())
+
+                    print_flag = False
+
+                total_loss += v_loss.item()
+                valid_overlap_loss += overlap_loss.item()
+            avg_loss = total_loss / len(val_loader)
+            valid_overlap_loss = valid_overlap_loss/len(val_loader)
+            scheduler.step(valid_overlap_loss)
+
+            valid_loss_list.append(avg_loss)
+            valid_loss2_list.append(valid_overlap_loss)
+
+            if avg_loss < min_loss:
+                min_loss = avg_loss
+                abort_learning = 0
+            if avg_loss>10e8:
+                abort_learning=100
+            else:
+                abort_learning += 1
+
+            print(f"{datetime.now()}Epoch {epoch},train_loss: {train_loss}, validation_loss: {avg_loss},"
+                  f" no_improvements: {abort_learning}")
+
