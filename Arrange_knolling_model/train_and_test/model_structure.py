@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
 SHIFT_DATA = 100
 SCALE_DATA = 100
@@ -294,9 +294,6 @@ class Knolling_Transformer(nn.Module):
             all_steps = False,
             max_obj_num = 10,
             num_gaussians=3,
-            canvas_factor=1,
-            use_overlap_loss=True,
-            mse_loss_factor=1,
             overlap_loss_factor=10
     ):
 
@@ -309,12 +306,9 @@ class Knolling_Transformer(nn.Module):
         self.all_steps = all_steps
 
         self.best_gap = 0.015
-        self.canvas_factor = canvas_factor
         self.padding_value = 1
         # self.min_overlap_area = np.inf
         self.min_overlap_num = np.inf
-        self.use_overlap_loss = use_overlap_loss
-        self.mse_loss_factor = mse_loss_factor
         self.overlap_loss_weight = overlap_loss_factor
 
         self.max_obj_num = max_obj_num# maximun 10

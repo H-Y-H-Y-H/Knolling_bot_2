@@ -18,18 +18,19 @@ def main():
 
     if not sweep_train_flag:
         config.map_embed_d_dim = 32
-        config.num_attention_heads = 4
+        config.num_attention_heads = 16
         config.num_layers = 10
         config.lr = 1e-3
-        config.num_gaussian = 3
+        config.num_gaussian = 32
         config.SCALE_DATA = 100
         config.SHIFT_DATA = 100
+        config.overlap_loss_factor = 10000
 
     SCALE_DATA = config.SCALE_DATA
     SHIFT_DATA = config.SHIFT_DATA
     config.forwardtype = 1
     config.dropout_prob = 0.0
-    config.max_seq_length = 10
+    config.max_seq_length = 2
     config.inputouput_size = 10
     config.log_pth = 'data/%s/' % running_name
     config.pos_encoding_Flag = True
@@ -39,7 +40,6 @@ def main():
     config.high_dim_encoder = True
     config.all_steps = False
     config.canvas_factor = None
-    config.use_overlap_loss = False
     config.patience = 20
     config.batch_size = 128
 
@@ -96,10 +96,7 @@ def main():
         all_steps=config.all_steps,
         max_obj_num=config.max_seq_length,
         num_gaussians=config.num_gaussian,
-        canvas_factor=config.canvas_factor,
-        use_overlap_loss=config.use_overlap_loss,
-        mse_loss_factor=None, # 1
-        overlap_loss_factor=10000 # 1
+        overlap_loss_factor= config.overlap_loss_factor # 1
     )
 
 
@@ -122,7 +119,7 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 1000 #1 000 000 data
+    config.DATA_CUT = 100000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -328,8 +325,8 @@ def main():
 
 if __name__ == '__main__':
 
-    sweep_train_flag = True
-    proj_name = "knolling0204_10_overlap"
+    sweep_train_flag = False
+    proj_name = "knolling0204_2_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -344,7 +341,8 @@ if __name__ == '__main__':
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[8,16,32,64]}
+                "num_gaussian":{"values":[8,16,32,64]},
+                "overlap_loss_factor":{"values":[10000]}
             },
         }
 

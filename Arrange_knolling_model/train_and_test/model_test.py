@@ -182,9 +182,8 @@ if __name__ == '__main__':
 
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
-    runs = api.runs("knolling0204_10")
-    # name = 'charmed-sweep-1'
-    name = 'volcanic-sweep-25'
+    runs = api.runs("knolling0204_2_overlap")
+    name = 'rose-waterfall-3'
     # name = 'floral-bush-179'
 
 
@@ -312,8 +311,7 @@ if __name__ == '__main__':
                 all_steps=config.all_steps,
                 max_obj_num=config.max_seq_length,
                 num_gaussians=config.num_gaussian,
-                canvas_factor=config.canvas_factor,
-                use_overlap_loss=config.use_overlap_loss
+                overlap_loss_factor=config.overlap_loss_factor  # 1
             )
 
         # Number of parameters: 87458

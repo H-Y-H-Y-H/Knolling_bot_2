@@ -452,10 +452,7 @@ if __name__ == '__main__':
     os.makedirs(preprocess_label_path, exist_ok=True)
 
 
-
-    name = 'deep-sweep-3'
-
-
+    name = 'rose-waterfall-3'
 
     show_baseline = 0
     show_results_flag = True
