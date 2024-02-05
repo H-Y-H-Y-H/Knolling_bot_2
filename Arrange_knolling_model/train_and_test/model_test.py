@@ -135,7 +135,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             predictions = model(input_batch, tart_x_gt=input_target_batch, temperature=0)
 
             target_batch[num_obj:] = -100
-            loss = model.calculate_loss(predictions, target_batch, input_batch)
+            loss,overlap_loss = model.calculate_loss(predictions, target_batch, input_batch)
             # target_batch_demo = target_batch.cpu().detach().numpy().reshape(5, 2)
             # predictions_demo = predictions.cpu().detach().numpy().reshape(5, 2)
             # input_demo = input_batch.cpu().detach().numpy().reshape(5, 2)
@@ -145,6 +145,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             total_loss += loss.item()
 
             print('test_loss', loss)
+            print('overlap_loss',overlap_loss)
 
             predictions = predictions.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
@@ -181,9 +182,9 @@ if __name__ == '__main__':
 
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
-    runs = api.runs("knolling0204")
+    runs = api.runs("knolling0204_10")
     # name = 'charmed-sweep-1'
-    name = 'giddy-sun-26'
+    name = 'volcanic-sweep-25'
     # name = 'floral-bush-179'
 
 
