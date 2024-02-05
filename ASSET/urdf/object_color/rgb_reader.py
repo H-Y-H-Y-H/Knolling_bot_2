@@ -17,11 +17,12 @@ for i in range(num_color):
     cols = np.random.choice(img.shape[1], size=num_sample, replace=True)
     positions = list(zip(rows, cols))
     selected_values = [(img[row, col, :] / 255).tolist() for row, col in positions]
+    test = [(img[row, col, :]).tolist() for row, col in positions]
 
     rgb_dict[png_files[i][:-4]] = selected_values
 
-    with open('./rgb_info.json', 'w') as f:
-        json.dump(rgb_dict, f, indent=4)
+    # with open('./rgb_info.json', 'w') as f:
+    #     json.dump(rgb_dict, f, indent=4)
 
 
     # cv2.namedWindow('zzz', 0)
@@ -29,6 +30,8 @@ for i in range(num_color):
     # cv2.imshow('zzz', img)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
+
+    print('here')
 
 # print([244, 23] / 255)
 #

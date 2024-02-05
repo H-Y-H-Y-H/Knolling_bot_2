@@ -24,6 +24,7 @@ class Arm:
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
+        self.dataset_path = '../../../knolling_dataset/sundry_204/'
         self.obj_urdf = '../../../knolling_dataset/'
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
@@ -108,8 +109,8 @@ class Arm:
     def get_data_virtual(self):
 
         # shuffle the class_num and color_num for each scenario
-        self.arrange_policy['class_num'] = np.random.randint(2, 11)
-        self.arrange_policy['color_num'] = np.random.randint(2, 6)
+        self.arrange_policy['class_num'] = np.random.randint(2, self.arrange_policy['max_class_num'] + 1)
+        self.arrange_policy['color_num'] = np.random.randint(2, self.arrange_policy['max_color_num'] + 1)
 
         if self.arrange_policy['object_type'] == 'box':
             length_data = np.round(np.random.uniform(low=self.arrange_policy['length_range'][0],
@@ -131,35 +132,26 @@ class Arm:
 
         elif self.arrange_policy['object_type'] == 'sundry':
             class_index = np.random.choice(a=self.arrange_policy['max_class_num'],
-                                          size=self.arrange_policy['class_num'],
-                                          replace=False)
-            class_index_data = np.random.choice(a=class_index,
-                                                size=self.arrange_policy['object_num'])
-            # class_index_data = np.random.choice(a=self.arrange_policy['class_num'],
-            #                                     size=self.arrange_policy['object_num'],
-            #                                     replace=False)
-            class_name_list = os.listdir(self.urdf_path + 'OpensCAD_generate/generated_stl/')
+                                          size=self.arrange_policy['class_num'], replace=False)
+            class_index_data = np.random.choice(a=class_index, size=self.arrange_policy['object_num'])
+            class_name_list = os.listdir(self.dataset_path + 'generated_stl/')
             class_name_list.sort()
             class_name = [class_name_list[n] for n in class_index_data]
+            self.class_name_test = class_name
             object_name_list = []
             object_lwh_list = []
             for i in range(self.arrange_policy['object_num']):
-                num_type_each_object = len(os.listdir(self.urdf_path + 'OpensCAD_generate/generated_stl/' + class_name[i] + '/'))
-                temp_path = (self.urdf_path + 'OpensCAD_generate/generated_stl/' + class_name[i] + '/'
-                             + class_name[i] + '_' + str(np.random.randint(num_type_each_object) + 1) + '/')
-                object_name = np.random.choice(os.listdir(temp_path))
-                object_name_list.append(object_name)
-
-                object_csv_path = temp_path + object_name + '/' + object_name + '.csv'
-                object_lwh_list.append(eval(pandas.read_csv(object_csv_path).loc[0, 'BoundingBoxDimensions (cm)']))
+                object_path = self.dataset_path + 'generated_stl/' + class_name[i] + '/'
+                temp = os.listdir(object_path)
+                temp.sort()
+                object_csv_path = object_path + temp[0]
+                object_name_list.append(class_name[i])
+                object_lwh_list.append(pandas.read_csv(object_csv_path).iloc[0, [3, 4, 5]].values)
 
             color_index = np.random.choice(a=self.arrange_policy['max_color_num'],
                                            size=self.arrange_policy['color_num'],
                                            replace=False)
             color_index_data = np.random.choice(a=color_index, size=self.arrange_policy['object_num'])
-            # color_index_data = np.random.randint(low=0,
-            #                                high=self.arrange_policy['color_num'],
-            #                                size=(self.arrange_policy['object_num'], 1))
 
             object_lwh_list = np.around(np.asarray(object_lwh_list) * 0.001, decimals=4)
             data = np.concatenate((object_lwh_list,
@@ -268,23 +260,28 @@ class Arm:
 
         if self.arrange_policy['object_type'] == 'sundry':
 
-            urdf_path_one_img = self.obj_urdf + 'OpensCAD_generate/urdf_file/'
+            # urdf_path_one_img = self.obj_urdf + 'OpensCAD_generate/urdf_file/'
             object_idx = []
             print('position\n', pos_data)
             print('lwh\n', lw_data)
             for i in range(obj_num):
 
+                object_path = self.dataset_path + 'generated_stl/' + labels_name[i] + '/'
+                temp = os.listdir(object_path)
+                temp.sort()
+                object_name = temp[0][:-4]
+                object_csv = object_path + temp[0]
+                object_stl = object_path + temp[1]
+
                 print(f'this is matching urdf{i}')
-                object_name = labels_name[i].split('_')[0]
-                object_index = labels_name[i].split('_')[1]
-                csv_path = (self.obj_urdf + 'OpensCAD_generate/generated_stl/' + object_name + '/' +
-                            object_name + '_' + object_index + '/' + labels_name[i] + '/' + labels_name[i] + '.csv')
-                csv_lwh = np.asarray(eval(pandas.read_csv(csv_path).loc[0, 'BoundingBoxDimensions (cm)'])) * 0.001
+                # object_name = labels_name[i].split('_')[0]
+                # object_index = labels_name[i].split('_')[1]
+                csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
                 pos_data[i, 2] = csv_lwh[2] / 2
 
                 if lw_data[i, 0] < lw_data[i, 1]:
                     ori_data[i, 2] += np.pi / 2
-                object_idx.append(p.loadURDF(urdf_path_one_img + labels_name[i] + '.urdf',
+                object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + object_name + '.urdf',
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
@@ -293,6 +290,7 @@ class Arm:
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
+        print('here')
         for i in range(100):
             p.stepSimulation()
 
@@ -303,12 +301,12 @@ class Arm:
         # get the standard xyz and corresponding index from files in the computer
         arranger = arrangement(self.arrange_policy)
         data_before, object_name_list = self.get_data_virtual()
-        data_after_total = []
-        object_name_after_total = []
+        data_after_distance_total = []
+        name_after_distance_total = []
+        data_after_default_total = []
+        name_after_default_total = []
 
         # type, color, area, ratio
-
-
         for i in range(len(policy_switch)):
 
             arranger.arrange_policy['type_classify_flag'] = policy_switch[i][0]
@@ -318,39 +316,46 @@ class Arm:
 
             times = 0
             while True: # generate several results for each configuration, now is 4
-                data_after, data_name_after = arranger.generate_arrangement(data=data_before, data_name=object_name_list)
+                data_after, name_after = arranger.generate_arrangement(data=data_before, data_name=object_name_list)
                 # the sequence of self.items_pos_list, self.items_ori_list are the same as those in self.xyz_list
+
                 data_after[:, :3] = data_after[:, :3] + self.arrange_policy['total_offset']
                 order = self.change_sequence(data_after[:, :2], flag='distance')
-                data_after = data_after[order]
                 data_after = np.delete(data_after, [2, 3, 4, 5], axis=1)
-                data_after_total.append(data_after)
 
-                # new_object_name_list = [object_name_list[order[m]] for m in range(len(order))]
-                new_data_name_after = data_name_after[order]
-                object_name_after_total.append(new_data_name_after)
+                temp_criterion = np.argsort(data_after[:, 5])
+                data_after_default = data_after[temp_criterion]
+                data_after_distance = data_after[order]
+                data_after_default_total.append(data_after_default)
+                data_after_distance_total.append(data_after_distance)
+
+                name_after_default = name_after[temp_criterion]
+                name_after_distance = name_after[order]
+                name_after_default_total.append(name_after_default)
+                name_after_distance_total.append(name_after_distance)
 
                 times += 1
                 if times >= self.arrange_policy['output_per_cfg']:
                     break
 
-        return data_after_total, object_name_after_total
+        return data_after_distance_total, name_after_distance_total, data_after_default_total, name_after_default_total
 
 
 if __name__ == '__main__':
 
-    command = 'recover'
+    command = 'knolling'
     before_after = 'after'
     obj_num = 10
-    SHIFT_DATASET_ID = 3
-    # np.random.seed(100)
+    SHIFT_DATASET_ID = 0
+    np.random.seed(100)
+    random.seed(100)
 
     start_evaluations = 450000
     end_evaluations =   500000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/learning_data_0126_{obj_num}/'
+    target_path = f'../../../knolling_dataset/learning_data_205_{obj_num}/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
@@ -359,18 +364,17 @@ if __name__ == '__main__':
                     'object_num': obj_num, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
-                    'class_num': None, 'color_num': None, 'max_class_num': 10, 'max_color_num': 5,
+                    'class_num': None, 'color_num': None, 'max_class_num': 9, 'max_color_num': 6,
                     'type_classify_flag': None, 'color_classify_flag': None, # classification range
                     'arrangement_policy': 'Type*3, Color*3, Area*3, Ratio*3', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
                     'total_offset': [0, 0, 0], 'gap_item': 0.016, 'gap_block': 0.016 # inverval and offset of the arrangement
-
                     }
     policy_switch = [[True, False, False, False],
                      [False, True, False, False],
                      [False, False, True, False],
                      [False, False, False, True]]
-    solution_num =1 #int(arrange_policy['output_per_cfg'] * len(policy_switch))
+    solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
 
     if command == 'recover':
 
@@ -428,13 +432,15 @@ if __name__ == '__main__':
 
         names = locals()
         for m in range(solution_num):
-            names['data_after_' + str(m)] = []
-            names['name_after_' + str(m)] = []
+            names['data_after_distance_' + str(m)] = []
+            names['name_after_distance_' + str(m)] = []
+            # names['data_after_default_' + str(m)] = []
+            # names['name_after_default_' + str(m)] = []
         j = 0
         index_point = 0
 
         while change_cfg_flag == False:
-            data_after_total, object_name_after_total = env.change_config()
+            data_after_distance_total, name_after_distance_total, data_after_default_total, name_after_default_total = env.change_config()
 
             if j + start_evaluations == int(save_point[-1]):
                 print('over!!!!!!!!!!!!')
@@ -445,22 +451,30 @@ if __name__ == '__main__':
 
             for m in range(solution_num):
 
-                names['data_after_' + str(m)].append(data_after_total[m].reshape(-1))
-                names['name_after_' + str(m)].append(object_name_after_total[m])
+                names['data_after_distance_' + str(m)].append(data_after_distance_total[m].reshape(-1))
+                names['name_after_distance_' + str(m)].append(name_after_distance_total[m])
+                # names['data_after_default_' + str(m)].append(data_after_default_total[m].reshape(-1))
+                # names['name_after_default_' + str(m)].append(name_after_default_total[m])
 
-                if len(names['data_after_' + str(m)]) == int((end_evaluations - start_evaluations) / step_num):
-                    names['data_after_' + str(m)] = np.asarray(names['data_after_' + str(m)])
-                    names['name_after_' + str(m)] = np.asarray(names['name_after_' + str(m)], dtype=str)
-                    np.savetxt(after_path[m] + 'num_%s_%s.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['data_after_' + str(m)])
-                    np.savetxt(after_path[m] + 'num_%s_%s_name.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['name_after_' + str(m)], fmt='%s')
+                if len(names['data_after_distance_' + str(m)]) == int((end_evaluations - start_evaluations) / step_num):
+                    names['data_after_distance_' + str(m)] = np.asarray(names['data_after_distance_' + str(m)])
+                    names['name_after_distance_' + str(m)] = np.asarray(names['name_after_distance_' + str(m)], dtype=str)
+                    # names['data_after_default_' + str(m)] = np.asarray(names['data_after_default_' + str(m)])
+                    # names['name_after_default_' + str(m)] = np.asarray(names['name_after_default_' + str(m)], dtype=str)
+                    np.savetxt(after_path[m] + 'num_%s_%s.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['data_after_distance_' + str(m)])
+                    np.savetxt(after_path[m] + 'num_%s_%s_name.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['name_after_distance_' + str(m)], fmt='%s')
+                    # np.savetxt(after_path[m] + 'num_%s_%s_default.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['data_after_default_' + str(m)])
+                    # np.savetxt(after_path[m] + 'num_%s_%s_name_default.txt' % (arrange_policy['object_num'], int(save_point[index_point])), names['name_after_default_' + str(m)], fmt='%s')
 
                     # with open(after_path[m] + 'num_%s_%s_name.txt' % (arrange_policy['object_num'], int(save_point[index_point])), 'w') as f:
                     #     for line in names['name_after_' + str(m)]:
                     #
                     #         f.write(str(line) + '\n')
 
-                    names['data_after_' + str(m)] = []
-                    names['name_after_' + str(m)] = []
+                    names['data_after_distance_' + str(m)] = []
+                    names['name_after_distance_' + str(m)] = []
+                    # names['data_after_default_' + str(m)] = []
+                    # names['name_after_default_' + str(m)] = []
 
                     print('save data in:' + after_path[m] + 'num_%s_%s.txt' % (arrange_policy['object_num'], int(save_point[index_point])))
                     save_flag = True

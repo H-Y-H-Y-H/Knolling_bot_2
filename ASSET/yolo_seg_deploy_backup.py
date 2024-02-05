@@ -309,20 +309,3 @@ class Yolo_seg_model():
             cv2.destroyAllWindows()
             img_path_output = img_path + '_pred_grasp.png'
             cv2.imwrite(img_path_output, self.img_output)
-
-if __name__ == '__main__':
-
-    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.004, 'yolo_iou': 0.6,
-                 'yolo_model_path': '../ASSET/models/203_seg_sundry/weights/best.pt',
-                 'dataset_path': '../../knolling_dataset/yolo_seg_sundry_203/',
-                 'index_begin': 44000}
-
-    log_save_path = '../ASSET/models/919_grasp/'
-
-    model_threshold_start = 0.3
-    model_threshold_end = 0.8
-    check_point = 10
-    valid_num = 20000
-    model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
-
-    zzz_yolo = Yolo_grasp_model(para_dict=para_dict)
