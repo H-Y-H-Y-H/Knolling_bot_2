@@ -132,13 +132,14 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             input_target_batch.masked_fill_(mask, -100)
 
             # Forward pass
-            predictions = model(input_batch, tart_x_gt=input_target_batch, temperature=0)
+            predictions, pi, sigma, mu = model(input_batch,
+                                 tart_x_gt=input_target_batch)
 
             target_batch[num_obj:] = -100
-            loss,overlap_loss = model.calculate_loss(predictions, target_batch, input_batch)
-            # target_batch_demo = target_batch.cpu().detach().numpy().reshape(5, 2)
-            # predictions_demo = predictions.cpu().detach().numpy().reshape(5, 2)
-            # input_demo = input_batch.cpu().detach().numpy().reshape(5, 2)
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            overlap_loss = calculate_collision_loss(predictions[:model.max_obj_num].transpose(0, 1),
+                                                    target_batch[:model.max_obj_num].transpose(0, 1))
+            overlap_loss = overlap_loss.mean()
 
             print('output', predictions[:, 0].flatten())
             print('target', target_batch[:, 0].flatten())
@@ -183,7 +184,7 @@ if __name__ == '__main__':
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
     runs = api.runs("knolling0204_10_overlap")
-    name = 'quiet-sweep-1'
+    name = 'pretty-sweep-1'
 
 
     model_name = "best_model.pt"
