@@ -25,12 +25,13 @@ def main():
         config.SCALE_DATA = 100
         config.SHIFT_DATA = 100
         config.overlap_loss_factor = 10000
+        config.batch_size = 128
 
     SCALE_DATA = config.SCALE_DATA
     SHIFT_DATA = config.SHIFT_DATA
     config.forwardtype = 1
     config.dropout_prob = 0.0
-    config.max_seq_length = 2
+    config.max_seq_length = 3
     config.inputouput_size = 10
     config.log_pth = 'data/%s/' % running_name
     config.pos_encoding_Flag = True
@@ -41,7 +42,7 @@ def main():
     config.all_steps = False
     config.canvas_factor = None
     config.patience = 20
-    config.batch_size = 128
+
 
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
@@ -119,7 +120,7 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 100000 #1 000 000 data
+    config.DATA_CUT = 10000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -219,16 +220,18 @@ def main():
 
             # Forward pass
             # object number > masked number
-            output_batch = model(input_batch,
+            output_batch, pi, sigma, mu = model(input_batch,
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+            overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0,1),target_batch[:model.max_obj_num].transpose(0,1))
+            overlap_loss = overlap_loss.mean()
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
-                print('loss and overlap loss:',loss.item(),overlap_loss.item())
+                print('loss and overlap loss:',loss.item())
                 print_flag = False
 
             loss.backward()
@@ -272,12 +275,15 @@ def main():
 
                 # Forward pass
                 # object number > masked number
-                output_batch = model(input_batch,
-                                     # obj_num=object_num,
-                                     tart_x_gt=input_target_batch)
+                output_batch, pi, sigma, mu = model(input_batch,
+                                                    tart_x_gt=input_target_batch)
 
                 # Calculate loss
-                v_loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+                # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0, 1),
+                                                        target_batch[:model.max_obj_num].transpose(0, 1))
+                overlap_loss = overlap_loss.mean()
 
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
@@ -325,8 +331,8 @@ def main():
 
 if __name__ == '__main__':
 
-    sweep_train_flag = False
-    proj_name = "knolling0204_2_overlap"
+    sweep_train_flag = True
+    proj_name = "knolling0204_10_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -335,14 +341,15 @@ if __name__ == '__main__':
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
                 "lr": {"values": [1e-3]},
-                "map_embed_d_dim": {"values": [32,64,128]},
+                "map_embed_d_dim": {"values": [32]},
                 "num_attention_heads": {"values": [4,8,16,32]},
                 "num_layers":{"values":[2,4,8,16]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[8,16,32,64]},
-                "overlap_loss_factor":{"values":[10000]}
+                "num_gaussian":{"values":[4]},
+                "overlap_loss_factor":{"values":[10000000]},
+                "batch_size":{"values":[64,256,512]}
             },
         }
 

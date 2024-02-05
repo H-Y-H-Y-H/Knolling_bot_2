@@ -440,7 +440,7 @@ if __name__ == '__main__':
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 
-    object_num = 2
+    object_num = 10
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
     # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
     DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % (10)
@@ -451,8 +451,7 @@ if __name__ == '__main__':
     os.makedirs(images_log_path, exist_ok=True)
     os.makedirs(preprocess_label_path, exist_ok=True)
 
-
-    name = 'rose-waterfall-3'
+    name = 'bright-sweep-13'
 
     show_baseline = 0
     show_results_flag = True
