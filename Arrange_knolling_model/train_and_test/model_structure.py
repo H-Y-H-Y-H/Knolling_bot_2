@@ -16,12 +16,12 @@ print(device)
 # label min&max: [-0.14599999962002042, 0.294500007390976]
 # input_min,input_max = 0.016,0.048
 # label_min,label_max = -0.14599999962002042, 0.294500007390976
-SCALE_DATA = 100
-SHIFT_DATA = 50
+# SCALE_DATA = 100
+# SHIFT_DATA = 50
 # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
 # DATAROOT = "../../../knolling_dataset/learning_data_826/"
 # DATAROOT = "../../knolling_dataset/learning_data_910/"
-DATAROOT = "../../../knolling_dataset/learning_data_1019_5w/"
+# DATAROOT = "../../../knolling_dataset/learning_data_1019_5w/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
@@ -47,16 +47,15 @@ def pad_sequences(sequences, max_seq_length=10, pad_value=0):
 
 
 class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, input_data, output_data, cls_data):
+    def __init__(self, input_data, output_data):
         self.input_data = input_data    # length and width
         self.output_data = output_data  # gt position
-        self.cls_data = cls_data
 
     def __len__(self):
         return len(self.input_data)
 
     def __getitem__(self, idx):
-        return self.input_data[idx], self.output_data[idx], self.cls_data[idx]
+        return self.input_data[idx], self.output_data[idx]
 
 
 class PositionalEncoder(nn.Module):
@@ -334,9 +333,6 @@ class Knolling_Transformer(nn.Module):
         else:
             tart_x_gt_high = tart_x_gt
 
-        # x_mask = torch.ones_like(x, dtype=torch.bool)
-        # x_mask[:obj_num] = False
-        # x.masked_fill_(x_mask, 0)
 
         # Pass input through the encoder
         enc_x = self.encoder(x)
@@ -371,7 +367,8 @@ class Knolling_Transformer(nn.Module):
 
                 std_devs = torch.exp(std_devs)
                 weights = F.softmax(weights, dim=-1)
-
+                # tensor([[0.4365, 0.2660, 0.2975],
+                #         [0.2866, 0.3864, 0.3270]], device='cuda:0', grad_fn= < SelectBackward0 >)
                 if temperature != 0:
                     # Apply temperature to weights
                     weights = torch.exp(weights / temperature)
@@ -395,7 +392,6 @@ class Knolling_Transformer(nn.Module):
                 # Reshape the means and std_devs back to the original dimensions
                 chosen_means = chosen_means.view(*x.shape[:-1])
                 chosen_std_devs = chosen_std_devs.view(*x.shape[:-1])
-
                 out = chosen_means + chosen_std_devs * torch.randn_like(chosen_means)
 
                 if t == self.max_obj_num-1:
@@ -418,22 +414,15 @@ class Knolling_Transformer(nn.Module):
             out = torch.cat(outputs, dim=0)
             return out
 
-    def calculate_loss(self, pred_pos, tar_pos, tar_lw, tar_cls=None):
+    def calculate_loss(self, pred_pos, tar_pos, tar_lw):
 
         MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
 
-        tar_lw_raw = ((tar_lw - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        tar_cls_raw = ((tar_cls - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        tar_pos_raw = ((tar_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
-        pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        # tar_lw_raw = ((tar_lw - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        # tar_pos_raw = ((tar_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        # pred_pos_raw = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-        if self.use_overlap_loss == True:
-            Overlap_loss = self.calcualte_overlap_loss(pred_pos=pred_pos_raw, tar_pos=tar_pos_raw,
-                                                     tar_lw=tar_lw_raw, tar_cls=tar_cls_raw)
-            total_loss = MSE_loss * self.mse_loss_factor + self.overlap_loss_factor * Overlap_loss
-        else:
-            Overlap_loss = 0
-            total_loss = MSE_loss
+        total_loss = MSE_loss
 
         # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
         # total_loss = MSE_loss + scaled_overlap_loss

@@ -110,13 +110,13 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
 
     with torch.no_grad():
         total_loss = 0
-        for input_batch, target_batch, input_cls in val_loader:
+        for input_batch, target_batch in val_loader:
             input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
             target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
-            input_cls = torch.from_numpy(np.asarray(input_cls, dtype=np.float32)).to(device)
+            # input_cls = torch.from_numpy(np.asarray(input_cls, dtype=np.float32)).to(device)
             input_batch = input_batch.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
-            input_cls = input_cls.transpose(1, 0)
+            # input_cls = input_cls.transpose(1, 0)
 
             # # zero to False
             # input_batch_atten_mask = (input_batch == 0).bool()
@@ -135,7 +135,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             predictions = model(input_batch, tart_x_gt=input_target_batch, temperature=0)
 
             target_batch[num_obj:] = -100
-            loss = model.calculate_loss(predictions, target_batch, input_batch, input_cls)
+            loss = model.calculate_loss(predictions, target_batch, input_batch)
             # target_batch_demo = target_batch.cpu().detach().numpy().reshape(5, 2)
             # predictions_demo = predictions.cpu().detach().numpy().reshape(5, 2)
             # input_demo = input_batch.cpu().detach().numpy().reshape(5, 2)
@@ -151,8 +151,8 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
 
             outputs.append(predictions.detach().cpu().numpy())
 
-            numpy_pred = (predictions.detach().cpu().numpy() - SHIFT_DATA) / SCALE_DATA
-            numpy_label = (target_batch.detach().cpu().numpy() - SHIFT_DATA) / SCALE_DATA
+            numpy_pred = (predictions.detach().cpu().numpy() - config.SHIFT_DATA) / config.SCALE_DATA
+            numpy_label = (target_batch.detach().cpu().numpy() - config.SHIFT_DATA) / config.SCALE_DATA
 
             numpy_loss = (numpy_pred-numpy_label)**2
             numpy_loss = numpy_loss.reshape(len(numpy_loss),-1)
@@ -163,7 +163,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
 
     test_loss_list = np.concatenate(test_loss_list)
     outputs = np.concatenate(outputs)
-    outputs = (outputs.reshape(-1, len(outputs[0]) * 2) - SHIFT_DATA) / SCALE_DATA
+    outputs = (outputs.reshape(-1, len(outputs[0]) * 2) - config.SHIFT_DATA) / config.SCALE_DATA
     np.savetxt(log_path + '/test_loss_list_num_%d.csv' % num_obj, np.asarray(test_loss_list))
     np.savetxt(log_path + '/outputs.csv', outputs)
 
@@ -181,16 +181,11 @@ if __name__ == '__main__':
 
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
-    if test_sweep_flag == False:
-        runs = api.runs("knolling_sundry")
-        # name = 'charmed-sweep-1'
-        name = 'iconic-plant-8'
-        # name = 'floral-bush-179'
-    else:
-        sweep = api.sweep('knolling_tuning/qtgswbjw')
-        sweep_name = 'sweep_1204'
-        runs = sweep.runs
-        name = 'charmed-sweep-1'
+    runs = api.runs("knolling0204")
+    # name = 'charmed-sweep-1'
+    name = 'giddy-sun-26'
+    # name = 'floral-bush-179'
+
 
     model_name = "best_model.pt"
 
@@ -203,27 +198,27 @@ if __name__ == '__main__':
                 config = {k: v for k, v in run.config.items() if not k.startswith('_')}
         print('using model: ', name)
         print(config)
-    else:
-        name = 'devoted-terrain-29'
-        config = {}
-        with open('data/' + name + '/config-' + name + '.yaml', 'r') as file:
-            read_data = yaml.safe_load(file)
-            config['max_seq_length'] = read_data['max_seq_length']
-            config['map_embed_d_dim'] = read_data['map_embed_d_dim']
-            config['num_layers'] = read_data['num_layers']
-            config['forward_expansion'] = read_data['forward_expansion']
-            config['num_attention_heads'] = read_data['num_attention_heads']
-            config['dropout_prob'] = read_data['dropout_prob']
-            config['all_zero_target'] = read_data['all_zero_target']
-            config['pos_encoding_Flag'] = read_data['pos_encoding_Flag']
-            config['forwardtype'] = read_data['forwardtype']
-            config['high_dim_encoder'] = read_data['high_dim_encoder']
-            config['all_steps'] = read_data['all_steps']
-            config['num_gaussian'] = 3
-            config['canvas_factor'] = 1
-            config['use_overlap_loss'] = False
-        print('using model: ', name)
-        print(config)
+    # else:
+    #     name = 'devoted-terrain-29'
+    #     config = {}
+    #     with open('data/' + name + '/config-' + name + '.yaml', 'r') as file:
+    #         read_data = yaml.safe_load(file)
+    #         config['max_seq_length'] = read_data['max_seq_length']
+    #         config['map_embed_d_dim'] = read_data['map_embed_d_dim']
+    #         config['num_layers'] = read_data['num_layers']
+    #         config['forward_expansion'] = read_data['forward_expansion']
+    #         config['num_attention_heads'] = read_data['num_attention_heads']
+    #         config['dropout_prob'] = read_data['dropout_prob']
+    #         config['all_zero_target'] = read_data['all_zero_target']
+    #         config['pos_encoding_Flag'] = read_data['pos_encoding_Flag']
+    #         config['forwardtype'] = read_data['forwardtype']
+    #         config['high_dim_encoder'] = read_data['high_dim_encoder']
+    #         config['all_steps'] = read_data['all_steps']
+    #         config['num_gaussian'] = 3
+    #         config['canvas_factor'] = 1
+    #         config['use_overlap_loss'] = False
+    #     print('using model: ', name)
+    #     print(config)
 
     config = argparse.Namespace(**config)
 
@@ -244,7 +239,8 @@ if __name__ == '__main__':
     NUM_objects = config.max_seq_length
     solu_num = 1#12
     info_per_object = 7
-    for s in range(solu_num):
+    SHIFT_DATASET_ID = 3 # color 3,4,5
+    for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', NUM_objects)
 
         # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
@@ -252,22 +248,22 @@ if __name__ == '__main__':
 
         raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
         total_raw_data = np.append(total_raw_data, raw_data)
-        test_data = raw_data * SCALE_DATA + SHIFT_DATA
+        test_data = raw_data * config.SCALE_DATA + config.SHIFT_DATA
         valid_lw = []
         valid_pos = []
         valid_cls = []
         for i in range(NUM_objects):
             valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
             valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
-            valid_cls.append(test_data[:, [i * info_per_object + 5]])
+            # valid_cls.append(test_data[:, [i * info_per_object + 5]])
 
         valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
         valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
-        valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
+        # valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
         valid_lw_data += list(valid_lw)
         valid_pos_data += list(valid_pos)
-        valid_cls_data += list(valid_cls)
+        # valid_cls_data += list(valid_cls)
         # else:
         # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
         #     raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
@@ -291,17 +287,17 @@ if __name__ == '__main__':
         #     valid_pos_data += list(valid_pos)
         #     valid_cls_data += list(valid_cls)
 
-    test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.max_seq_length)
-    test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.max_seq_length)
-    test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
+    test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.inputouput_size)
+    test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.inputouput_size)
+    # test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
 
-    test_dataset = CustomDataset(test_input_padded, test_label_padded, test_cls_padded)
+    test_dataset = CustomDataset(test_input_padded, test_label_padded)
     val_loader = DataLoader(test_dataset, batch_size=512, shuffle=False) # 不能用shuffle True，不然evaluate面积时对不上号
 
     if test_sweep_flag == False:
 
         model = Knolling_Transformer(
-                input_length=config.max_seq_length,
+                input_length=config.inputouput_size,
                 input_size=2,
                 map_embed_d_dim=config.map_embed_d_dim,
                 num_layers=config.num_layers,
@@ -335,15 +331,15 @@ if __name__ == '__main__':
         #     for i in range(NUM_objects):
         #         raw_data[:, i * 6:i * 6 + 2] = outputs[:, i * 2:i * 2 + 2]
         #         raw_data[:, i * 6 + 6] = 0
-        if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
-            for i in range(NUM_objects):
-                raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
+        # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
+        for i in range(NUM_objects):
+            raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
 
         # evaluate_success_rate(raw_data, NUM_objects, config, test_sweep_flag=test_sweep_flag)
         log_folder = './results/%s/pred_after' % (name)
         os.makedirs(log_folder, exist_ok=True)
         print(log_folder)
-        np.savetxt(log_folder + '/num_%d_new.txt' % file_num, raw_data)
+        np.savetxt(log_folder + '/num_%d_new.txt' % config.max_seq_length, raw_data)
 
     else:
         # test the success rate in every sweep!

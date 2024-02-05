@@ -438,10 +438,10 @@ if __name__ == '__main__':
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
 
-    object_num = 10
+    object_num = 3
     # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
     # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
-    DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % object_num
+    DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % (10)
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
     images_log_path = target_path + 'images_%s/' % before_after
@@ -449,13 +449,11 @@ if __name__ == '__main__':
     os.makedirs(images_log_path, exist_ok=True)
     os.makedirs(preprocess_label_path, exist_ok=True)
 
-    # name = "devoted-terraqin-29"
-    # name = "classic-bush-95"
-    # name = 'dandy-hill-142'
-    # name = 'devoted-terrain-29'
-    name = 'iconic-plant-8'
-    # name = 'fallen-morning-156'
-    # name = "radiant-puddle-143"
+
+
+    name = 'giddy-sun-26'
+
+
 
     show_baseline = 0
     show_results_flag = True

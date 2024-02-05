@@ -8,62 +8,70 @@ DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
 
 def main():
-    if sweep_train_flag == True:
-        wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
-    else:
-        wandb.init(project='knolling_sundry')
+    # if sweep_train_flag == True:
+    #     wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
+    # else:
+
+    wandb.init(project='knolling0204')
     config = wandb.config
     running_name = wandb.run.name
 
-    config.forwardtype = 1
-    config.map_embed_d_dim = 32
-    config.num_attention_heads = 4
-    config.num_layers = 4
-    config.dropout_prob = 0.0
-    config.max_seq_length = 10
-    if sweep_train_flag == False:
+    if not sweep_train_flag:
+        config.map_embed_d_dim = 32
+        config.num_attention_heads = 4
+        config.num_layers = 10
         config.lr = 1e-3
-    config.batch_size = 512
+        config.num_gaussian = 16
+        config.SCALE_DATA = 100
+        config.SHIFT_DATA = 100
+
+    SCALE_DATA = config.SCALE_DATA
+    SHIFT_DATA = config.SHIFT_DATA
+    config.forwardtype = 1
+    config.dropout_prob = 0.0
+    config.max_seq_length = 6
+    config.inputouput_size = 10
     config.log_pth = 'data/%s/' % running_name
     config.pos_encoding_Flag = True
     config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
     config.forward_expansion = 4
-    config.pre_trained = True
+    config.pre_trained = False
     config.high_dim_encoder = True
     config.all_steps = False
     config.canvas_factor = None
     config.use_overlap_loss = False
     config.patience = 20
-    config.num_gaussian = 3
+    config.batch_size = 512
+
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
 
-    if config.pre_trained:
-        pre_name = 'devoted-terrain-29'
-        if pre_name == 'devoted-terrain-29':
-            with open('data/%s/config-%s.yaml' % (pre_name, pre_name)) as f:
-                read_data = yaml.safe_load(f)
+    # if config.pre_trained:
+    #     pre_name = 'devoted-terrain-29'
+    #     if pre_name == 'devoted-terrain-29':
+    #         with open('data/%s/config-%s.yaml' % (pre_name, pre_name)) as f:
+    #             read_data = yaml.safe_load(f)
+    #
+    #         config.all_zero_target = read_data['all_zero_target']
+    #         # config.all_steps = read_data['all_steps']
+    #         config.batch_size = read_data['batch_size']
+    #         config.dropout_prob = read_data['dropout_prob']
+    #         config.forward_expansion = read_data['forward_expansion']
+    #         config.forwardtype = read_data['forwardtype']
+    #         config.high_dim_encoder = read_data['high_dim_encoder']
+    #         config.map_embed_d_dim = read_data['map_embed_d_dim']
+    #         config.max_seq_length = read_data['max_seq_length']
+    #         config.num_attention_heads = read_data['num_attention_heads']
+    #         # config.model_params = read_data['model_params']
+    #         # config.num_data = read_data['num_data']
+    #         config.num_layers = read_data['num_layers']
+    #         config.pos_encoding_Flag = read_data['pos_encoding_Flag']
 
-            config.all_zero_target = read_data['all_zero_target']
-            # config.all_steps = read_data['all_steps']
-            config.batch_size = read_data['batch_size']
-            config.dropout_prob = read_data['dropout_prob']
-            config.forward_expansion = read_data['forward_expansion']
-            config.forwardtype = read_data['forwardtype']
-            config.high_dim_encoder = read_data['high_dim_encoder']
-            config.map_embed_d_dim = read_data['map_embed_d_dim']
-            config.max_seq_length = read_data['max_seq_length']
-            config.num_attention_heads = read_data['num_attention_heads']
-            # config.model_params = read_data['model_params']
-            # config.num_data = read_data['num_data']
-            config.num_layers = read_data['num_layers']
-            config.pos_encoding_Flag = read_data['pos_encoding_Flag']
-        PATH = 'data/%s/best_model.pt' % pre_name
-        checkpoint = torch.load(PATH, map_location=device)
+    pre_name = 'devoted-terrain-29'
 
     model = Knolling_Transformer(
-        input_length=config.max_seq_length,
+        input_length=config.inputouput_size,
         input_size=2,
         map_embed_d_dim=config.map_embed_d_dim,
         num_layers=config.num_layers,
@@ -83,6 +91,9 @@ def main():
         overlap_loss_factor=None # 1
     )
 
+
+    PATH = 'data/%s/best_model.pt' % pre_name
+    checkpoint = torch.load(PATH, map_location=device)
     if config.pre_trained:
         model.load_state_dict(checkpoint)
 
@@ -99,14 +110,16 @@ def main():
     valid_output_data = []
     valid_cls_data = []
 
-    config.DATA_CUT = 100000
+    config.DATA_CUT = 100000 #1 000 000 data
 
-    policy_num = 1#4
-    configuration_num = 1#3
+    SHIFT_DATASET_ID = 3
+    policy_num = 4
+    configuration_num = 3
     config.solu_num = int(policy_num * configuration_num)
     info_per_object = 7
-    for f in range(config.solu_num):
-        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (config.max_seq_length, f)
+
+    for f in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+config.solu_num):
+        dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (config.inputouput_size, f)
         print('load data:', dataset_path)
         raw_data = np.loadtxt(dataset_path)[:config.DATA_CUT, :config.max_seq_length * info_per_object]
         # num_list = np.random.choice(np.arange(4, 11), len(raw_data))
@@ -145,15 +158,13 @@ def main():
         valid_output_data += list(valid_pos)
         valid_cls_data += list(valid_cls)
 
-    train_input_padded = pad_sequences(train_input_data, max_seq_length=config.max_seq_length)
-    train_label_padded = pad_sequences(train_output_data, max_seq_length=config.max_seq_length)
-    train_cls_padded = pad_sequences(train_cls_data, max_seq_length=config.max_seq_length)
-    test_input_padded = pad_sequences(valid_input_data, max_seq_length=config.max_seq_length)
-    test_label_padded = pad_sequences(valid_output_data, max_seq_length=config.max_seq_length)
-    test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
+    train_input_padded = pad_sequences(train_input_data,  max_seq_length=config.inputouput_size)
+    train_label_padded = pad_sequences(train_output_data, max_seq_length=config.inputouput_size)
+    test_input_padded = pad_sequences(valid_input_data,   max_seq_length=config.inputouput_size)
+    test_label_padded = pad_sequences(valid_output_data,  max_seq_length=config.inputouput_size)
 
-    train_dataset = CustomDataset(train_input_padded, train_label_padded, train_cls_padded)
-    test_dataset = CustomDataset(test_input_padded, test_label_padded, test_cls_padded)
+    train_dataset = CustomDataset(train_input_padded, train_label_padded)
+    test_dataset = CustomDataset(test_input_padded, test_label_padded)
 
     config.num_data = (len(train_dataset), len(test_dataset))
 
@@ -175,15 +186,13 @@ def main():
         model.train()
         train_loss = 0
 
-        for input_batch, target_batch, input_cls in train_loader:
+        for input_batch, target_batch in train_loader:
             optimizer.zero_grad()
 
             input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
             target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
-            input_cls = torch.from_numpy(np.asarray(input_cls, dtype=np.float32)).to(device)
             input_batch = input_batch.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
-            input_cls = input_cls.transpose(1, 0)
 
             target_batch_atten_mask = (target_batch == 0).bool()
             target_batch.masked_fill_(target_batch_atten_mask, -100)
@@ -201,7 +210,7 @@ def main():
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss = model.calculate_loss(output_batch, target_batch, input_batch, input_cls)
+            loss = model.calculate_loss(output_batch, target_batch, input_batch)
 
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
@@ -218,13 +227,11 @@ def main():
         print_flag = True
         with torch.no_grad():
             total_loss = 0
-            for input_batch, target_batch, input_cls in val_loader:
+            for input_batch, target_batch in val_loader:
                 input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
                 target_batch = torch.from_numpy(np.asarray(target_batch, dtype=np.float32)).to(device)
-                input_cls = torch.from_numpy(np.asarray(input_cls, dtype=np.float32)).to(device)
                 input_batch = input_batch.transpose(1, 0)
                 target_batch = target_batch.transpose(1, 0)
-                input_cls = input_cls.transpose(1, 0)
 
                 # # zero to False
                 # input_batch_atten_mask = (input_batch == 0).bool()
@@ -252,7 +259,7 @@ def main():
                                      tart_x_gt=input_target_batch)
 
                 # Calculate loss
-                loss = model.calculate_loss(output_batch, target_batch, input_batch, input_cls)
+                loss = model.calculate_loss(output_batch, target_batch, input_batch)
 
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
@@ -284,7 +291,8 @@ def main():
                        "valid_loss": avg_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
                        "scheduler_factor": config.scheduler_factor,
-                       "min_loss": min_loss})
+                       "min_loss": min_loss,
+                       "norm_loss": min_loss/(config.SCALE_DATA**2)})
             if abort_learning > config.patience:
                 print('abort training!')
                 break
@@ -293,19 +301,26 @@ if __name__ == '__main__':
 
     sweep_train_flag = False
 
-    if sweep_train_flag == True:
+    if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
             "metric": {"goal": "minimize", "name": "min_loss"},
             "parameters": {
                 "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-                "lr": {"values": [1e-3, 1e-4]}
+                "lr": {"values": [1e-3, 1e-4]},
+                "map_embed_d_dim": {"values": [32,128]},
+                "num_attention_heads": {"values": [4,8]},
+                "num_layers":{"values":[4,10,16]},
+                # "batch_size":{"values":[512]},
+                "SCALE_DATA": {"values": [100]},
+                "SHIFT_DATA": {"values": [100]},
+                "num_gaussian":{"values":[3,8,16,32,64]}
             },
         }
 
-        sweep_id = wandb.sweep(sweep=sweep_configuration, project="knolling_tuning")
+        sweep_id = wandb.sweep(sweep=sweep_configuration, project="knolling0204")
 
-        wandb.agent(sweep_id, function=main, count=3)
+        wandb.agent(sweep_id, function=main, count=100)
     else:
         main()
