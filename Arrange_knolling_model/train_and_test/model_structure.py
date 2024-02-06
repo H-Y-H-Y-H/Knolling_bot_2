@@ -540,26 +540,24 @@ class Knolling_Transformer(nn.Module):
 
 def min_smaple_loss(weights, variances, means, target_value):
     std = torch.sqrt(variances)
-    sample_v = std*torch.randn_like(std,device=device)
+    sample_v = std*torch.randn(std.shape,device=device)
     samples = sample_v + means
     samples_errors = abs(samples - target_value.unsqueeze(2)).sum(3)
     # Calculate the values between
     min_samples_errors_id = torch.argmin(samples_errors, dim=2)
-    unique_indices, counts = min_samples_errors_id.unique(return_counts=True)
-    # Calculate the probability of each index
-    probabilities = counts.float() / min_samples_errors_id.size(0)
-    samples_prob = probabilities[min_samples_errors_id]
-    min_samples_errors_id = torch.clamp(min_samples_errors_id, 0, 3 - 1)  # Ensure indices are in the range [0, 2]
+    min_samples_errors_id = torch.clamp(min_samples_errors_id, 0, 3 - 1).detach()  # Ensure indices are in the range [0, 2]
+
+    # unique_indices, counts = min_samples_errors_id.unique(return_counts=True)
+    # # Calculate the probability of each index
+    # probabilities = counts.float() / min_samples_errors_id.size(1)
+    # samples_prob = probabilities[min_samples_errors_id]
 
     selected_values = torch.gather(samples_errors, 2, min_samples_errors_id.unsqueeze(-1))
 
-    # Squeeze the last dimension to get the shape (3, 512)
-    selected_values = selected_values.squeeze(-1)
 
+    # weighted_loss = selected_values*samples_prob.unsqueeze(2)
 
-    weighted_loss = selected_values*samples_prob
-
-    loss_all = weighted_loss.mean()
+    loss_all= selected_values.mean()
 
     return loss_all
 
@@ -568,7 +566,7 @@ if __name__ == "__main__":
     from datetime import datetime
 
     max_seq_length = 10
-    in_obj_num =3
+    in_obj_num =2
 
     d_dim = 32
     layers_num = 4
@@ -603,7 +601,7 @@ if __name__ == "__main__":
     batch_size =512
     lr=1e-3
     scheduler_factor=0.1
-    patience=20
+    patience=1000
 
     train_input_data = []
     train_output_data = []
@@ -615,6 +613,9 @@ if __name__ == "__main__":
     valid_cls_data = []
 
     DATA_CUT = 1000 #1 000 000 data
+    k_ll = 0.
+    k_op=0
+    k_pos=1
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -711,12 +712,14 @@ if __name__ == "__main__":
             ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
             # Calculate collision loss
             overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
-
-            loss = ll_loss+ms_min_smaple_loss+overlap_loss
+            # Calcluate position loss
+            pos_loss = model.masked_MSE_loss(output_batch,target_batch)
+            loss = k_ll*ll_loss+ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
-                print('loss and overlap loss:',loss.item())
+                print('loss and overlap loss:', loss.item(), ll_loss.item(), ms_min_smaple_loss.item(),overlap_loss.item())
+
                 print_flag = False
 
             loss.backward()
@@ -770,13 +773,13 @@ if __name__ == "__main__":
                 # Calculate collision loss
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
                                                         target_batch[:model.in_obj_num].transpose(0, 1))
-                # loss all
-                loss = ll_loss + ms_min_smaple_loss + overlap_loss
-
+                # Calcluate position loss
+                pos_loss = model.masked_MSE_loss(output_batch, target_batch)
+                loss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', loss.item(), overlap_loss.item())
+                    print('loss and overlap loss:', loss.item(),ll_loss.item(),ms_min_smaple_loss.item(), overlap_loss.item())
 
                     print_flag = False
 

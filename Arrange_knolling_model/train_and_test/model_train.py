@@ -36,8 +36,8 @@ def main():
         config.forward_expansion = 4
         config.pre_trained = False
         config.all_steps = False
-        config.patience = 100
-        loss_d_epoch = 30
+        config.patience = 300
+        loss_d_epoch = 200
 
         model_path = None
     else:
@@ -58,16 +58,17 @@ def main():
         os.makedirs(config.log_pth,exist_ok=True)
         config.pre_trained = True
         config.inputouput_size = inputouput_size
-        config.patience = 100
-        loss_d_epoch = 30
+        config.patience = 300
+        loss_d_epoch = 200
 
         print(config)
 
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
-
-
+    k_ll = config.k_ll
+    k_op = config.k_op
+    k_pos = config.k_pos
     # Assuming 'config' is your W&B configuration object
     try:
         config_dict = dict(config)  # Convert to dictionary if necessary
@@ -147,21 +148,26 @@ def main():
             output_batch, pi, sigma, mu = model(input_batch,
                                  tart_x_gt=input_target_batch)
 
-            # Calculate loss
-            loss_mdn = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-            loss_mse, overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-            # overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
-            # overlap_loss = overlap_loss.mean()
-            loss = loss_mdn + loss_mse
+            # Calculate log-likelihood loss
+            ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+            # Calculate min sample loss
+            ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+            # Calculate collision loss
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
+            # Calcluate position loss
+            pos_loss = model.masked_MSE_loss(output_batch, target_batch)
+            tloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
+
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
-                print('loss and overlap loss:',loss.item())
+                print('loss and overlap loss:', tloss.item(), ll_loss.item(), ms_min_smaple_loss.item(),overlap_loss.item(),pos_loss.item())
+
                 print_flag = False
 
-            loss.backward()
+            tloss.backward()
             optimizer.step()
-            train_loss += loss.item()
+            train_loss += tloss.item()
             train_loss_overlap += overlap_loss.item()
         train_loss = train_loss / len(train_loader)
         train_loss_overlap = train_loss_overlap/len(train_loader)
@@ -203,28 +209,29 @@ def main():
                 output_batch, pi, sigma, mu = model(input_batch,
                                                     tart_x_gt=input_target_batch)
 
-                # Calculate loss log likehood
-                loss_mdn = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-
-
-                loss_mse, overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-                # overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                #                                         target_batch[:model.in_obj_num].transpose(0, 1))
-                # overlap_loss = overlap_loss.mean()
-                v_loss = loss_mdn + loss_mse*config.mse_factor
-
+                # Calculate log-likelihood loss
+                ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+                # Calculate min sample loss
+                ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+                # Calculate collision loss
+                overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        target_batch[:model.in_obj_num].transpose(0, 1))
+                # Calcluate position loss
+                pos_loss = model.masked_MSE_loss(output_batch, target_batch)
+                vloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss, mdn, mse:', v_loss.item(), overlap_loss.item(),loss_mdn.item(),loss_mse.item())
+                    print('loss and overlap loss:', vloss.item(), ll_loss.item(), ms_min_smaple_loss.item(),
+                          overlap_loss.item(), pos_loss.item())
 
                     print_flag = False
 
-                total_loss += v_loss.item()
+                total_loss += vloss.item()
                 valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
             valid_overlap_loss = valid_overlap_loss/len(val_loader)
-            scheduler.step(avg_loss)
+            scheduler.step(vloss)
 
             valid_loss_list.append(avg_loss)
             valid_loss2_list.append(valid_overlap_loss)
@@ -269,11 +276,11 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000000 #1 000 000 data
+    DATA_CUT = 10000 #1 000 000 data
 
     SHIFT_DATASET_ID = 0
-    policy_num = 3
-    configuration_num = 4
+    policy_num = 1
+    configuration_num = 1
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
@@ -347,17 +354,19 @@ if __name__ == '__main__':
             "parameters": {
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-                "lr": {"values": [1e-2]},
-                "map_embed_d_dim": {"values": [32,64,128,256]},
-                "num_attention_heads": {"values": [4,8,16,32]},
-                "num_layers":{"values":[2,4,8,16]},
+                "lr": {"values": [1e-3]},
+                "map_embed_d_dim": {"values": [32]},
+                "num_attention_heads": {"values": [4]},
+                "num_layers":{"values":[4]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[4,8,16]},
+                "num_gaussian":{"values":[4]},
                 "overlap_loss_factor":{"values":[10000000]},
                 "batch_size":{"values":[512]},
-                "mse_factor":{"values":[0.01,0.1,0.5]}
+                "k_ll":{"values":[0.01]},
+                "k_op":{'values':[0.0001]},
+                'k_pos':{'values':[1]}
             },
         }
 

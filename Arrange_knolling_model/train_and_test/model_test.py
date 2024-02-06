@@ -177,12 +177,13 @@ if __name__ == '__main__':
 
     test_sweep_flag = False
     use_yaml = True
+    SHOW_GT = False
 
     api = wandb.Api()
     # Project is specified by <entity/project-name>
 
-    runs = api.runs("knolling0204_10_overlap")
-    name = 'fearless-plant-88'
+    runs = api.runs("knolling0205_10_overlap")
+    name = 'stilted-sweep-1'
 
 
     model_name = "best_model.pt"
@@ -213,7 +214,6 @@ if __name__ == '__main__':
     valid_cls_data = []
     total_raw_data = []
 
-    SHOW_GT = False
     # load the test dataset
     file_num = 10
     test_num_scenario = 1000
