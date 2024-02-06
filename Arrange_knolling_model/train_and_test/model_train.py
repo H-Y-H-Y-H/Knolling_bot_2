@@ -3,41 +3,65 @@ from datetime import datetime
 import os
 from model_structure import *
 import wandb
+import argparse
 
-DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
 
 def main():
     # if sweep_train_flag == True:
     #     wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
     # else:
+    if sweep_train_flag:
+        wandb.init(project=proj_name)
+        running_name = wandb.run.name
 
-    wandb.init(project=proj_name)
-    config = wandb.config
-    running_name = wandb.run.name
+        config = wandb.config
 
-    if not sweep_train_flag:
-        config.map_embed_d_dim = 32
-        config.num_attention_heads = 16
-        config.num_layers = 10
-        config.lr = 1e-3
-        config.num_gaussian = 32
-        config.SCALE_DATA = 100
-        config.SHIFT_DATA = 100
-        config.overlap_loss_factor = 10000
-        config.batch_size = 128
+        # config.map_embed_d_dim = 32
+        # config.num_attention_heads = 16
+        # config.num_layers = 10
+        # config.lr = 1e-3
+        # config.num_gaussian = 32
+        # config.SCALE_DATA = 100
+        # config.SHIFT_DATA = 100
+        # config.overlap_loss_factor = 10000
+        # config.batch_size = 128
 
-    config.forwardtype = 1
-    config.dropout_prob = 0.0
-    config.max_seq_length = max_seq_length
-    config.inputouput_size = inputouput_size
-    config.log_pth = 'data/%s/' % running_name
-    config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
-    config.forward_expansion = 4
-    config.pre_trained = False
-    config.all_steps = False
-    config.patience = 21
+        config.forwardtype = 1
+        config.dropout_prob = 0.0
+        config.max_seq_length = max_seq_length
+        config.inputouput_size = inputouput_size
+        config.log_pth = 'data/%s/' % running_name
+        config.all_zero_target = 0  # 1 tart_x = zero like, 0: tart_x = tart_x
+        config.forward_expansion = 4
+        config.pre_trained = False
+        config.all_steps = False
+        config.patience = 100
+        loss_d_epoch = 30
 
+        model_path = None
+    else:
+        pretrained_model = 'celestial-silence-87'
+        wandb.init(project=proj_name)
+        running_name = wandb.run.name
+        # Load the YAML file
+        with open(f'data/{pretrained_model}/config.yaml', 'r') as yaml_file:
+            config_dict = yaml.safe_load(yaml_file)
+
+        model_path = f'data/{pretrained_model}/best_model.pt'
+
+
+        config = {k: v for k, v in config_dict.items() if not k.startswith('_')}
+        config = argparse.Namespace(**config)
+
+        config.log_pth = f'data/{running_name}/'
+        os.makedirs(config.log_pth,exist_ok=True)
+        config.pre_trained = True
+        config.inputouput_size = inputouput_size
+        config.patience = 100
+        loss_d_epoch = 30
+
+        print(config)
 
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
@@ -45,7 +69,10 @@ def main():
 
 
     # Assuming 'config' is your W&B configuration object
-    config_dict = dict(config)  # Convert to dictionary if necessary
+    try:
+        config_dict = dict(config)  # Convert to dictionary if necessary
+    except:
+        config_dict = vars(config)
     # Save as YAML
     with open(config.log_pth + 'config.yaml', 'w') as yaml_file:
         yaml.dump(config_dict, yaml_file, default_flow_style=False)
@@ -68,11 +95,10 @@ def main():
         overlap_loss_factor= config.overlap_loss_factor # 1
     )
 
-    pre_name=''
+
 
     if config.pre_trained:
-        PATH = 'data/%s/best_model.pt' % pre_name
-        checkpoint = torch.load(PATH, map_location=device)
+        checkpoint = torch.load(model_path, map_location=device)
         model.load_state_dict(checkpoint)
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -81,7 +107,7 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
-                                                           patience=config.patience, verbose=True)
+                                                           patience=loss_d_epoch, verbose=True)
 
     num_epochs = 1000
     train_loss_list = []
@@ -122,10 +148,11 @@ def main():
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-            # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
-            overlap_loss = overlap_loss.mean()
+            loss_mdn = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+            loss_mse, overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+            # overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
+            # overlap_loss = overlap_loss.mean()
+            loss = loss_mdn + loss_mse
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
@@ -177,16 +204,17 @@ def main():
                                                     tart_x_gt=input_target_batch)
 
                 # Calculate loss
-                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-                # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-                overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        target_batch[:model.in_obj_num].transpose(0, 1))
-                overlap_loss = overlap_loss.mean()
+                loss_mdn = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+                loss_mse, overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                # overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                #                                         target_batch[:model.in_obj_num].transpose(0, 1))
+                # overlap_loss = overlap_loss.mean()
+                v_loss = loss_mdn + loss_mse*config.mse_factor
 
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', v_loss.item(), overlap_loss.item())
+                    print('loss and overlap loss, mdn, mse:', v_loss.item(), overlap_loss.item(),loss_mdn.item(),loss_mse.item())
 
                     print_flag = False
 
@@ -241,13 +269,13 @@ if __name__ == '__main__':
 
     DATA_CUT = 1000000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 3
-    policy_num = 1
-    configuration_num = 1
+    SHIFT_DATASET_ID = 0
+    policy_num = 3
+    configuration_num = 4
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
-    inputouput_size = 3
+    inputouput_size = 2
 
     # how many data used during training.
     max_seq_length = 10
@@ -308,7 +336,8 @@ if __name__ == '__main__':
 
 
     sweep_train_flag = True
-    proj_name = "knolling0204_10_overlap"
+
+    proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -323,9 +352,10 @@ if __name__ == '__main__':
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[4,16]},
+                "num_gaussian":{"values":[4,8,16]},
                 "overlap_loss_factor":{"values":[10000000]},
-                "batch_size":{"values":[64,256,512]}
+                "batch_size":{"values":[64,256,512]},
+                "mse_factor":{"values":[0.01,0.1,0.5]}
             },
         }
 
