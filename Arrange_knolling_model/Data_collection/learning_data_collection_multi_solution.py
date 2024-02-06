@@ -347,8 +347,6 @@ if __name__ == '__main__':
     before_after = 'after'
     obj_num = 10
     SHIFT_DATASET_ID = 0
-    np.random.seed(100)
-    random.seed(100)
 
     start_evaluations = 450000
     end_evaluations =   500000
