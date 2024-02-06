@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
 np.random.seed(1)
 def generate_synthetic_data(num_samples, input_size, output_size, num_components):
     X = np.random.randn(num_samples, input_size).astype(np.float32)  # Input features
@@ -18,11 +21,11 @@ def generate_synthetic_data(num_samples, input_size, output_size, num_components
         component = np.random.choice(num_components, p=weights[i])
         Y[i] = means[component] + np.random.randn(output_size) * np.sqrt(variances[component])
 
-    return torch.tensor(X), torch.tensor(Y)
+    return torch.tensor(X,device=device), torch.tensor(Y,device=device)
 
 # Generate synthetic data
-num_samples = 120
-train_data = 100
+num_samples = 1200
+train_data = 1000
 input_size = 2
 output_size = 2
 num_components = 3
@@ -105,49 +108,26 @@ class GMM_MLP(nn.Module):
 #
 #     return loss
 
-def sample_from_gmm(means, variances, weights, num_samples=10):
-    """
-    Sample from the Gaussian Mixture Model defined by the means, variances, and weights.
-    Args:
-    - means: Tensor of shape [batch_size, num_components, output_dim]
-    - variances: Tensor of shape [batch_size, num_components, output_dim]
-    - weights: Tensor of shape [batch_size, num_components]
+def mse_loss(means, variances, weights, target_value, num_samples=10):
+    std = torch.sqrt(variances)
+    sample_v = std*torch.rand(1000,3,2,device=device)
+    samples = sample_v + means
+    samples_errors = abs(samples - target_value.unsqueeze(1)).sum(2)
+    # Calculate the values between
+    min_samples_errors_id = torch.argmin(samples_errors, dim=1)
+    unique_indices, counts = min_samples_errors_id.unique(return_counts=True)
+    # Calculate the probability of each index
+    probabilities = counts.float() / min_samples_errors_id.size(0)
+    samples_prob = probabilities[min_samples_errors_id]
 
-    Returns:
-    - samples: Tensor of shape [batch_size, num_samples, output_dim]
-    """
-    batch_size, num_components, output_dim = means.size()
-    categorical = torch.distributions.Categorical(weights)
-    component_indices = categorical.sample((num_samples,)).permute(1, 0)  # [batch_size, num_samples]
+    samples_errors = samples_errors[np.arange(len(min_samples_errors_id)),min_samples_errors_id]
 
-    # Select means and stds based on sampled component indices
-    means = means.gather(1, component_indices.unsqueeze(2).expand(-1, -1, output_dim))
-    stds = variances.sqrt().gather(1, component_indices.unsqueeze(2).expand(-1, -1, output_dim))
+    weighted_loss = samples_errors*samples_prob
 
-    # Sample from Normal distribution
-    normal = torch.distributions.Normal(means, stds)
-    samples = normal.sample()  # [batch_size, num_samples, output_dim]
+    loss_all = weighted_loss.mean()
 
-    return samples
+    return loss_all
 
-def gmm_loss(means, variances, weights, targets):
-    """
-    Compute the negative log-likelihood of the targets under the Gaussian mixture model defined by means, variances, and weights.
-    """
-    # Expand targets to compute their density under each component
-    targets_expanded = targets.unsqueeze(1)  # Shape: [N, 1, D]
-
-    # Calculate the density of each target under each Gaussian component
-    component_densities = torch.exp(
-        -0.5 * torch.sum(((targets_expanded - means) ** 2) / variances, dim=2)) / torch.sqrt(
-        torch.prod(2 * np.pi * variances, dim=2))
-    # Weighted sum of densities across components
-    mixture_density = torch.sum(weights * component_densities, dim=1)
-
-    # Compute negative log-likelihood
-    nll = -torch.mean(torch.log(mixture_density + 1e-9))  # Add a small value to prevent log(0)
-
-    return nll
 
 
 def min_sampling_error_loss(samples, targets):
@@ -177,8 +157,7 @@ def sample_gmm(means, variances, weights, num_samples=1):
     # Choose components based on weights
     cumulative_weights = weights.cumsum(dim=1)
     rand_vals = torch.rand(N, num_samples, device=means.device).unsqueeze(-1)
-    component_indices = (rand_vals > cumulative_weights.unsqueeze(1)).sum(
-        dim=2)  # Find which component each sample belongs to
+    component_indices = (rand_vals > cumulative_weights.unsqueeze(1)).sum(dim=2)  # Find which component each sample belongs to
 
     for i in range(N):  # Loop over batch
         for j in range(num_samples):  # Loop over samples
@@ -190,18 +169,50 @@ def sample_gmm(means, variances, weights, num_samples=1):
     return samples.squeeze()
 
 
+def gmm_nll_loss(means, variances, weights, targets):
+    """
+    Compute the negative log-likelihood of targets under a Gaussian Mixture Model.
+
+    Parameters:
+    - means: Predicted means of the GMM components, shape [batch_size, num_components, output_dim].
+    - variances: Predicted variances of the GMM components, shape [batch_size, num_components, output_dim].
+    - weights: Predicted mixture weights of the GMM components, shape [batch_size, num_components].
+    - targets: True target values, shape [batch_size, output_dim].
+
+    Returns:
+    - nll_loss: The negative log-likelihood loss, a scalar tensor.
+    """
+    batch_size, num_components, output_dim = means.size()
+    targets = targets.unsqueeze(1).expand(-1, num_components, -1)  # [batch_size, num_components, output_dim]
+
+    # Compute the Gaussian probability density for each component
+    variances = variances.clamp(min=1e-6)  # Ensure variance is not too close to zero
+    inv_variances = 1.0 / variances
+    exp_term = ((targets - means) ** 2) * inv_variances
+    exp_term = torch.sum(exp_term, dim=2)  # Sum over output dimensions
+    norm_term = torch.log(2 * torch.pi * variances).sum(dim=2)  # Log normalization term
+    log_prob = -0.5 * (norm_term + exp_term)
+
+    # Log-sum-exp trick for numerical stability
+    log_weights = torch.log(weights.clamp(min=1e-6))  # Log mixture weights
+    logsumexp_term = torch.logsumexp(log_prob + log_weights, dim=1)
+
+    # Negative log-likelihood loss
+    nll_loss = -torch.mean(logsumexp_term)
+
+    return nll_loss
 
 from torch.utils.data import DataLoader, TensorDataset
 
 # Assuming X and Y are your input and target tensors
 dataset = TensorDataset(X_train, Y_train)
-batch_size = 512  # You can adjust the batch size as needed
+batch_size = 1024  # You can adjust the batch size as needed
 
 # Create a DataLoader to handle batching and shuffling
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
-def train_model(model, X_train, Y_train, epochs=10000, lr=0.01):
+def train_model(model, X_train, Y_train, epochs=3000, lr=0.01,alpha= 0.5):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     for epoch in range(epochs):
         model.train()
@@ -210,10 +221,13 @@ def train_model(model, X_train, Y_train, epochs=10000, lr=0.01):
         for X_batch, Y_batch in data_loader:
             optimizer.zero_grad()
             means, variances, weights = model(X_batch)
+            nll_loss = gmm_nll_loss(means, variances, weights, Y_batch)
             # Sample from the GMM and compute loss
-            samples = sample_from_gmm(means, variances, weights, num_samples)
-            loss = min_sampling_error_loss(samples, Y_batch)
-
+            mse_loss_value = mse_loss(means, variances, weights, Y_batch, num_samples)
+            # sampling_loss  = min_sampling_error_loss(samples, Y_batch)
+            # Combined Loss
+            loss = alpha * nll_loss + (1 - alpha) * mse_loss_value
+            # loss = mse_loss_value
             loss.backward()
             optimizer.step()
 
@@ -221,16 +235,17 @@ def train_model(model, X_train, Y_train, epochs=10000, lr=0.01):
 
         average_loss = total_loss / len(data_loader)
         if epoch % 10 == 0:
-            print(f'Epoch {epoch}, Loss: {average_loss}')
+            print(f'Epoch {epoch}, Loss: {average_loss}',"MSE",mse_loss_value.item())
 
     # Example of generating predictions for a single input
-    x_new = X  # Replace with your new input
+    x_new = X_train[:120]  # Replace with your new input
     model.eval()
     with torch.no_grad():
         means, variances, weights = model(x_new)
         predicted_samples = sample_gmm(means, variances, weights, num_samples=10)  # Generate 10 samples
 
     x_new = x_new.detach().cpu().numpy()
+    X, Y = X_train.detach().cpu().numpy(), Y_train.detach().cpu().numpy()
     predicted_samples = predicted_samples.detach().cpu().numpy()
 
     for i in range(120):
@@ -241,6 +256,6 @@ def train_model(model, X_train, Y_train, epochs=10000, lr=0.01):
     plt.show()
 
 
-model = GMM_MLP(input_size, [4,16,32], num_components)
+model = GMM_MLP(input_size, [32,64,64], num_components).to(device)
 train_model(model, X, Y)
 

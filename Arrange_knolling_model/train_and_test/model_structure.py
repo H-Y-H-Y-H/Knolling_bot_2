@@ -233,7 +233,7 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=1):
     num_pairs = num_objects * (num_objects - 1) / 2
     collision_loss = collision_loss / num_pairs
 
-    return collision_loss
+    return collision_loss.mean()
 
 class Knolling_Transformer(nn.Module):
     def __init__(
@@ -426,30 +426,64 @@ class Knolling_Transformer(nn.Module):
 
         return total_loss, overlap_loss
 
-    def mdn_loss_function(self, pi, sigma, mu, y):
-        # Reshape y to match the Gaussian components (Num_of_objects, Batch_size, 1, 2)
-        y = y.unsqueeze(2)  # Assuming y has shape (Num_of_objects, Batch_size, 2)
+    def mdn_loss_function(self, weights, variances, means, targets):
+        """
+        Compute the negative log-likelihood of targets under a Gaussian Mixture Model.
 
-        # Calculate the mixture of Gaussian probabilities
-        # Assuming sigma is positive and represents standard deviation
-        norm = torch.distributions.Normal(mu, sigma)
+        Parameters:
+        - means: Predicted means of the GMM components, shape [step, batch_size, num_components, output_dim].
+        - variances: Predicted variances of the GMM components, shape [step, batch_size, num_components, output_dim].
+        - weights: Predicted mixture weights of the GMM components, shape [step, batch_size, num_components].
+        - targets: True target values, shape [step, batch_size, output_dim].
 
-        prob = norm.log_prob(y)  # This computes the log probability of y for each Gaussian
-        prob = torch.clamp(prob,-float('inf'),-1e-9)
-        # prob shape is (Num_of_objects, Batch_size, Num_of_Gaussian,2), need to sum log probs over dimensions
-        log_prob = prob.sum(dim=-1)  # New shape: [Num_of_objects, Batch_size, Num_of_Gaussian]
+        Returns:
+        - nll_loss: The negative log-likelihood loss, a scalar tensor.
+        """
 
-        # Weighting log probabilities by the mixing coefficients (pi)
-        # Adding a small value to pi to avoid log(0)
-        weighted_log_prob = log_prob + torch.log(pi + 1e-9)
+        num_step, batch_size, num_components, output_dim = means.size()
+        targets = targets.unsqueeze(2).expand(-1,-1, num_components, -1)  # [step, batch_size, num_components, output_dim]
 
-        # Using logsumexp to sum across Gaussians for numerical stability
-        # This combines the weighted log probabilities for all Gaussians for each object in the batch
-        loss = torch.logsumexp(weighted_log_prob, dim=2)  # Shape: [Num_of_objects, Batch_size]
+        # Compute the Gaussian probability density for each component
+        variances = variances.clamp(min=1e-6)  # Ensure variance is not too close to zero
+        inv_variances = 1.0 / variances
+        exp_term = ((targets - means) ** 2) * inv_variances
+        exp_term = torch.sum(exp_term, dim=3)  # Sum over output dimensions
+        norm_term = torch.log(2 * torch.pi * variances).sum(dim=3)  # Log normalization term
+        log_prob = -0.5 * (norm_term + exp_term)
 
-        # Taking the negative and averaging over all objects and all batch items
-        loss = -loss.mean()
-        return loss
+        # Log-sum-exp trick for numerical stability
+        log_weights = torch.log(weights.clamp(min=1e-6))  # Log mixture weights
+        logsumexp_term = torch.logsumexp(log_prob + log_weights, dim=2)
+
+        # Negative log-likelihood loss
+        nll_loss = -torch.mean(logsumexp_term)
+
+        return nll_loss
+
+
+        # # Reshape y to match the Gaussian components (Num_of_objects, Batch_size, 1, 2)
+        # y = y.unsqueeze(2)  # Assuming y has shape (Num_of_objects, Batch_size, 2)
+        #
+        # # Calculate the mixture of Gaussian probabilities
+        # # Assuming sigma is positive and represents standard deviation
+        # norm = torch.distributions.Normal(mu, sigma)
+        #
+        # prob = norm.log_prob(y)  # This computes the log probability of y for each Gaussian
+        # prob = torch.clamp(prob,-float('inf'),-1e-9)
+        # # prob shape is (Num_of_objects, Batch_size, Num_of_Gaussian,2), need to sum log probs over dimensions
+        # log_prob = prob.sum(dim=-1)  # New shape: [Num_of_objects, Batch_size, Num_of_Gaussian]
+        #
+        # # Weighting log probabilities by the mixing coefficients (pi)
+        # # Adding a small value to pi to avoid log(0)
+        # weighted_log_prob = log_prob + torch.log(pi + 1e-9)
+        #
+        # # Using logsumexp to sum across Gaussians for numerical stability
+        # # This combines the weighted log probabilities for all Gaussians for each object in the batch
+        # loss = torch.logsumexp(weighted_log_prob, dim=2)  # Shape: [Num_of_objects, Batch_size]
+        #
+        # # Taking the negative and averaging over all objects and all batch items
+        # loss = -loss.mean()
+        # return loss
 
     def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100):
 
@@ -503,6 +537,33 @@ class Knolling_Transformer(nn.Module):
 
         return penalty
 
+
+def min_smaple_loss(weights, variances, means, target_value):
+    std = torch.sqrt(variances)
+    sample_v = std*torch.randn_like(std,device=device)
+    samples = sample_v + means
+    samples_errors = abs(samples - target_value.unsqueeze(2)).sum(3)
+    # Calculate the values between
+    min_samples_errors_id = torch.argmin(samples_errors, dim=2)
+    unique_indices, counts = min_samples_errors_id.unique(return_counts=True)
+    # Calculate the probability of each index
+    probabilities = counts.float() / min_samples_errors_id.size(0)
+    samples_prob = probabilities[min_samples_errors_id]
+    min_samples_errors_id = torch.clamp(min_samples_errors_id, 0, 3 - 1)  # Ensure indices are in the range [0, 2]
+
+    selected_values = torch.gather(samples_errors, 2, min_samples_errors_id.unsqueeze(-1))
+
+    # Squeeze the last dimension to get the shape (3, 512)
+    selected_values = selected_values.squeeze(-1)
+
+
+    weighted_loss = selected_values*samples_prob
+
+    loss_all = weighted_loss.mean()
+
+    return loss_all
+
+
 if __name__ == "__main__":
     from datetime import datetime
 
@@ -553,7 +614,7 @@ if __name__ == "__main__":
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 100000 #1 000 000 data
+    DATA_CUT = 1000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -562,7 +623,7 @@ if __name__ == "__main__":
     info_per_object = 7
 
     for f in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+solu_num):
-        raw_data =np.loadtxt(DATAROOT+'test_data.txt')
+        raw_data =np.loadtxt(DATAROOT+'test_data.txt')[:1000]
 
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
@@ -644,11 +705,14 @@ if __name__ == "__main__":
             output_batch, pi, sigma, mu = model(input_batch,
                                  tart_x_gt=input_target_batch)
 
-            # Calculate loss
-            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-            # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+            # Calculate log-likelihood loss
+            ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+            # Calculate min sample loss
+            ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+            # Calculate collision loss
             overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
-            overlap_loss = overlap_loss.mean()
+
+            loss = ll_loss+ms_min_smaple_loss+overlap_loss
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
@@ -699,21 +763,24 @@ if __name__ == "__main__":
                 output_batch, pi, sigma, mu = model(input_batch,
                                                     tart_x_gt=input_target_batch)
 
-                # Calculate loss
-                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-                # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
+                # Calculate log-likelihood loss
+                ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+                # Calculate min sample loss
+                ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+                # Calculate collision loss
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
                                                         target_batch[:model.in_obj_num].transpose(0, 1))
-                overlap_loss = overlap_loss.mean()
+                # loss all
+                loss = ll_loss + ms_min_smaple_loss + overlap_loss
 
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', v_loss.item(), overlap_loss.item())
+                    print('loss and overlap loss:', loss.item(), overlap_loss.item())
 
                     print_flag = False
 
-                total_loss += v_loss.item()
+                total_loss += loss.item()
                 valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
             valid_overlap_loss = valid_overlap_loss/len(val_loader)

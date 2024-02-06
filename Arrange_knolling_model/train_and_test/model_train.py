@@ -203,8 +203,10 @@ def main():
                 output_batch, pi, sigma, mu = model(input_batch,
                                                     tart_x_gt=input_target_batch)
 
-                # Calculate loss
+                # Calculate loss log likehood
                 loss_mdn = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+
+
                 loss_mse, overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
                 # overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
                 #                                         target_batch[:model.in_obj_num].transpose(0, 1))
@@ -354,7 +356,7 @@ if __name__ == '__main__':
                 "SHIFT_DATA": {"values": [100]},
                 "num_gaussian":{"values":[4,8,16]},
                 "overlap_loss_factor":{"values":[10000000]},
-                "batch_size":{"values":[64,256,512]},
+                "batch_size":{"values":[512]},
                 "mse_factor":{"values":[0.01,0.1,0.5]}
             },
         }
