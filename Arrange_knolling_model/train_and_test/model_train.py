@@ -59,7 +59,7 @@ def main():
         config.pre_trained = True
         config.inputouput_size = inputouput_size
         config.k_ll = 0.01
-        config.k_op = 0.1
+        config.k_op = 1
         config.k_pos= 0.2
 
         config.patience = 300
@@ -368,7 +368,7 @@ if __name__ == '__main__':
                 "num_gaussian":{"values":[4]},
                 "batch_size":{"values":[512]},
                 "k_ll":{"values":[0.01]},
-                "k_op":{'values':[0.1]},
+                "k_op":{'values':[1]},
                 'k_pos':{'values':[0.2]}
             },
         }
