@@ -41,7 +41,7 @@ def main():
 
         model_path = None
     else:
-        pretrained_model = 'celestial-silence-87'
+        pretrained_model = 'stilted-sweep-1'
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -58,8 +58,13 @@ def main():
         os.makedirs(config.log_pth,exist_ok=True)
         config.pre_trained = True
         config.inputouput_size = inputouput_size
+        config.k_ll = 0.01
+        config.k_op = 0.1
+        config.k_pos= 0.2
+
         config.patience = 300
         loss_d_epoch = 200
+
 
         print(config)
 
@@ -93,7 +98,6 @@ def main():
         all_steps=config.all_steps,
         in_obj_num=config.inputouput_size,
         num_gaussians=config.num_gaussian,
-        overlap_loss_factor= config.overlap_loss_factor # 1
     )
 
 
@@ -110,7 +114,7 @@ def main():
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
                                                            patience=loss_d_epoch, verbose=True)
 
-    num_epochs = 1000
+    num_epochs = 100000
     train_loss_list = []
     valid_loss_list = []
     train_loss2_list = []
@@ -344,7 +348,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-    sweep_train_flag = True
+    sweep_train_flag = False
 
     proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
@@ -362,11 +366,10 @@ if __name__ == '__main__':
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
                 "num_gaussian":{"values":[4]},
-                "overlap_loss_factor":{"values":[10000000]},
                 "batch_size":{"values":[512]},
                 "k_ll":{"values":[0.01]},
-                "k_op":{'values':[0.0001]},
-                'k_pos':{'values':[1]}
+                "k_op":{'values':[0.1]},
+                'k_pos':{'values':[0.2]}
             },
         }
 
