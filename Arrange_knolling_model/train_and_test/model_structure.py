@@ -13,27 +13,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
 SHIFT_DATA = 100
 SCALE_DATA = 100
-# input min&max: [0.016, 0.048]
-# label min&max: [-0.14599999962002042, 0.294500007390976]
-# input_min,input_max = 0.016,0.048
-# label_min,label_max = -0.14599999962002042, 0.294500007390976
-# SCALE_DATA = 100
-# SHIFT_DATA = 50
-# DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-# DATAROOT = "../../../knolling_dataset/learning_data_826/"
-# DATAROOT = "../../knolling_dataset/learning_data_910/"
-# DATAROOT = "../../../knolling_dataset/learning_data_1019_5w/"
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
-    # for i in tqdm(range(len(sequences))):
-    #     seq = sequences[i]
-    #     if len(seq) < max_seq_length:
-    #         padding_length = max_seq_length - len(seq)
-    #         padded_seq = list(seq) + [[pad_value] * 2 for _ in range(padding_length)]
-    #         padded_sequences.append(padded_seq)
-    #     else:
-    #         padded_sequences.append(seq)
     for i in tqdm(range(len(sequences))):
         seq = sequences[i]
         if np.sum(np.any(seq != 0, axis=1)) < max_seq_length:
@@ -216,29 +198,6 @@ class Decoder(nn.Module):
         return out
 
 
-class ProximityAwareLoss(nn.Module):
-    def __init__(self, primary_loss_fn, min_distance):
-        super(ProximityAwareLoss, self).__init__()
-        self.primary_loss_fn = primary_loss_fn
-        self.min_distance = min_distance
-
-    def forward(self, predictions, targets):
-        # Primary loss (e.g., mean squared error)
-        primary_loss = self.primary_loss_fn(predictions, targets)
-
-        # Proximity penalty
-        n_objects = predictions.shape[0]
-        proximity_penalty = 0
-
-        for i in range(n_objects):
-            for j in range(i+1, n_objects):
-                distance = torch.norm(predictions[i] - predictions[j])
-                if distance < self.min_distance:
-                    proximity_penalty += (self.min_distance - distance) ** 2
-
-        # Total loss
-        total_loss = primary_loss + proximity_penalty
-        return total_loss
 
 def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=1):
     # Calculate half dimensions for easier overlap checking
@@ -288,11 +247,11 @@ class Knolling_Transformer(nn.Module):
             heads=2,
             dropout=0.,
             all_zero_target=0,
-            pos_encoding_Flag = False,
             forwardtype = 0,
-            high_dim_encoder=False,
+            pos_encoding_Flag=True,
+            high_dim_encoder=True,
             all_steps = False,
-            max_obj_num = 10,
+            in_obj_num = 10,
             num_gaussians=4,
             overlap_loss_factor=10
     ):
@@ -304,6 +263,7 @@ class Knolling_Transformer(nn.Module):
         self.losstype = 1
         self.high_dim_encoder = high_dim_encoder
         self.all_steps = all_steps
+        self.min_std_dev = 3e-3  # Define a minimum standard deviation
 
         self.best_gap = 0.015
         self.padding_value = 1
@@ -311,7 +271,7 @@ class Knolling_Transformer(nn.Module):
         self.min_overlap_num = np.inf
         self.overlap_loss_weight = overlap_loss_factor
 
-        self.max_obj_num = max_obj_num# maximun 10
+        self.in_obj_num = in_obj_num # maximun 10
         self.num_gaussians = num_gaussians
         self.positional_encoding = PositionalEncoding(d_model = input_size, max_len=input_length)
 
@@ -393,7 +353,7 @@ class Knolling_Transformer(nn.Module):
             mus = []  # Collect mu for all timesteps
 
             results = 0
-            for t in range(self.max_obj_num):
+            for t in range(self.in_obj_num):
                 tart_x_gt_high = self.position_encoder(tart_x)
                 dec_output = self.decoder(enc_x, tart_x_gt_high)
 
@@ -402,7 +362,7 @@ class Knolling_Transformer(nn.Module):
                 x = x.view(x.shape[0], x.shape[1], self.num_gaussians, 5)
                 # Split along the last dimension to extract means, std_devs, and weights
                 means = x[:, :, :, :2]  # First two are means for x and y
-                std_devs = torch.exp(x[:, :, :, 2:4])  # Next two are std devs for x and y, ensure positivity
+                std_devs = torch.nn.functional.softplus(x[:, :, :, 2:4]) + self.min_std_dev
                 weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
 
                 pis.append(weights[t].unsqueeze(0))
@@ -443,9 +403,9 @@ class Knolling_Transformer(nn.Module):
             if self.all_steps:
                 return results, pi, sigma, mu
 
-            elif self.max_obj_num < tart_x.size(0):
+            elif self.in_obj_num < tart_x.size(0):
                 pad_data_shape = outputs[0].shape
-                outputs = outputs + [torch.zeros(pad_data_shape, device=device) for _ in range(tart_x.size(0) - self.max_obj_num)]
+                outputs = outputs + [torch.zeros(pad_data_shape, device=device) for _ in range(tart_x.size(0) - self.in_obj_num)]
             out = torch.cat(outputs, dim=0)
             return out, pi, sigma, mu
 
@@ -463,8 +423,6 @@ class Knolling_Transformer(nn.Module):
         overlap_loss = calculate_collision_loss(pred_pos_raw,obj_length_width,self.overlap_loss_weight).mean()
         total_loss = MSE_loss + overlap_loss
 
-        # scaled_overlap_loss = 1 + 1 / self.max_obj_num * Overlap_loss
-        # total_loss = MSE_loss + scaled_overlap_loss
 
         return total_loss, overlap_loss
 
@@ -475,8 +433,9 @@ class Knolling_Transformer(nn.Module):
         # Calculate the mixture of Gaussian probabilities
         # Assuming sigma is positive and represents standard deviation
         norm = torch.distributions.Normal(mu, sigma)
-        prob = norm.log_prob(y)  # This computes the log probability of y for each Gaussian
 
+        prob = norm.log_prob(y)  # This computes the log probability of y for each Gaussian
+        prob = torch.clamp(prob,-float('inf'),-1e-9)
         # prob shape is (Num_of_objects, Batch_size, Num_of_Gaussian,2), need to sum log probs over dimensions
         log_prob = prob.sum(dim=-1)  # New shape: [Num_of_objects, Batch_size, Num_of_Gaussian]
 
@@ -499,104 +458,6 @@ class Knolling_Transformer(nn.Module):
         mse_loss = mse_loss.sum() / mask.sum()
 
         return mse_loss
-
-
-
-
-
-
-    def calculate_distance_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
-
-        tar_pos_x_low = (tar_pos[:, :, 0] - tar_lw[:, :, 0] / 2).unsqueeze(2)
-        tar_pos_x_high = (tar_pos[:, :, 0] + tar_lw[:, :, 0] / 2).unsqueeze(2)
-        tar_pos_y_low = (tar_pos[:, :, 1] - tar_lw[:, :, 1] / 2).unsqueeze(2)
-        tar_pos_y_high = (tar_pos[:, :, 1] + tar_lw[:, :, 1] / 2).unsqueeze(2)
-
-        pred_pos_x_low = (pred_pos[:, :, 0] - tar_lw[:, :, 0] / 2).unsqueeze(2)
-        pred_pos_x_high = (pred_pos[:, :, 0] + tar_lw[:, :, 0] / 2).unsqueeze(2)
-        pred_pos_y_low = (pred_pos[:, :, 1] - tar_lw[:, :, 1] / 2).unsqueeze(2)
-        pred_pos_y_high = (pred_pos[:, :, 1] + tar_lw[:, :, 1] / 2).unsqueeze(2)
-
-        num_cls = torch.unique(tar_cls.flatten())
-
-        tar_total_min = []
-        pred_total_min = []
-        for i in num_cls:
-            cls_index = tar_cls == i
-            cls_mask = cls_index & cls_index.transpose(1, 2)
-
-            tar_x_distance = tar_pos_x_low - tar_pos_x_high.transpose(1, 2)
-            tar_y_distance = tar_pos_y_low - tar_pos_y_high.transpose(1, 2)
-            tar_x_mask = tar_x_distance <= 0
-            tar_y_mask = tar_y_distance <= 0
-            tar_x_distance.masked_fill_(tar_x_mask, 100)
-            tar_y_distance.masked_fill_(tar_y_mask, 100)
-
-            tar_x_temp = tar_x_distance[cls_mask]
-            tar_x_gap = tar_x_temp[tar_x_temp < 100]
-            tar_y_temp = tar_y_distance[cls_mask]
-            tar_y_gap = tar_y_temp[tar_y_temp < 100]
-            if len(tar_x_gap) == 0 and len(tar_y_gap) == 0:
-                print('x none and y none')
-                tar_x_gap = torch.tensor(0.0001)
-                tar_y_gap = torch.tensor(0.0001)
-            elif len(tar_x_gap) == 0 and len(tar_y_gap) != 0:
-                print('x none')
-                tar_x_gap = torch.clone(tar_y_gap)
-            elif len(tar_x_gap) != 0 and len(tar_y_gap) == 0:
-                print('y none')
-                tar_y_gap = torch.clone(tar_x_gap)
-
-            # if len(tar_x_temp[tar_x_temp < 100]) == 0 or len(tar_y_temp[tar_y_temp < 100]) == 0:
-            #     print('here')
-            tar_total_min.append(torch.min(tar_x_gap))
-            tar_total_min.append(torch.min(tar_y_gap))
-
-            pred_x_distance = pred_pos_x_low - pred_pos_x_high.transpose(1, 2)
-            pred_y_distance = pred_pos_y_low - pred_pos_y_high.transpose(1, 2)
-            pred_x_mask = pred_x_distance <= 0
-            pred_y_mask = pred_y_distance <= 0
-            pred_x_distance.masked_fill_(pred_x_mask, 100)
-            pred_y_distance.masked_fill_(pred_y_mask, 100)
-
-            pred_x_temp = pred_x_distance[cls_mask]
-            pred_y_temp = pred_y_distance[cls_mask]
-            pred_x_gap = pred_x_temp[pred_x_temp < 100]
-            pred_y_gap = pred_y_temp[pred_y_temp < 100]
-            if len(pred_x_gap) == 0 and len(pred_y_gap) == 0:
-                print('x none and y none')
-                pred_x_gap = torch.tensor(0.0001)
-                pred_y_gap = torch.tensor(0.0001)
-            elif len(pred_x_gap) == 0 and len(pred_y_gap) != 0:
-                print('x none')
-                pred_x_gap = torch.clone(pred_y_gap)
-            elif len(pred_x_gap) != 0 and len(pred_y_gap) == 0:
-                print('y none')
-                pred_y_gap = torch.clone(pred_x_gap)
-
-            try:
-                pred_total_min.append(torch.min(pred_x_gap))
-                pred_total_min.append(torch.min(pred_y_gap))
-            except:
-                print('this is pred_x_gap', pred_x_gap)
-                print('this is pred_y_gap', pred_y_gap)
-                print('this is len x', len(pred_x_temp))
-                print('this is len y', len(pred_y_temp))
-
-        total_pred_min = torch.mean(torch.tensor(pred_total_min))
-
-        return self.scale_distance_loss(total_pred_min)
-
-    def scale_distance_loss(self, raw_loss):
-
-        if raw_loss > 0.015:
-            return 0 + (raw_loss * 200 / 3 - 1) * 0.2
-        else:
-            log_loss = torch.abs(torch.log(raw_loss * 200 / 3)) + 1
-            if log_loss > 15:
-                print('this is log loss', log_loss)
-            # return torch.abs(torch.log(raw_loss * 200 / 3)) + 1
-            return log_loss
 
     def calcualte_overlap_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
 
@@ -645,15 +506,16 @@ class Knolling_Transformer(nn.Module):
 if __name__ == "__main__":
     from datetime import datetime
 
-    inputouput_size = 10
-    max_seq_length =3
+    max_seq_length = 10
+    in_obj_num =3
+
     d_dim = 32
     layers_num = 4
     heads_num = 4
     num_gaussian = 4
     print(d_dim,layers_num,heads_num)
     model = Knolling_Transformer(
-        input_length=inputouput_size,
+        input_length=max_seq_length,
         input_size=2,
         map_embed_d_dim=d_dim,
         num_layers=layers_num,
@@ -665,7 +527,7 @@ if __name__ == "__main__":
         forwardtype= 1,
         high_dim_encoder = True,
         all_steps=False,
-        max_obj_num=max_seq_length,
+        in_obj_num=in_obj_num,
         num_gaussians=num_gaussian,
         overlap_loss_factor=0  # 1
     )
@@ -691,7 +553,7 @@ if __name__ == "__main__":
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 10000 #1 000 000 data
+    DATA_CUT = 100000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -700,9 +562,6 @@ if __name__ == "__main__":
     info_per_object = 7
 
     for f in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+solu_num):
-        # dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (inputouput_size, f)
-        # print('load data:', dataset_path)
-        # raw_data = np.loadtxt(dataset_path)[:DATA_CUT, :max_seq_length * info_per_object]
         raw_data =np.loadtxt(DATAROOT+'test_data.txt')
 
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
@@ -714,13 +573,9 @@ if __name__ == "__main__":
         valid_lw = []
         train_pos = []
         valid_pos = []
-        train_cls = []
-        valid_cls = []
-        for i in range(max_seq_length):
+        for i in range(in_obj_num):
             train_lw.append(train_data[:, i * info_per_object + 2:i * info_per_object + 4])
             valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
-            train_cls.append(train_data[:, [i * info_per_object + 5]])
-            valid_cls.append(test_data[:, [i * info_per_object + 5]])
             train_pos.append(train_data[:, i * info_per_object:i * info_per_object + 2])
             valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
 
@@ -728,20 +583,16 @@ if __name__ == "__main__":
         valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
         train_pos = np.asarray(train_pos).transpose(1, 0, 2)
         valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
-        train_cls = np.asarray(train_cls).transpose(1, 0, 2)
-        valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
 
         train_input_data += list(train_lw)
         train_output_data += list(train_pos)
-        train_cls_data += list(train_cls)
         valid_input_data += list(valid_lw)
         valid_output_data += list(valid_pos)
-        valid_cls_data += list(valid_cls)
 
-    train_input_padded = pad_sequences(train_input_data,  max_seq_length=10)
-    train_label_padded = pad_sequences(train_output_data, max_seq_length=10)
-    test_input_padded = pad_sequences(valid_input_data,   max_seq_length=10)
-    test_label_padded = pad_sequences(valid_output_data,  max_seq_length=10)
+    train_input_padded = pad_sequences(train_input_data,  max_seq_length=max_seq_length)
+    train_label_padded = pad_sequences(train_output_data, max_seq_length=max_seq_length)
+    test_input_padded = pad_sequences(valid_input_data,   max_seq_length=max_seq_length)
+    test_label_padded = pad_sequences(valid_output_data,  max_seq_length=max_seq_length)
 
     train_dataset = CustomDataset(train_input_padded, train_label_padded)
     test_dataset = CustomDataset(test_input_padded, test_label_padded)
@@ -794,9 +645,9 @@ if __name__ == "__main__":
                                  tart_x_gt=input_target_batch)
 
             # Calculate loss
-            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
             # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-            overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0,1),target_batch[:model.max_obj_num].transpose(0,1))
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
             overlap_loss = overlap_loss.mean()
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
@@ -849,10 +700,10 @@ if __name__ == "__main__":
                                                     tart_x_gt=input_target_batch)
 
                 # Calculate loss
-                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
+                v_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # loss,overlap_loss = model.calculate_loss(output_batch, target_batch, input_batch)
-                overlap_loss = calculate_collision_loss(output_batch[:model.max_obj_num].transpose(0, 1),
-                                                        target_batch[:model.max_obj_num].transpose(0, 1))
+                overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        target_batch[:model.in_obj_num].transpose(0, 1))
                 overlap_loss = overlap_loss.mean()
 
                 if epoch % 10 == 0 and print_flag:

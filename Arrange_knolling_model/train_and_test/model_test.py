@@ -184,7 +184,7 @@ if __name__ == '__main__':
     DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
 
     runs = api.runs("knolling0204_10_overlap")
-    name = 'pretty-sweep-1'
+    name = 'jolly-sweep-1'
 
 
     model_name = "best_model.pt"
