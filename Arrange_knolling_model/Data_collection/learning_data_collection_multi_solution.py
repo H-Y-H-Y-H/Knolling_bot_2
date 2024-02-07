@@ -348,8 +348,8 @@ if __name__ == '__main__':
     obj_num = 10
     SHIFT_DATASET_ID = 0
 
-    start_evaluations = 450000
-    end_evaluations =   500000
+    start_evaluations = 900000
+    end_evaluations =   1000000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
