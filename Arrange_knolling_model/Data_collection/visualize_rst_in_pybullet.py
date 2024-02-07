@@ -439,10 +439,7 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-
-    object_num = 10
-    # DATAROOT = "C:/Users/yuhan/Downloads/learning_data_804_20w/"
-    # DATAROOT = "../../../knolling_dataset/learning_data_1019_42w/"
+    object_num = 2
     DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % (10)
 
     target_path = DATAROOT + 'cfg_%s/' % configuration
@@ -451,7 +448,9 @@ if __name__ == '__main__':
     os.makedirs(images_log_path, exist_ok=True)
     os.makedirs(preprocess_label_path, exist_ok=True)
 
-    name = 'bright-sweep-13'
+    name = 'balmy-sweep-2'
+
+
 
     show_baseline = 0
     show_results_flag = True
@@ -514,7 +513,7 @@ if __name__ == '__main__':
             pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
             length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
 
-            collision_loss = calculate_collision_loss(pred_pos, length_width)
+            collision_loss = calculate_collision_loss(pred_pos, length_width,scale=False)
             print(collision_loss)
 
             cv2.waitKey()
