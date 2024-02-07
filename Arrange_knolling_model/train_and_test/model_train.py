@@ -62,8 +62,8 @@ def main():
         config.k_op = 1
         config.k_pos= 0.2
 
-        config.patience = 300
-        loss_d_epoch = 200
+        config.patience = 30
+        loss_d_epoch = 10
 
 
         print(config)
@@ -182,6 +182,8 @@ def main():
         print_flag = True
         with torch.no_grad():
             total_loss = 0
+            all_ll_loss = 0
+            all_ms_loss = 0
             valid_overlap_loss = 0
             for input_batch, target_batch in val_loader:
                 input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
@@ -232,8 +234,12 @@ def main():
                     print_flag = False
 
                 total_loss += vloss.item()
+                all_ll_loss += ll_loss.item()
+                all_ms_loss += ms_min_smaple_loss.item()
                 valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
+            all_ll_loss = all_ll_loss / len(val_loader)
+            all_ms_loss = all_ms_loss / len(val_loader)
             valid_overlap_loss = valid_overlap_loss/len(val_loader)
             scheduler.step(vloss)
 
@@ -260,10 +266,12 @@ def main():
                        "train_overlap_loss":train_loss_overlap,
                        "valid_loss": avg_loss,
                        "valid_overlap_loss": valid_overlap_loss,
+                       "valid_ll_loss": all_ll_loss,
+                       "valid_min_sam_loss": all_ms_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
-                       "scheduler_factor": config.scheduler_factor,
                        "min_loss": min_loss,
-                       "norm_loss": min_loss/(config.SCALE_DATA**2)})
+                       "norm_loss": min_loss/(config.SCALE_DATA**2),
+                       })
             if abort_learning > config.patience:
                 print('abort training!')
                 break
@@ -283,8 +291,8 @@ if __name__ == '__main__':
     DATA_CUT = 10000 #1 000 000 data
 
     SHIFT_DATASET_ID = 0
-    policy_num = 1
-    configuration_num = 1
+    policy_num = 3
+    configuration_num = 4
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
@@ -348,7 +356,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-    sweep_train_flag = False
+    sweep_train_flag = True
 
     proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
@@ -358,18 +366,18 @@ if __name__ == '__main__':
             "parameters": {
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-                "lr": {"values": [1e-3]},
-                "map_embed_d_dim": {"values": [32]},
-                "num_attention_heads": {"values": [4]},
-                "num_layers":{"values":[4]},
+                "lr": {"values": [1e-2,1e-3]},
+                "map_embed_d_dim": {"values": [32,64,128]},
+                "num_attention_heads": {"values": [4,8,16,32,64]},
+                "num_layers":{"values":[4,8,16]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[4]},
+                "num_gaussian":{"values":[3,4]},
                 "batch_size":{"values":[512]},
-                "k_ll":{"values":[0.01]},
-                "k_op":{'values':[1]},
-                'k_pos':{'values':[0.2]}
+                "k_ll":{"values":[0,0.01,0.1]},
+                "k_op":{'values':[0,0.01,0.1]},
+                'k_pos':{'values':[0,0.01,0.1]}
             },
         }
 

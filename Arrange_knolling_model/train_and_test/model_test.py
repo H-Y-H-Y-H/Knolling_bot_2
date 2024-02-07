@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
 
     runs = api.runs("knolling0205_10_overlap")
-    name = 'frosty-bird-38'
+    name = 'brisk-sweep-2'
 
 
     model_name = "best_model.pt"
