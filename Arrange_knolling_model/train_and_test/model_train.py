@@ -36,12 +36,11 @@ def main():
         config.forward_expansion = 4
         config.pre_trained = False
         config.all_steps = False
-        config.patience = 300
-        loss_d_epoch = 200
+
 
         model_path = None
     else:
-        pretrained_model = 'stilted-sweep-1'
+        pretrained_model = 'dry-dawn-91'
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -58,16 +57,16 @@ def main():
         os.makedirs(config.log_pth,exist_ok=True)
         config.pre_trained = True
         config.inputouput_size = inputouput_size
-        config.k_ll = 0.01
+        config.k_ll = 0.1
         config.k_op = 1
-        config.k_pos= 0.2
-
-        config.patience = 30
-        loss_d_epoch = 10
+        config.k_pos= 0.5
 
 
         print(config)
 
+    config.inputouput_size=4
+    config.patience = 300
+    loss_d_epoch = 200
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
@@ -157,7 +156,8 @@ def main():
             # Calculate min sample loss
             ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),
+                                                    input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch, target_batch)
             tloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
@@ -221,7 +221,7 @@ def main():
                 ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # Calculate collision loss
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        target_batch[:model.in_obj_num].transpose(0, 1))
+                                                        input_batch[:model.in_obj_num].transpose(0, 1))
                 # Calcluate position loss
                 pos_loss = model.masked_MSE_loss(output_batch, target_batch)
                 vloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
@@ -288,15 +288,15 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 10000 #1 000 000 data
+    DATA_CUT = 1000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 0
-    policy_num = 3
-    configuration_num = 4
+    SHIFT_DATASET_ID = 3
+    policy_num = 1
+    configuration_num = 1
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
-    inputouput_size = 2
+    inputouput_size = 4
 
     # how many data used during training.
     max_seq_length = 10
@@ -358,7 +358,7 @@ if __name__ == '__main__':
 
     sweep_train_flag = True
 
-    proj_name = "knolling0205_2_overlap"
+    proj_name = "knolling0205_4_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -366,18 +366,18 @@ if __name__ == '__main__':
             "parameters": {
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
-                "lr": {"values": [1e-2,1e-3]},
-                "map_embed_d_dim": {"values": [32,64,128]},
-                "num_attention_heads": {"values": [4,8,16,32,64]},
+                "lr": {"values": [1e-3]},
+                "map_embed_d_dim": {"values": [32,64,128]},#
+                "num_attention_heads": {"values": [4,8,16,32]},#,16,32
                 "num_layers":{"values":[4,8,16]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[3,4]},
+                "num_gaussian":{"values":[3,5]},
                 "batch_size":{"values":[512]},
-                "k_ll":{"values":[0,0.01,0.1]},
-                "k_op":{'values':[0,0.01,0.1]},
-                'k_pos':{'values':[0,0.01,0.1]}
+                "k_ll":{"values":[0.1]},
+                "k_op":{'values':[10]},
+                'k_pos':{'values':[0.2]}
             },
         }
 

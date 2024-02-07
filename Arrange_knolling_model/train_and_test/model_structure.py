@@ -203,11 +203,11 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
 
     if scale:
         # The length and width of objects:
-        obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA)
 
         # The predicted position of objects:
 
-        pred_pos = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        pred_pos = ((pred_pos - SHIFT_DATA) / SCALE_DATA)
 
 
     # Calculate half dimensions for easier overlap checking
@@ -718,7 +718,7 @@ if __name__ == "__main__":
             # Calculate min sample loss
             ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),target_batch[:model.in_obj_num].transpose(0,1))
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch,target_batch)
             loss = k_ll*ll_loss+ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss
@@ -779,7 +779,7 @@ if __name__ == "__main__":
                 ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # Calculate collision loss
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        target_batch[:model.in_obj_num].transpose(0, 1))
+                                                        input_batch[:model.in_obj_num].transpose(0, 1))
                 # Calcluate position loss
                 pos_loss = model.masked_MSE_loss(output_batch, target_batch)
                 loss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss

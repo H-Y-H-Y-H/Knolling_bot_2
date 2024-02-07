@@ -137,7 +137,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             target_batch[num_obj:] = -100
             loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
             overlap_loss = calculate_collision_loss(predictions[:model.in_obj_num].transpose(0, 1),
-                                                    target_batch[:model.in_obj_num].transpose(0, 1))
+                                                    input_batch[:model.in_obj_num].transpose(0, 1))
             overlap_loss = overlap_loss.mean()
 
             print('output', predictions[:, 0].flatten())
@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
 
     runs = api.runs("knolling0205_10_overlap")
-    name = 'balmy-sweep-2'
+    name = 'driven-sweep-1'
 
 
     model_name = "best_model.pt"
