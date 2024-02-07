@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
 
     runs = api.runs("knolling0205_10_overlap")
-    name = 'revived-wind-35'
+    name = 'frosty-bird-38'
 
 
     model_name = "best_model.pt"
@@ -264,8 +264,7 @@ if __name__ == '__main__':
                 forwardtype=config.forwardtype,
                 all_steps=config.all_steps,
                 in_obj_num=config.inputouput_size,
-                num_gaussians=config.num_gaussian,
-                overlap_loss_factor=config.overlap_loss_factor  # 1
+                num_gaussians=config.num_gaussian
             )
 
         # Number of parameters: 87458
@@ -322,9 +321,7 @@ if __name__ == '__main__':
                 forwardtype=config.forwardtype,
                 high_dim_encoder=config.high_dim_encoder,
                 all_steps = config.all_steps,
-                max_obj_num = config.max_seq_length,
                 num_gaussians=config.num_gaussian,
-                overlap_loss_factor=config.overlap_loss_factor
             )
 
             # Number of parameters: 87458

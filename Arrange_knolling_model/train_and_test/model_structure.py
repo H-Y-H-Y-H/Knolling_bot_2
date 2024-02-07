@@ -199,14 +199,15 @@ class Decoder(nn.Module):
 
 
 
-def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHIFT_DATA*SHIFT_DATA):
+def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHIFT_DATA*SHIFT_DATA,scale=True):
 
-    # The length and width of objects:
-    obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+    if scale:
+        # The length and width of objects:
+        obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
-    # The predicted position of objects:
+        # The predicted position of objects:
 
-    pred_pos = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
+        pred_pos = ((pred_pos - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
 
 
     # Calculate half dimensions for easier overlap checking
