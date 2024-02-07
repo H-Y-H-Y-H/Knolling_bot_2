@@ -1,11 +1,10 @@
 import os
 import yaml
 import numpy as np
-
+from model_structure import *
 from model_structure import *
 from torch.utils.data import DataLoader, random_split
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
 best_success_rate = 0
 worst_success_rate = 100
 best_index = 0
@@ -136,9 +135,9 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
                                  tart_x_gt=input_target_batch)
 
             target_batch[num_obj:] = -100
-            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.max_obj_num])
-            overlap_loss = calculate_collision_loss(predictions[:model.max_obj_num].transpose(0, 1),
-                                                    target_batch[:model.max_obj_num].transpose(0, 1))
+            loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
+            overlap_loss = calculate_collision_loss(predictions[:model.in_obj_num].transpose(0, 1),
+                                                    input_batch[:model.in_obj_num].transpose(0, 1))
             overlap_loss = overlap_loss.mean()
 
             print('output', predictions[:, 0].flatten())
@@ -177,14 +176,14 @@ if __name__ == '__main__':
     import argparse
 
     test_sweep_flag = False
-    use_yaml = False
+    use_yaml = True
+    SHOW_GT = False
+
     api = wandb.Api()
     # Project is specified by <entity/project-name>
 
-    DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
-
-    runs = api.runs("knolling0204_10_overlap")
-    name = 'pretty-sweep-1'
+    runs = api.runs("knolling0205_10_overlap")
+    name = 'driven-sweep-1'
 
 
     model_name = "best_model.pt"
@@ -198,27 +197,10 @@ if __name__ == '__main__':
                 config = {k: v for k, v in run.config.items() if not k.startswith('_')}
         print('using model: ', name)
         print(config)
-    # else:
-    #     name = 'devoted-terrain-29'
-    #     config = {}
-    #     with open('data/' + name + '/config-' + name + '.yaml', 'r') as file:
-    #         read_data = yaml.safe_load(file)
-    #         config['max_seq_length'] = read_data['max_seq_length']
-    #         config['map_embed_d_dim'] = read_data['map_embed_d_dim']
-    #         config['num_layers'] = read_data['num_layers']
-    #         config['forward_expansion'] = read_data['forward_expansion']
-    #         config['num_attention_heads'] = read_data['num_attention_heads']
-    #         config['dropout_prob'] = read_data['dropout_prob']
-    #         config['all_zero_target'] = read_data['all_zero_target']
-    #         config['pos_encoding_Flag'] = read_data['pos_encoding_Flag']
-    #         config['forwardtype'] = read_data['forwardtype']
-    #         config['high_dim_encoder'] = read_data['high_dim_encoder']
-    #         config['all_steps'] = read_data['all_steps']
-    #         config['num_gaussian'] = 3
-    #         config['canvas_factor'] = 1
-    #         config['use_overlap_loss'] = False
-    #     print('using model: ', name)
-    #     print(config)
+    else:
+        with open(f'data/{name}/config.yaml', 'r') as yaml_file:
+            config_dict = yaml.safe_load(yaml_file)
+        config = {k: v for k, v in config_dict.items() if not k.startswith('_')}
 
     config = argparse.Namespace(**config)
 
@@ -232,18 +214,16 @@ if __name__ == '__main__':
     valid_cls_data = []
     total_raw_data = []
 
-    SHOW_GT = False
     # load the test dataset
     file_num = 10
     test_num_scenario = 1000
-    NUM_objects = config.max_seq_length
+    NUM_objects = config.inputouput_size
     solu_num = 1#12
     info_per_object = 7
     SHIFT_DATASET_ID = 3 # color 3,4,5
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', NUM_objects)
 
-        # if DATAROOT == "../../../knolling_dataset/learning_data_0126/":
         raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
 
         raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
@@ -263,33 +243,9 @@ if __name__ == '__main__':
 
         valid_lw_data += list(valid_lw)
         valid_pos_data += list(valid_pos)
-        # valid_cls_data += list(valid_cls)
-        # else:
-        # if DATAROOT == "../../../knolling_dataset/learning_data_1019_42w/":
-        #     raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
-        #
-        #     raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
-        #     total_raw_data = np.append(total_raw_data, raw_data)
-        #     test_data = raw_data * SCALE_DATA + SHIFT_DATA
-        #     valid_lw = []
-        #     valid_pos = []
-        #     valid_cls = []
-        #     for i in range(NUM_objects):
-        #         valid_lw.append(test_data[:, i * 6 + 2:i * 6 + 4])
-        #         valid_pos.append(test_data[:, i * 6:i * 6 + 2])
-        #         valid_cls.append(test_data[:, [i * 6 + 5]])
-        #
-        #     valid_lw = np.asarray(valid_lw).transpose(1, 0, 2)
-        #     valid_pos = np.asarray(valid_pos).transpose(1, 0, 2)
-        #     valid_cls = np.asarray(valid_cls).transpose(1, 0, 2)
-        #
-        #     valid_lw_data += list(valid_lw)
-        #     valid_pos_data += list(valid_pos)
-        #     valid_cls_data += list(valid_cls)
 
-    test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.inputouput_size)
-    test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.inputouput_size)
-    # test_cls_padded = pad_sequences(valid_cls_data, max_seq_length=config.max_seq_length)
+    test_input_padded = pad_sequences(valid_lw_data, max_seq_length=config.max_seq_length)
+    test_label_padded = pad_sequences(valid_pos_data, max_seq_length=config.max_seq_length)
 
     test_dataset = CustomDataset(test_input_padded, test_label_padded)
     val_loader = DataLoader(test_dataset, batch_size=512, shuffle=False) # 不能用shuffle True，不然evaluate面积时对不上号
@@ -297,7 +253,7 @@ if __name__ == '__main__':
     if test_sweep_flag == False:
 
         model = Knolling_Transformer(
-                input_length=config.inputouput_size,
+                input_length=config.max_seq_length,
                 input_size=2,
                 map_embed_d_dim=config.map_embed_d_dim,
                 num_layers=config.num_layers,
@@ -305,13 +261,10 @@ if __name__ == '__main__':
                 heads=config.num_attention_heads,
                 dropout=config.dropout_prob,
                 all_zero_target=config.all_zero_target,
-                pos_encoding_Flag=config.pos_encoding_Flag,
                 forwardtype=config.forwardtype,
-                high_dim_encoder=config.high_dim_encoder,
                 all_steps=config.all_steps,
-                max_obj_num=config.max_seq_length,
-                num_gaussians=config.num_gaussian,
-                overlap_loss_factor=config.overlap_loss_factor  # 1
+                in_obj_num=config.inputouput_size,
+                num_gaussians=config.num_gaussian
             )
 
         # Number of parameters: 87458
@@ -334,7 +287,7 @@ if __name__ == '__main__':
         log_folder = './results/%s/pred_after' % (name)
         os.makedirs(log_folder, exist_ok=True)
         print(log_folder)
-        np.savetxt(log_folder + '/num_%d_new.txt' % config.max_seq_length, raw_data)
+        np.savetxt(log_folder + '/num_%d_new.txt' % config.inputouput_size, raw_data)
 
     else:
         # test the success rate in every sweep!
@@ -368,9 +321,7 @@ if __name__ == '__main__':
                 forwardtype=config.forwardtype,
                 high_dim_encoder=config.high_dim_encoder,
                 all_steps = config.all_steps,
-                max_obj_num = config.max_seq_length,
                 num_gaussians=config.num_gaussian,
-                overlap_loss_factor=config.overlap_loss_factor
             )
 
             # Number of parameters: 87458
