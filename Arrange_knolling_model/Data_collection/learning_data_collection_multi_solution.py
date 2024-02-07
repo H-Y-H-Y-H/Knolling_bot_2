@@ -13,6 +13,7 @@ import shutil
 import json
 import csv
 import pandas
+import glob
 
 from arrange_policy import configuration_zzz, arrangement
 
@@ -142,10 +143,12 @@ class Arm:
             object_lwh_list = []
             for i in range(self.arrange_policy['object_num']):
                 object_path = self.dataset_path + 'generated_stl/' + class_name[i] + '/'
-                temp = os.listdir(object_path)
-                temp.sort()
-                object_csv_path = object_path + temp[0]
-                object_name_list.append(class_name[i])
+                candidate_object = np.random.choice(glob.glob(object_path + '*.csv')).split('/')[-1][:-4]
+                # temp = os.listdir(object_path)
+                # temp.sort()
+                # temp_object_index = np.random.choice(np.arange(int(len(temp) / 2)) * 2)
+                object_csv_path = object_path + candidate_object + '.csv'
+                object_name_list.append(candidate_object)
                 object_lwh_list.append(pandas.read_csv(object_csv_path).iloc[0, [3, 4, 5]].values)
 
             color_index = np.random.choice(a=self.arrange_policy['max_color_num'],
@@ -266,12 +269,15 @@ class Arm:
             print('lwh\n', lw_data)
             for i in range(obj_num):
 
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i] + '/'
-                temp = os.listdir(object_path)
-                temp.sort()
-                object_name = temp[0][:-4]
-                object_csv = object_path + temp[0]
-                object_stl = object_path + temp[1]
+                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+                # temp = os.listdir(object_path)
+                # temp.sort()
+                # object_name = temp[0][:-4]
+                # object_csv = object_path + temp[0]
+                # object_stl = object_path + temp[1]
+                object_csv = object_path + '.csv'
+                object_stl = object_path + '.stl'
 
                 print(f'this is matching urdf{i}')
                 # object_name = labels_name[i].split('_')[0]
@@ -281,7 +287,7 @@ class Arm:
 
                 if lw_data[i, 0] < lw_data[i, 1]:
                     ori_data[i, 2] += np.pi / 2
-                object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + object_name + '.urdf',
+                object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
                                              basePosition=pos_data[i],
                                              baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
@@ -348,12 +354,12 @@ if __name__ == '__main__':
     obj_num = 10
     SHIFT_DATASET_ID = 0
 
-    start_evaluations = 900000
-    end_evaluations =   1000000
+    start_evaluations = 0
+    end_evaluations =   100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/learning_data_205_{obj_num}/'
+    target_path = f'../../../knolling_dataset/learning_data_207_{obj_num}/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
