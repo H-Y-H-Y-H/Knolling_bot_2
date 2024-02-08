@@ -199,7 +199,7 @@ class Decoder(nn.Module):
 
 
 
-def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHIFT_DATA*SHIFT_DATA,scale=True):
+def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHIFT_DATA*SHIFT_DATA,scale=True,Output_scaler=True):
 
     if scale:
         # The length and width of objects:
@@ -243,7 +243,10 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
     num_pairs = num_objects * (num_objects - 1) / 2
     collision_loss = collision_loss / num_pairs
 
-    return collision_loss.mean()
+    if Output_scaler:
+        return collision_loss.mean()
+    else:
+        return collision_loss
 
 class Knolling_Transformer(nn.Module):
     def __init__(
@@ -384,6 +387,9 @@ class Knolling_Transformer(nn.Module):
 
                 # return the idx of selecting Gaussion
                 indices = torch.multinomial(weights, 1)
+                # else:
+                #     indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
+
 
                 # Gather the chosen means and std_devs based on sampled indices
                 # Batch is the second dimension, we adjust gathering for means and std_devs
@@ -434,7 +440,7 @@ class Knolling_Transformer(nn.Module):
     #
     #     return total_loss, overlap_loss
 
-    def mdn_loss_function(self, weights, variances, means, targets):
+    def mdn_loss_function(self, weights, variances, means, targets, Output_scaler=True):
         """
         Compute the negative log-likelihood of targets under a Gaussian Mixture Model.
 
@@ -464,7 +470,10 @@ class Knolling_Transformer(nn.Module):
         logsumexp_term = torch.logsumexp(log_prob + log_weights, dim=2)
 
         # Negative log-likelihood loss
-        nll_loss = -torch.mean(logsumexp_term)
+        if Output_scaler:
+            nll_loss = -torch.mean(logsumexp_term)
+        else:
+            nll_loss = -logsumexp_term
 
         return nll_loss
 
@@ -493,13 +502,18 @@ class Knolling_Transformer(nn.Module):
         # loss = -loss.mean()
         # return loss
 
-    def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100):
+    def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100,Output_scaler=True):
 
         mask = tar_pos.ne(ignore_index)
         mse_loss = (pred_pos - tar_pos).pow(2) * mask
-        mse_loss = mse_loss.sum() / mask.sum()
 
-        return mse_loss
+        if Output_scaler:
+            mse_loss = mse_loss.sum() / mask.sum()
+            return mse_loss
+        else:
+            mse_loss = mse_loss.sum((0,2)) / mask.sum((0,2))
+            return mse_loss
+
 
     # def calcualte_overlap_loss(self, pred_pos, tar_pos, tar_lw, tar_cls):
     #
@@ -546,7 +560,7 @@ class Knolling_Transformer(nn.Module):
     #     return penalty
 
 
-def min_smaple_loss(weights, variances, means, target_value):
+def min_smaple_loss(weights, variances, means, target_value,Output_scaler=True):
     std = torch.sqrt(variances)
     sample_v = std*torch.randn(std.shape,device=device)
     samples = sample_v + means
@@ -564,10 +578,25 @@ def min_smaple_loss(weights, variances, means, target_value):
 
 
     # weighted_loss = selected_values*samples_prob.unsqueeze(2)
+    if Output_scaler:
+        loss_all= selected_values.mean()
+    else:
+        loss_all = selected_values
 
-    loss_all= selected_values.mean()
 
     return loss_all
+
+def entropy_loss(weights,lambda_value=1,Output_scaler=True):
+    epsilon = 1e-9
+    entropy = -torch.sum(weights * torch.log(weights + epsilon), dim=2)
+
+    if Output_scaler:
+        mean_entropy = (2-torch.mean(entropy))*lambda_value
+    else:
+        mean_entropy = (2-entropy)*lambda_value
+
+    return mean_entropy
+
 
 
 if __name__ == "__main__":
@@ -620,9 +649,9 @@ if __name__ == "__main__":
     valid_cls_data = []
 
     DATA_CUT = 1000 #1 000 000 data
-    k_ll = 0.
+    k_ll = 0.01
     k_op=0
-    k_pos=1
+    k_pos=0.1
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -718,10 +747,13 @@ if __name__ == "__main__":
             # Calculate min sample loss
             ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),input_batch[:model.in_obj_num].transpose(0,1))
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),
+                                                    input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch,target_batch)
-            loss = k_ll*ll_loss+ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss
+            # Calucluate Entropy loss:
+            train_entropy_loss = entropy_loss(pi)
+            loss = ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss + train_entropy_loss
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
@@ -786,7 +818,7 @@ if __name__ == "__main__":
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', loss.item(),ll_loss.item(),ms_min_smaple_loss.item(), overlap_loss.item())
+                    print('loss and overlap loss:', loss.item(),ms_min_smaple_loss.item(), overlap_loss.item())
 
                     print_flag = False
 

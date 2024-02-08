@@ -225,7 +225,7 @@ class Arm:
             image = get_images()
             return image
 
-    def label2image(self, labels_data, img_index, save_urdf_path):
+    def label2image(self, labels_data):
 
         labels_data = labels_data.reshape(-1, 7)
 
@@ -430,98 +430,65 @@ class Arm:
 
 if __name__ == '__main__':
 
-    command = 'recover'
-    before_after = 'before'
-    configuration = '1'
-
+    info_per_object = 7
     start_evaluations = 0
     end_evaluations =   1000000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
     object_num = 2
-    DATAROOT = "../../../knolling_dataset/learning_data_0126_%s/" % (10)
 
-    target_path = DATAROOT + 'cfg_%s/' % configuration
-    images_log_path = target_path + 'images_%s/' % before_after
-    preprocess_label_path = target_path + 'preprocess_label_%s/' % before_after
+    name = 'misunderstood-sweep-2'
+
+    images_log_path = f'../train_and_test/results/{name}/output_images/'
+    data_path = f'../train_and_test/results/{name}/'
     os.makedirs(images_log_path, exist_ok=True)
-    os.makedirs(preprocess_label_path, exist_ok=True)
 
-    name = 'balmy-sweep-2'
+    pred_data = np.loadtxt(data_path + '/num_%d_pred.txt' % object_num)
+    gt_data = np.loadtxt(data_path + '/num_%d_pred.txt' % object_num)
 
 
+    env = Arm(is_render=True)
+    with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
+        color_dict = json.load(f)
 
-    show_baseline = 0
-    show_results_flag = True
+    pred_data = pred_data[:, :object_num * info_per_object]
+    print('this is pred data shape',pred_data.shape)
 
-    if command == 'recover':
+    new_data = []
+    image_list = []
+    for i in range(len(pred_data)*2):
+        if i%2 ==0:
+            data = pred_data
+        else:
+            data = gt_data
+        j = i//2
+        env.get_parameters(box_num=object_num)
+        print(f'this is data {j}')
+        one_img_data = data[j].reshape(-1, info_per_object)
+        # one_img_index_flag = index_flag[j].reshape(2, -1)
+        box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
+        one_img_data = one_img_data[box_order].reshape(-1,)
+        # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
+        new_data.append(one_img_data)
+        # new_index_flag.append(one_img_index_flag)
 
-        env = Arm(is_render=True)
-        visual_path = '../train_and_test/results/%s/pred_after'%(name)
+        image = env.label2image(data[j])
+        image_list.append(image[..., :3])
 
-        with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
-            color_dict = json.load(f)
+        if i%2==1:
+            image_comb = np.hstack((image_list[0],image_list[1]))
+            cv2.imwrite(images_log_path+'%d.png'%j,image_comb)
+            image_list = []
 
-        info_per_object = 7
-        if show_baseline == 0:
-            data = np.loadtxt(visual_path + '/num_%d_new.txt' % object_num)
-            savefolder = '../train_and_test/results/%s/pred_after/image/' % (name)
-        elif show_baseline == 1:
-            data = np.loadtxt('../train_and_test/baseline/mlp_result/outputs.csv')
+        cv2.namedWindow('zzz', 0)
+        cv2.resizeWindow('zzz', 1280, 960)
+        cv2.imshow("zzz", image)
+        print('This is the data: \n', data[j])
+        data_reshape = data[j].reshape(-1, 7)
+        pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
+        length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
 
-        test_start = int(len(data)*0.8)
-        # test_end = int(len(data)*0.81)
-        data = data[:test_start]
-        savefolder = '../train_and_test/results/%s/pred_%s/' % (name, before_after)
+        cv2.waitKey()
+        cv2.destroyAllWindows()
 
-        os.makedirs(savefolder, exist_ok=True)
-
-        if len(data.shape) == 1:
-            data = data.reshape(1, len(data))
-
-        data = data[:, :object_num * info_per_object]
-        print('this is len data', len(data))
-        save_urdf_path = DATAROOT + '/box_urdf/num_%d/' % (object_num)
-        os.makedirs(save_urdf_path, exist_ok=True)
-
-        new_data = []
-        # new_index_flag = []
-        # for j in range(start_evaluations, end_evaluations):
-        # for j in [ 81434, 100777,  88176, 148385,  9905,  23617,  95448, 103549, 113927,  17746]:
-        # for j in [88176,  9905,  81434]:
-        for j in range(len(data)):
-            env.get_parameters(box_num=object_num)
-            print(f'this is data {j}')
-            one_img_data = data[j].reshape(-1, info_per_object)
-            # one_img_index_flag = index_flag[j].reshape(2, -1)
-            box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
-            one_img_data = one_img_data[box_order].reshape(-1,)
-            # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
-            new_data.append(one_img_data)
-            # new_index_flag.append(one_img_index_flag)
-
-            image = env.label2image(data[j], j, save_urdf_path)
-            image = image[..., :3]
-
-            cv2.imwrite(savefolder+'%d.png'%j,image)
-            cv2.namedWindow('zzz', 0)
-            cv2.resizeWindow('zzz', 1280, 960)
-            cv2.imshow("zzz", image)
-            print('This is the data: \n', data[j])
-            data_reshape = data[j].reshape(-1, 7)
-            pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
-            length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
-
-            collision_loss = calculate_collision_loss(pred_pos, length_width,scale=False)
-            print(collision_loss)
-
-            cv2.waitKey()
-            cv2.destroyAllWindows()
-
-            # cv2.imwrite(images_log_path + '%d_%d.png' % (i, j), image)
-
-        # new_data = np.asarray(new_data)
-        # # new_index_flag = np.asarray(new_index_flag)
-        # np.savetxt(preprocess_label_path + 'num_%d.txt' % i, new_data)
-        # # np.savetxt(target_path + 'index_flag/num_%s_flag.txt' % i, new_index_flag)
