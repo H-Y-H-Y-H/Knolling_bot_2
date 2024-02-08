@@ -352,10 +352,10 @@ if __name__ == '__main__':
     # np.random.seed(110)
     # np.random.seed(110)
 
-    command = 'knolling'
+    command = 'recover'
     before_after = 'after'
     obj_num = 10
-    SHIFT_DATASET_ID = 0
+    SHIFT_DATASET_ID = 3
 
     start_evaluations = 950000
     end_evaluations =   1000000
@@ -382,6 +382,7 @@ if __name__ == '__main__':
                      [False, False, True, False],
                      [False, False, False, True]]
     solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
+    solution_num = 1
 
     if command == 'recover':
 
