@@ -298,9 +298,9 @@ if __name__ == '__main__':
 
     DATA_CUT = 10000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 0
-    policy_num = 3
-    configuration_num = 4
+    SHIFT_DATASET_ID = 3
+    policy_num = 1
+    configuration_num = 1
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
@@ -383,7 +383,7 @@ if __name__ == '__main__':
                 "SHIFT_DATA": {"values": [100]},
                 "num_gaussian":{"values":[3]},
                 "batch_size":{"values":[512]},
-                "k_ll":{"values":[0.01]},
+                "k_ll":{"values":[0.]},
                 "k_op":{'values':[1]},
                 'k_pos':{'values':[0.01]}
             },
