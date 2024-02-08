@@ -349,13 +349,16 @@ class Arm:
 
 if __name__ == '__main__':
 
+    # np.random.seed(110)
+    # np.random.seed(110)
+
     command = 'knolling'
     before_after = 'after'
     obj_num = 10
     SHIFT_DATASET_ID = 0
 
-    start_evaluations = 0
-    end_evaluations =   100
+    start_evaluations = 950000
+    end_evaluations =   1000000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -368,7 +371,7 @@ if __name__ == '__main__':
                     'object_num': obj_num, 'output_per_cfg': 3, 'object_type': 'sundry', # sundry or box
                     'iteration_time': 10,
                     'area_num': None, 'ratio_num': None, 'area_classify_flag': None, 'ratio_classify_flag': None,
-                    'class_num': None, 'color_num': None, 'max_class_num': 9, 'max_color_num': 6,
+                    'class_num': None, 'color_num': None, 'max_class_num': 9, 'max_color_num': 7,
                     'type_classify_flag': None, 'color_classify_flag': None, # classification range
                     'arrangement_policy': 'Type*3, Color*3, Area*3, Ratio*3', # customized setting
                     'object_even': True, 'block_even': True, 'upper_left_max': False, 'forced_rotate_box': False,
