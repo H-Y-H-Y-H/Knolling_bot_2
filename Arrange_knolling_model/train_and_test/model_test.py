@@ -183,7 +183,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
 
     runs = api.runs("knolling0205_10_overlap")
-    name = 'driven-sweep-1'
+    name = 'glamorous-sweep-1'
 
 
     model_name = "best_model.pt"
@@ -224,9 +224,9 @@ if __name__ == '__main__':
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', NUM_objects)
 
-        raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
+        raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))[:test_num_scenario]
 
-        raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        # raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
         total_raw_data = np.append(total_raw_data, raw_data)
         test_data = raw_data * config.SCALE_DATA + config.SHIFT_DATA
         valid_lw = []

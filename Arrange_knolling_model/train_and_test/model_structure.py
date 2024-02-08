@@ -384,6 +384,9 @@ class Knolling_Transformer(nn.Module):
 
                 # return the idx of selecting Gaussion
                 indices = torch.multinomial(weights, 1)
+                # else:
+                #     indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
+
 
                 # Gather the chosen means and std_devs based on sampled indices
                 # Batch is the second dimension, we adjust gathering for means and std_devs
@@ -569,6 +572,14 @@ def min_smaple_loss(weights, variances, means, target_value):
 
     return loss_all
 
+def entropy_loss(weights,lambda_value=1):
+    epsilon = 1e-9
+    entropy = -torch.sum(weights * torch.log(weights + epsilon), dim=2)
+
+    mean_entropy = (2-torch.mean(entropy))*lambda_value
+
+    return mean_entropy
+
 
 if __name__ == "__main__":
     from datetime import datetime
@@ -620,9 +631,9 @@ if __name__ == "__main__":
     valid_cls_data = []
 
     DATA_CUT = 1000 #1 000 000 data
-    k_ll = 0.
+    k_ll = 0.01
     k_op=0
-    k_pos=1
+    k_pos=0.1
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
@@ -718,10 +729,13 @@ if __name__ == "__main__":
             # Calculate min sample loss
             ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),input_batch[:model.in_obj_num].transpose(0,1))
+            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),
+                                                    input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch,target_batch)
-            loss = k_ll*ll_loss+ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss
+            # Calucluate Entropy loss:
+            train_entropy_loss = entropy_loss(pi)
+            loss = ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss + train_entropy_loss
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
@@ -786,7 +800,7 @@ if __name__ == "__main__":
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', loss.item(),ll_loss.item(),ms_min_smaple_loss.item(), overlap_loss.item())
+                    print('loss and overlap loss:', loss.item(),ms_min_smaple_loss.item(), overlap_loss.item())
 
                     print_flag = False
 

@@ -1,3 +1,4 @@
+import torch.optim
 import yaml
 from datetime import datetime
 import os
@@ -40,7 +41,7 @@ def main():
 
         model_path = None
     else:
-        pretrained_model = 'dry-dawn-91'
+        pretrained_model = 'radiant-sweep-1'
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -57,14 +58,14 @@ def main():
         os.makedirs(config.log_pth,exist_ok=True)
         config.pre_trained = True
         config.inputouput_size = inputouput_size
-        config.k_ll = 0.1
-        config.k_op = 1
-        config.k_pos= 0.5
+        config.k_ll = 0.01
+        config.k_op = 0.01
+        config.k_pos= 0.01
 
 
         print(config)
 
-    config.inputouput_size=4
+    config.inputouput_size=inputouput_size
     config.patience = 300
     loss_d_epoch = 200
     config.dataset_path = DATAROOT
@@ -107,7 +108,7 @@ def main():
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
-
+    config.lr = 1e-3
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
@@ -160,7 +161,11 @@ def main():
                                                     input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch, target_batch)
-            tloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
+            # Calucluate Entropy loss:
+            train_entropy_loss = entropy_loss(pi)
+
+
+            tloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss + train_entropy_loss
 
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
@@ -224,7 +229,10 @@ def main():
                                                         input_batch[:model.in_obj_num].transpose(0, 1))
                 # Calcluate position loss
                 pos_loss = model.masked_MSE_loss(output_batch, target_batch)
-                vloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
+                # Calucluate Entropy loss:
+                v_entropy_loss = entropy_loss(pi)
+
+                vloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss + v_entropy_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
@@ -288,15 +296,15 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000 #1 000 000 data
+    DATA_CUT = 10000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 3
-    policy_num = 1
-    configuration_num = 1
+    SHIFT_DATASET_ID = 0
+    policy_num = 3
+    configuration_num = 4
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
-    inputouput_size = 4
+    inputouput_size = 2
 
     # how many data used during training.
     max_seq_length = 10
@@ -358,7 +366,7 @@ if __name__ == '__main__':
 
     sweep_train_flag = True
 
-    proj_name = "knolling0205_4_overlap"
+    proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -367,17 +375,17 @@ if __name__ == '__main__':
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
                 "lr": {"values": [1e-3]},
-                "map_embed_d_dim": {"values": [32,64,128]},#
-                "num_attention_heads": {"values": [4,8,16,32]},#,16,32
-                "num_layers":{"values":[4,8,16]},
+                "map_embed_d_dim": {"values": [32]},#32,64,
+                "num_attention_heads": {"values": [16]},#,16,32
+                "num_layers":{"values":[4]},
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[3,5]},
+                "num_gaussian":{"values":[3]},
                 "batch_size":{"values":[512]},
-                "k_ll":{"values":[0.1]},
-                "k_op":{'values':[10]},
-                'k_pos':{'values':[0.2]}
+                "k_ll":{"values":[0.01]},
+                "k_op":{'values':[1]},
+                'k_pos':{'values':[0.01]}
             },
         }
 
