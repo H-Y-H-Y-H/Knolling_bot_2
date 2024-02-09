@@ -13,6 +13,7 @@ num_sample = 10
 
 for i in range(num_color):
     img = cv2.imread(script_directory + '/' + png_files[i])
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     rows = np.random.choice(img.shape[0], size=num_sample, replace=True)
     cols = np.random.choice(img.shape[1], size=num_sample, replace=True)
     positions = list(zip(rows, cols))
@@ -21,8 +22,8 @@ for i in range(num_color):
 
     rgb_dict[png_files[i][:-4]] = selected_values
 
-    # with open('./rgb_info.json', 'w') as f:
-    #     json.dump(rgb_dict, f, indent=4)
+    with open('./rgb_info.json', 'w') as f:
+        json.dump(rgb_dict, f, indent=4)
 
 
     # cv2.namedWindow('zzz', 0)
@@ -32,6 +33,7 @@ for i in range(num_color):
     # cv2.destroyAllWindows()
 
     print('here')
+print('here')
 
 # print([244, 23] / 255)
 #

@@ -23,6 +23,8 @@ class knolling_main():
             # self.lstm_dict = lstm_dict
             from ASSET.visual_perception import Yolo_pose_model
             self.task.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
+            from ASSET.yolo_seg_deploy import Yolo_seg_model
+            self.task.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
         if self.para_dict['visual_perception_model'] == 'yolo_grasp':
             from ASSET.yolo_grasp_deploy import Yolo_grasp_model
             self.task.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)

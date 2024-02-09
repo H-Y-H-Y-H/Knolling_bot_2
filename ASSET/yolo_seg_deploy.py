@@ -230,25 +230,41 @@ class Yolo_seg_model():
 
         return pred_result, pred_conf
 
-    def plot_result(self, result_one_img):
-
-        img = result_one_img.orig_img
-        masks = result_one_img.masks
-        cls_idx = result_one_img.boxes.cls.cpu().detach().numpy()
-        name_dict = result_one_img.names
-        cls_name = []
+    def plot_result(self, result_one_img, truth_flag=False):
 
         ############### zzz plot parameters ###############
+        txt_color = (255, 255, 255)
         zzz_lw = 1
         tf = 1 # font thickness
+        highlight_overlay = np.zeros_like(result_one_img.orig_img)
+        highlight_overlay[:, :, 2] = 255  # Set the red channel to 255 (full red), other channels to 0
         ############### zzz plot parameters ###############
 
+        img = result_one_img.orig_img
+        masks = result_one_img.masks.data.squeeze().cpu().detach().numpy()
+        pred_cls_idx = result_one_img.boxes.cls.cpu().detach().numpy()
+        pred_conf = result_one_img.boxes.conf.cpu().detach().numpy()
+        name_dict = result_one_img.names
+        pred_xylws = result_one_img.boxes.xywhn.cpu().detach().numpy()
+
+        ######## order based on distance to draw it on the image!!!
+        x_px_center = pred_xylws[:, 1] * 480
+        y_px_center = pred_xylws[:, 0] * 640
+        mm_center = np.concatenate(
+            (((x_px_center - 6) / self.mm2px).reshape(-1, 1), ((y_px_center - 320) / self.mm2px).reshape(-1, 1)), axis=1)
+        pred_order = change_sequence(mm_center)
+        mm_center = mm_center[pred_order]
+        pred_cls_idx = pred_cls_idx[pred_order]
+        pred_cls_name = [name_dict[i] for i in pred_cls_idx]
+        pred_conf = pred_conf[pred_order]
+        pred_xylws = pred_xylws[pred_order]
+        masks = masks[pred_order]
+        ######## order based on distance to draw it on the image!!!
+
         ################### zzz plot mask ####################
-        highlight_overlay = np.zeros_like(img)
-        highlight_overlay[:, :, 2] = 255  # Set the red channel to 255 (full red), other channels to 0
         for i in range(len(masks)):
             # Resize the mask array to match the image dimensions
-            resized_mask = cv2.resize(masks[i].data.squeeze().cpu().detach().numpy(), (img.shape[1], img.shape[0]))
+            resized_mask = cv2.resize(masks[i], (img.shape[1], img.shape[0]))
 
             # Create a mask with the red overlay only in the "special area"
             special_area_mask = np.stack([resized_mask] * 3, axis=-1)  # Convert to 3-channel mask
@@ -257,6 +273,28 @@ class Yolo_seg_model():
 
             # Blend the original image and the red overlay in the "special area"
             img = cv2.addWeighted(img, 1, special_area_mask, 0.5, 0)
+
+            # plot label
+            label1 = 'cls: %s, conf: %.5f' % (pred_cls_name[i], pred_conf[i])
+            label2 = 'index: %d, x: %.4f, y: %.4f' % (i, mm_center[i, 0], mm_center[i, 1])
+            # label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (plot_l, plot_w, my_ori)
+            w, h = cv2.getTextSize('', 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
+            p1 = np.array([int(pred_xylws[i, 0] * 640), int(pred_xylws[i, 1] * 480)])
+            outside = p1[1] - h >= 3
+            if truth_flag == True:
+                txt_color = (0, 0, 255)
+                # im = cv2.putText(im, label1, (p1[0] - 50, p1[1] - 32 if outside else p1[1] + h + 2),
+                #                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
+                # im = cv2.putText(im, label2, (p1[0] - 50, p1[1] - 22 if outside else p1[1] + h + 12),
+                #                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
+            else:
+                img = cv2.putText(img, label1, (p1[0] - 50, p1[1] + 22 if outside else p1[1] + h + 2),
+                                 0, zzz_lw / 3, (0, 0, 0), thickness=tf, lineType=cv2.LINE_AA)
+                img = cv2.putText(img, label2, (p1[0] - 50, p1[1] + 32 if outside else p1[1] + h + 12),
+                                 0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
+                # im = cv2.putText(im, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
+                #                  0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
+
         ################### zzz plot mask ####################
 
         # ############### zzz plot the box ###############
@@ -279,39 +317,86 @@ class Yolo_seg_model():
         # ############### zzz plot the box ###############
 
         # result = np.concatenate((box_center, [z_mm_center]))
-        result = masks.data.squeeze().cpu().detach().numpy()
+        result = masks
 
         return img, result
 
-    def yolo_seg_dataset(self, start_index, end_index):
+    def yolo_seg_dataset(self, start_index, end_index, real_operate=False):
 
         model = self.para_dict['yolo_model_path']
-        mask_dir = '../../knolling_dataset/yolo_seg_sundry_205/masks/'
-        os.makedirs(mask_dir, exist_ok=True)
 
-        for i in range(int(end_index - start_index)):
-            image_source = self.para_dict['dataset_path'] + '%012d.png' % (start_index + i)
-            args = dict(model=model, source=image_source, conf=self.para_dict['yolo_conf'],
-                        iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-            from ultralytics import YOLO
-            pre_images = YOLO(model)(**args)
-            result_one_img = pre_images[0]
+        if real_operate == False:
+            mask_dir = '../../knolling_dataset/yolo_seg_sundry_205/masks/'
+            os.makedirs(mask_dir, exist_ok=True)
 
-            new_img, mask_results = self.plot_result(result_one_img)
+            for i in range(int(end_index - start_index)):
+                image_source = self.para_dict['dataset_path'] + '%012d.png' % (start_index + i)
+                args = dict(model=model, source=image_source, conf=self.para_dict['yolo_conf'],
+                            iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+                from ultralytics import YOLO
+                pre_images = YOLO(model)(**args)
+                result_one_img = pre_images[0]
+                pred_xylws = result_one_img.boxes.xywhn.cpu().detach().numpy()
+                if len(pred_xylws) == 0:
+                    continue
 
-            np.save(mask_dir + '%012d.npy' % (start_index + i), arr=mask_results)
+                new_img, mask_results = self.plot_result(result_one_img)
+                # np.save(mask_dir + '%012d.npy' % (start_index + i), arr=mask_results)
+                # test = np.load(mask_dir + '%012d.npy' % (start_index + i))
 
-            # test = np.load(mask_dir + '%012d.npy' % (start_index + i))
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', new_img)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows()
+        else:
+            self.img_path = '../IMAGE/real_images/%012d' % (0)
 
-            # cv2.namedWindow('zzz', 0)
-            # cv2.resizeWindow('zzz', 1280, 960)
-            # cv2.imshow('zzz', new_img)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
+            cap = cv2.VideoCapture(8)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # set the resolution width
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+
+            for i in range(10): # warm-up camera
+                ret, resized_color_image = cap.read()
+
+            while True:
+                ret, resized_color_image = cap.read()
+                resized_color_image = cv2.flip(resized_color_image, -1)
+
+                # cv2.imwrite(img_path + '.png', resized_color_image)
+                # img_path_input = img_path + '.png'
+                args = dict(model=model, source=resized_color_image, conf=self.para_dict['yolo_conf'],
+                            iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow('zzz', resized_color_image)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+
+                from ultralytics import YOLO
+                pre_images = YOLO(model)(**args)
+                result_one_img = pre_images[0]
+                pred_xylws = result_one_img.boxes.xywhn.cpu().detach().numpy()
+                if len(pred_xylws) == 0:
+                    continue
+
+                new_img, mask_results = self.plot_result(result_one_img)
+
+                cv2.namedWindow('zzz', 0)
+                cv2.resizeWindow('zzz', 1280, 960)
+                cv2.imshow('zzz', new_img)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    cv2.destroyAllWindows()
+                    img_path_output = self.img_path + '_pred.png'
+                    cv2.imwrite(img_path_output, new_img)
+                    break
+
 
 if __name__ == '__main__':
 
-    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.5, 'yolo_iou': 0.6,
+    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.7, 'yolo_iou': 0.6,
                  'yolo_model_path': '../ASSET/models/205_seg_sundry/weights/best.pt',
                  'dataset_path': '../../knolling_dataset/yolo_seg_sundry_205/images/train/',
                  'index_begin': 44000}
@@ -324,4 +409,4 @@ if __name__ == '__main__':
     model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
 
     zzz_yolo = Yolo_seg_model(para_dict=para_dict)
-    zzz_yolo.yolo_seg_dataset(start_index=0, end_index=3200)
+    zzz_yolo.yolo_seg_dataset(start_index=0, end_index=3200, real_operate=True)
