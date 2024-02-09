@@ -143,13 +143,15 @@ class Arm:
             object_lwh_list = []
             for i in range(self.arrange_policy['object_num']):
                 object_path = self.dataset_path + 'generated_stl/' + class_name[i] + '/'
-                candidate_object = np.random.choice(glob.glob(object_path + '*.csv')).split('/')[-1][:-4]
+                # candidate_object = np.random.choice(glob.glob(object_path + '*.csv')).split('/')[-1][:-4]
+                candidate_object = np.random.choice(glob.glob(object_path + '*.csv'))
+
                 # temp = os.listdir(object_path)
                 # temp.sort()
                 # temp_object_index = np.random.choice(np.arange(int(len(temp) / 2)) * 2)
-                object_csv_path = object_path + candidate_object + '.csv'
-                object_name_list.append(candidate_object)
-                object_lwh_list.append(pandas.read_csv(object_csv_path).iloc[0, [3, 4, 5]].values)
+                # object_csv_path = object_path + candidate_object + '.csv'
+                object_name_list.append(candidate_object.split('/')[-1][:-4])
+                object_lwh_list.append(pandas.read_csv(candidate_object).iloc[0, [3, 4, 5]].values)
 
             color_index = np.random.choice(a=self.arrange_policy['max_color_num'],
                                            size=self.arrange_policy['color_num'],
@@ -269,8 +271,8 @@ class Arm:
             print('lwh\n', lw_data)
             for i in range(obj_num):
 
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+                # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+                object_path = self.dataset_path + 'generated_stl/' + labels_name[i] + '/' + labels_name[i]
                 # temp = os.listdir(object_path)
                 # temp.sort()
                 # object_name = temp[0][:-4]
@@ -349,17 +351,17 @@ class Arm:
 
 if __name__ == '__main__':
 
-    command = 'knolling'
+    command = 'recover'
     before_after = 'after'
     obj_num = 10
-    SHIFT_DATASET_ID = 0
+    SHIFT_DATASET_ID = 3
 
     start_evaluations = 0
     end_evaluations =   100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/learning_data_207_{obj_num}/'
+    target_path = f'../../../knolling_dataset/learning_data_205_{obj_num}/'
     images_log_path = target_path + 'images_%s/' % before_after
     os.makedirs(images_log_path, exist_ok=True)
 
@@ -378,7 +380,7 @@ if __name__ == '__main__':
                      [False, True, False, False],
                      [False, False, True, False],
                      [False, False, False, True]]
-    solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
+    solution_num = 1#int(arrange_policy['output_per_cfg'] * len(policy_switch))
 
     if command == 'recover':
 

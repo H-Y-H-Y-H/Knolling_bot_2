@@ -41,7 +41,7 @@ def main():
 
         model_path = None
     else:
-        pretrained_model = 'radiant-sweep-1'
+        pretrained_model = 'vivid-sweep-1'
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -59,7 +59,7 @@ def main():
         config.pre_trained = True
         config.inputouput_size = inputouput_size
         config.k_ll = 0.01
-        config.k_op = 0.01
+        config.k_op = 1
         config.k_pos= 0.01
 
 
@@ -298,13 +298,13 @@ if __name__ == '__main__':
 
     DATA_CUT = 10000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 3
-    policy_num = 1
-    configuration_num = 1
+    SHIFT_DATASET_ID = 0
+    policy_num = 3
+    configuration_num = 4
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
-    inputouput_size = 2
+    inputouput_size = 4
 
     # how many data used during training.
     max_seq_length = 10
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-    sweep_train_flag = True
+    sweep_train_flag = False
 
     proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
@@ -381,9 +381,9 @@ if __name__ == '__main__':
                 # "batch_size":{"values":[512]},
                 "SCALE_DATA": {"values": [100]},
                 "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[3]},
+                "num_gaussian":{"values":[5]},
                 "batch_size":{"values":[512]},
-                "k_ll":{"values":[0.]},
+                "k_ll":{"values":[0.01]},
                 "k_op":{'values':[1]},
                 'k_pos':{'values':[0.01]}
             },
