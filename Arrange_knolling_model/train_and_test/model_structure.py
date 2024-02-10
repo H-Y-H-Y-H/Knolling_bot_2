@@ -9,7 +9,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import cv2
 DATAROOT = "../../../knolling_dataset/learning_data_205_10/"
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 print(device)
 SHIFT_DATA = 100
 SCALE_DATA = 100

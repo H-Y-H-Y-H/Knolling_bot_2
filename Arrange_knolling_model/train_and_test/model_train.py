@@ -164,17 +164,17 @@ def main():
             overlap_loss = calculate_collision_loss(output_batch.transpose(0,1),
                                                     input_batch[:model.in_obj_num].transpose(0,1))
             # Calcluate position loss
-            pos_loss = model.masked_MSE_loss(output_batch, target_batch)
+            pos_loss = model.masked_MSE_loss(output_batch, target_batch[:model.in_obj_num])
             # Calucluate Entropy loss:
             train_entropy_loss = entropy_loss(pi)
 
 
-            tloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss + train_entropy_loss
+            tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + train_entropy_loss
 
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
-                print('loss and overlap loss:', tloss.item(), ll_loss.item(), ms_min_smaple_loss.item(),overlap_loss.item(),pos_loss.item())
+                print('loss and overlap loss:', tloss.item(), ll_loss.item(), ms_min_sample_loss.item(),overlap_loss.item(),pos_loss.item())
 
                 print_flag = False
 
@@ -235,22 +235,22 @@ def main():
                 overlap_loss = calculate_collision_loss(output_batch.transpose(0, 1),
                                                         input_batch[:model.in_obj_num].transpose(0, 1))
                 # Calcluate position loss
-                pos_loss = model.masked_MSE_loss(output_batch, target_batch)
+                pos_loss = model.masked_MSE_loss(output_batch, target_batch[:model.in_obj_num])
                 # Calucluate Entropy loss:
                 v_entropy_loss = entropy_loss(pi)
 
-                vloss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss + v_entropy_loss
+                vloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + v_entropy_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', vloss.item(), ll_loss.item(), ms_min_smaple_loss.item(),
+                    print('loss and overlap loss:', vloss.item(), ll_loss.item(), ms_min_sample_loss.item(),
                           overlap_loss.item(), pos_loss.item())
 
                     print_flag = False
 
                 total_loss += vloss.item()
                 all_ll_loss += ll_loss.item()
-                all_ms_loss += ms_min_smaple_loss.item()
+                all_ms_loss += ms_min_sample_loss.item()
                 valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
             all_ll_loss = all_ll_loss / len(val_loader)
@@ -311,7 +311,7 @@ if __name__ == '__main__':
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
 
-    inputouput_size = 4
+    inputouput_size = 10
 
     # how many data used during training.
     max_seq_length = 10
@@ -371,7 +371,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-    sweep_train_flag = False
+    sweep_train_flag = True
 
     proj_name = "knolling0205_2_overlap"
     if sweep_train_flag:
@@ -382,7 +382,7 @@ if __name__ == '__main__':
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
                 # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
                 "lr": {"values": [1e-3]},
-                "map_embed_d_dim": {"values": [32]},#32,64,
+                "map_embed_d_dim": {"values": [64]},#32,64,
                 "num_attention_heads": {"values": [16]},#,16,32
                 "num_layers":{"values":[4]},
                 # "batch_size":{"values":[512]},
