@@ -506,6 +506,7 @@ if __name__ == '__main__':
 
         cv2.namedWindow('zzz', 0)
         cv2.resizeWindow('zzz', 1280, 960)
+        image= cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         cv2.imshow("zzz", image)
         print('This is the data: \n', data[j])
         data_reshape = data[j].reshape(-1, 7)
