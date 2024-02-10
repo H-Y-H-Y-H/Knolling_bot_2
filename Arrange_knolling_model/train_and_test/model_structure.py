@@ -511,7 +511,7 @@ class Knolling_Transformer(nn.Module):
             mse_loss = mse_loss.sum() / mask.sum()
             return mse_loss
         else:
-            mse_loss = mse_loss.sum((0,2)) / mask.sum((0,2))
+            mse_loss = mse_loss.sum(2)
             return mse_loss
 
 
@@ -560,7 +560,7 @@ class Knolling_Transformer(nn.Module):
     #     return penalty
 
 
-def min_smaple_loss(weights, variances, means, target_value,Output_scaler=True):
+def min_sample_loss(weights, variances, means, target_value,Output_scaler=True,contain_id_and_values =False):
     std = torch.sqrt(variances)
     sample_v = std*torch.randn(std.shape,device=device)
     samples = sample_v + means
@@ -574,17 +574,21 @@ def min_smaple_loss(weights, variances, means, target_value,Output_scaler=True):
     # probabilities = counts.float() / min_samples_errors_id.size(1)
     # samples_prob = probabilities[min_samples_errors_id]
 
-    selected_values = torch.gather(samples_errors, 2, min_samples_errors_id.unsqueeze(-1))
+    selected_errors = torch.gather(samples_errors, 2, min_samples_errors_id.unsqueeze(-1))
+    indices_expanded = min_samples_errors_id.unsqueeze(-1).expand(-1, -1, 2)
+    result = torch.gather(samples, 2, indices_expanded.unsqueeze(2)).squeeze(2)
 
 
     # weighted_loss = selected_values*samples_prob.unsqueeze(2)
     if Output_scaler:
-        loss_all= selected_values.mean()
+        loss_all= selected_errors.mean()
     else:
-        loss_all = selected_values
+        loss_all = selected_errors
 
-
-    return loss_all
+    if contain_id_and_values:
+        return loss_all, min_samples_errors_id,result
+    else:
+        return loss_all
 
 def entropy_loss(weights,lambda_value=1,Output_scaler=True):
     epsilon = 1e-9
@@ -596,6 +600,11 @@ def entropy_loss(weights,lambda_value=1,Output_scaler=True):
         mean_entropy = (2-entropy)*lambda_value
 
     return mean_entropy
+
+
+# def find_min_loss_output(weights, variances, means, target_value):
+
+
 
 
 

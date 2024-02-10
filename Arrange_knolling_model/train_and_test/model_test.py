@@ -20,7 +20,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
     test_loss_list = []
     outputs = []
     ll_loss_list= []
-    ms_min_smaple_loss_list= []
+    ms_min_sample_loss_list= []
     overlap_loss_list= []
     pos_loss_list= []
     v_entropy_loss_list= []
@@ -53,27 +53,35 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             output_batch, pi, sigma, mu = model(input_batch,
                                  tart_x_gt=input_target_batch)
 
-            # Calculate log-likelihood loss
-            ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num],Output_scaler=False)
+            # output_batch=output_batch[: model.in_obj_num]
+
             # Calculate min sample loss
-            ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num],Output_scaler=False)
+            ms_min_sample_loss, ms_id,output_batch = min_sample_loss(pi, sigma, mu,
+                                                 target_batch[:model.in_obj_num],
+                                                 Output_scaler=False,
+                                                 contain_id_and_values = True)
+
+            # Calculate log-likelihood loss
+            ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num],
+                                              Output_scaler=False)
+
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+            overlap_loss = calculate_collision_loss(output_batch.transpose(0, 1),
                                                     input_batch[:model.in_obj_num].transpose(0, 1),
                                                     Output_scaler=False)
             # Calcluate position loss
-            pos_loss = model.masked_MSE_loss(output_batch, target_batch,Output_scaler=False)
+            pos_loss = model.masked_MSE_loss(output_batch, target_batch[:model.in_obj_num],Output_scaler=False)
             # Calucluate Entropy loss:
             v_entropy_loss = entropy_loss(pi,Output_scaler=False)
 
             ll_loss_list.append(ll_loss.transpose(1,0).detach().cpu().numpy())
-            ms_min_smaple_loss_list.append(ms_min_smaple_loss.transpose(1,0).squeeze(-1).detach().cpu().numpy())
+            ms_min_sample_loss_list.append(ms_min_sample_loss.transpose(1,0).squeeze(-1).detach().cpu().numpy())
             overlap_loss_list.append(overlap_loss.detach().cpu().numpy())
-            pos_loss_list.append(pos_loss.detach().cpu().numpy())
+            pos_loss_list.append(pos_loss.transpose(1,0).detach().cpu().numpy())
             v_entropy_loss_list.append(v_entropy_loss.transpose(1,0).detach().cpu().numpy())
 
             output_batch = output_batch.transpose(1, 0)
-            target_batch = target_batch.transpose(1, 0)
+            target_batch = target_batch[:model.in_obj_num].transpose(1, 0)
 
             outputs.append(output_batch.detach().cpu().numpy())
 
@@ -90,7 +98,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
     outputs = np.concatenate(outputs)
 
     ll_loss_list= np.concatenate(ll_loss_list)
-    ms_min_smaple_loss_list= np.concatenate(ms_min_smaple_loss_list)
+    ms_min_sample_loss_list= np.concatenate(ms_min_sample_loss_list)
     overlap_loss_list= np.concatenate(overlap_loss_list)
     pos_loss_list= np.concatenate(pos_loss_list)
     v_entropy_loss_list= np.concatenate(v_entropy_loss_list)
@@ -98,7 +106,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
     outputs = (outputs.reshape(-1, len(outputs[0]) * 2) - config.SHIFT_DATA) / config.SCALE_DATA
     np.savetxt(log_path + '/test_loss_list%d.csv' % num_obj, np.asarray(test_loss_list))
     np.savetxt(log_path + '/ll_loss%d.csv' % num_obj, ll_loss_list)
-    np.savetxt(log_path + '/ms_min_sample_loss%d.csv' % num_obj, ms_min_smaple_loss_list)
+    np.savetxt(log_path + '/ms_min_sample_loss%d.csv' % num_obj, ms_min_sample_loss_list)
     np.savetxt(log_path + '/overlap_loss%d.csv' % num_obj, overlap_loss_list)
     np.savetxt(log_path + '/pos_loss%d.csv' % num_obj, pos_loss_list)
     np.savetxt(log_path + '/v_entropy_loss%d.csv' % num_obj, v_entropy_loss_list)
@@ -117,7 +125,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     # runs = api.runs("knolling0205_2_overlap")
 
-    name = 'vivid-sweep-1'
+    name = 'luminous-fireworks-118'
 
     model_name = "best_model.pt"
 

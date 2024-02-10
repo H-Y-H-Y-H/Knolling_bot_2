@@ -41,7 +41,7 @@ def main():
 
         model_path = None
     else:
-        pretrained_model = 'vivid-sweep-1'
+        pretrained_model = 'auspicious-bao-117'
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -67,7 +67,7 @@ def main():
 
     config.inputouput_size=inputouput_size
     config.patience = 300
-    loss_d_epoch = 200
+    loss_d_epoch = 100
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
@@ -108,7 +108,7 @@ def main():
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
-    config.lr = 1e-3
+    config.lr = 1e-4
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,

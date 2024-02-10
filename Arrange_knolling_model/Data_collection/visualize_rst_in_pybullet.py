@@ -275,10 +275,10 @@ class Arm:
         ################### recover urdf boxes based on lw_data ###################
         obj_name = []
         for i in range(len(lw_data)):
-            print(f'this is matching urdf{j}')
-            print(pos_data[i])
-            print(lw_data[i])
-            print(ori_data[i])
+            # print(f'this is matching urdf{j}')
+            # print(pos_data[i])
+            # print(lw_data[i])
+            # print(ori_data[i])
             pos_data[i, 2] += 0.006
             obj_name.append(f'object_{i}')
             create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
@@ -439,9 +439,8 @@ if __name__ == '__main__':
     # object_num = 2
     # name = 'gentle-river-106'
 
-    object_num = 2
-    name = 'vivid-sweep-1'
-
+    object_num = 4
+    name = 'luminous-fireworks-118'
 
 
     images_log_path = f'../train_and_test/results/{name}/output_images/'
@@ -508,7 +507,6 @@ if __name__ == '__main__':
         cv2.resizeWindow('zzz', 1280, 960)
         image= cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         cv2.imshow("zzz", image)
-        print('This is the data: \n', data[j])
         data_reshape = data[j].reshape(-1, 7)
         pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
         length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
