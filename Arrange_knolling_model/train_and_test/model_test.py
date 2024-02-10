@@ -96,10 +96,10 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
     v_entropy_loss_list= np.concatenate(v_entropy_loss_list)
 
     outputs = (outputs.reshape(-1, len(outputs[0]) * 2) - config.SHIFT_DATA) / config.SCALE_DATA
-    np.savetxt(log_path + '/ll_loss%d.csv' % num_obj, np.asarray(test_loss_list))
-    np.savetxt(log_path + '/ms_min_smaple_loss%d.csv' % num_obj, ll_loss_list)
-    np.savetxt(log_path + '/overlap_loss%d.csv' % num_obj, ms_min_smaple_loss_list)
-    np.savetxt(log_path + '/pos_loss%d.csv' % num_obj, overlap_loss_list)
+    np.savetxt(log_path + '/test_loss_list%d.csv' % num_obj, np.asarray(test_loss_list))
+    np.savetxt(log_path + '/ll_loss%d.csv' % num_obj, ll_loss_list)
+    np.savetxt(log_path + '/ms_min_sample_loss%d.csv' % num_obj, ms_min_smaple_loss_list)
+    np.savetxt(log_path + '/overlap_loss%d.csv' % num_obj, overlap_loss_list)
     np.savetxt(log_path + '/pos_loss%d.csv' % num_obj, pos_loss_list)
     np.savetxt(log_path + '/v_entropy_loss%d.csv' % num_obj, v_entropy_loss_list)
 
@@ -112,14 +112,12 @@ if __name__ == '__main__':
 
     test_sweep_flag = False
     use_yaml = True
-    SHOW_GT = False
 
     # api = wandb.Api()
     # Project is specified by <entity/project-name>
-
     # runs = api.runs("knolling0205_2_overlap")
-    name = 'misunderstood-sweep-2'
 
+    name = 'vivid-sweep-1'
 
     model_name = "best_model.pt"
 
@@ -140,7 +138,7 @@ if __name__ == '__main__':
     NUM_objects = config.inputouput_size
     solu_num = 1 #12
     info_per_object = 7
-    SHIFT_DATASET_ID = 3 # color 3,4,5
+    SHIFT_DATASET_ID = 0 # color 3,4,5
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', NUM_objects)
 

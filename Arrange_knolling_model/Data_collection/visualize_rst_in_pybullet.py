@@ -436,16 +436,37 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    object_num = 2
+    # object_num = 2
+    # name = 'gentle-river-106'
 
-    name = 'misunderstood-sweep-2'
+    object_num = 2
+    name = 'vivid-sweep-1'
+
+
 
     images_log_path = f'../train_and_test/results/{name}/output_images/'
     data_path = f'../train_and_test/results/{name}/'
     os.makedirs(images_log_path, exist_ok=True)
 
     pred_data = np.loadtxt(data_path + '/num_%d_pred.txt' % object_num)
-    gt_data = np.loadtxt(data_path + '/num_%d_pred.txt' % object_num)
+    gt_data = np.loadtxt(data_path + '/num_%d_gt.txt' % object_num)
+    ms_min_sample_loss = np.loadtxt(data_path+f'ms_min_sample_loss{object_num}.csv')
+    ll_loss = np.loadtxt(data_path+f'll_loss{object_num}.csv')
+    overlap_loss = np.loadtxt(data_path + f'overlap_loss{object_num}.csv')
+    pos_loss = np.loadtxt(data_path + f'pos_loss{object_num}.csv')
+    entropy_loss = np.loadtxt(data_path + f'v_entropy_loss{object_num}.csv')
+
+    all_loss = [ms_min_sample_loss,
+                ll_loss,
+                overlap_loss,
+                pos_loss,
+                entropy_loss]
+    all_loss_name = ['ms_min_sample_loss',
+                'll_loss',
+                'overlap_loss',
+                'pos_loss',
+                'entropy_loss']
+
 
 
     env = Arm(is_render=True)
@@ -460,20 +481,22 @@ if __name__ == '__main__':
     for i in range(len(pred_data)*2):
         if i%2 ==0:
             data = pred_data
+            for i_loss in range(len(all_loss)):
+                print(all_loss_name[i_loss],all_loss[i_loss][i//2])
         else:
             data = gt_data
         j = i//2
         env.get_parameters(box_num=object_num)
         print(f'this is data {j}')
-        one_img_data = data[j].reshape(-1, info_per_object)
-        # one_img_index_flag = index_flag[j].reshape(2, -1)
-        box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
-        one_img_data = one_img_data[box_order].reshape(-1,)
-        # one_img_index_flag = one_img_index_flag[:, box_order].reshape(-1, )
-        new_data.append(one_img_data)
-        # new_index_flag.append(one_img_index_flag)
+        one_img_data = data[j][:info_per_object*object_num].reshape(-1, info_per_object)
 
-        image = env.label2image(data[j])
+        box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
+
+        one_img_data = one_img_data[box_order].reshape(-1,)
+
+        new_data.append(one_img_data)
+
+        image = env.label2image(one_img_data)
         image_list.append(image[..., :3])
 
         if i%2==1:
@@ -483,6 +506,7 @@ if __name__ == '__main__':
 
         cv2.namedWindow('zzz', 0)
         cv2.resizeWindow('zzz', 1280, 960)
+        image= cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         cv2.imshow("zzz", image)
         print('This is the data: \n', data[j])
         data_reshape = data[j].reshape(-1, 7)
