@@ -56,7 +56,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             # output_batch=output_batch[: model.in_obj_num]
 
             # Calculate min sample loss
-            ms_min_sample_loss, ms_id,output_batch = min_sample_loss(pi, sigma, mu,
+            ms_min_sample_loss, ms_id,min_output_batch = min_sample_loss(pi, sigma, mu,
                                                  target_batch[:model.in_obj_num],
                                                  Output_scaler=False,
                                                  contain_id_and_values = True)
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     # runs = api.runs("knolling0205_2_overlap")
 
-    name = 'luminous-fireworks-118'
+    name = 'vibrant-fuse-15'
 
     model_name = "best_model.pt"
 
@@ -135,6 +135,7 @@ if __name__ == '__main__':
 
     config = argparse.Namespace(**config)
 
+    object_num = 10
 
     valid_lw_data = []
     valid_pos_data = []
@@ -143,14 +144,14 @@ if __name__ == '__main__':
     # load the test dataset
     file_num = 10
     test_num_scenario = 1000
-    NUM_objects = config.inputouput_size
+
     solu_num = 1 #12
     info_per_object = 7
-    SHIFT_DATASET_ID = 0 # color 3,4,5
+    SHIFT_DATASET_ID = 3 # color 3,4,5
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
-        print('load data:', NUM_objects)
+        print('load data:', object_num)
 
-        raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))
+        raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))[:,:object_num*info_per_object]
 
         raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
         total_raw_data.append(raw_data)
@@ -158,7 +159,7 @@ if __name__ == '__main__':
         valid_lw = []
         valid_pos = []
 
-        for i in range(NUM_objects):
+        for i in range(object_num):
             valid_lw.append(test_data[:, i * info_per_object + 2:i * info_per_object + 4])
             valid_pos.append(test_data[:, i * info_per_object:i * info_per_object + 2])
 
@@ -200,12 +201,12 @@ if __name__ == '__main__':
     os.makedirs(log_path, exist_ok=True)
 
     raw_data = np.concatenate(total_raw_data)
-    outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=NUM_objects)
-    np.savetxt(log_path + '/num_%d_gt.txt' % config.inputouput_size, raw_data)
+    outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=object_num)
+    np.savetxt(log_path + '/num_%d_gt.txt' % object_num, raw_data)
 
-    for i in range(NUM_objects):
+    for i in range(object_num):
         raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
 
-    np.savetxt(log_path + '/num_%d_pred.txt' % config.inputouput_size, raw_data)
+    np.savetxt(log_path + '/num_%d_pred.txt' % object_num, raw_data)
 
 
