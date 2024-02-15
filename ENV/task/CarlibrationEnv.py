@@ -25,7 +25,6 @@ class carlibration_env():
         self.knolling_para = knolling_para
 
         self.kImageSize = {'width': 480, 'height': 480}
-        self.endnum = para_dict['end_num']
         self.init_pos_range = para_dict['init_pos_range']
         self.init_ori_range = para_dict['init_ori_range']
         self.init_offset_range = para_dict['init_offset_range']

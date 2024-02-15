@@ -11,7 +11,6 @@ class knolling_robot():
     def __init__(self, para_dict, knolling_para=None):
 
         self.para_dict = para_dict
-        self.knolling_para = knolling_para
 
     def calculate_gripper(self):
         self.close_open_gap = 0.053
@@ -26,7 +25,7 @@ class knolling_robot():
         if self.para_dict['real_operate'] == True:
 
             HOST = "192.168.0.189"  # Standard loopback interface address (localhost)
-            PORT = 8880 # Port to listen on (non-privileged ports are > 1023)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -37,6 +36,7 @@ class knolling_robot():
             print(self.conn)
             print(f"Connected by {addr}")
             self.real_table_height = 0.003
+            # self.real_table_height = 0.010
             self.sim_table_height = 0
             num_motor = 5
             # ! reset the pos in both real and sim

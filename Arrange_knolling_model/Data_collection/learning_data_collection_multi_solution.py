@@ -181,12 +181,19 @@ class Arm:
             image[:, :, 2] = temp
             return image
 
+    def is_too_close(self, new_pos, existing_objects, min_distance=0.01):
+        for _, obj_pos in existing_objects:
+            if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
+                return True
+        return False
+
     def label2image(self, labels_data, labels_name=None):
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
 
         total_offset = [0.016, -0.17 + 0.016, 0]
         labels_data = labels_data.reshape(-1, 7)
+        # labels_data = labels_data[:np.random.randint(low=4, high=len(labels_data)-2), :]
         obj_num = np.sum(np.any(labels_data, axis=1))
 
         pos_data = np.concatenate((labels_data[:, :2], np.ones((len(labels_data), 1)) * 0.003), axis=1)
@@ -234,6 +241,7 @@ class Arm:
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
 
+        self.state_blank = p.saveState()
         ################### recover urdf boxes based on lw_data ###################
         # if self.arrange_policy['object_type'] == 'box':
         #     temp_box = URDF.load('../../ASSET/urdf/box_generator/template.urdf')
@@ -269,19 +277,12 @@ class Arm:
             print('lwh\n', lw_data)
             for i in range(obj_num):
 
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+                # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
                 object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
-                # temp = os.listdir(object_path)
-                # temp.sort()
-                # object_name = temp[0][:-4]
-                # object_csv = object_path + temp[0]
-                # object_stl = object_path + temp[1]
                 object_csv = object_path + '.csv'
-                object_stl = object_path + '.stl'
+                # object_stl = object_path + '.stl'
 
                 print(f'this is matching urdf{i}')
-                # object_name = labels_name[i].split('_')[0]
-                # object_index = labels_name[i].split('_')[1]
                 csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
                 pos_data[i, 2] = csv_lwh[2] / 2
 
@@ -293,6 +294,46 @@ class Arm:
                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
                 p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
+            neat_img = self.get_obs('images', None)
+            # p.restoreState(self.state_blank)
+            self.init_ori_range = [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]]
+            rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1],
+                                             size=(len(object_idx), 1))
+            rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1],
+                                              size=(len(object_idx), 1))
+            rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1],
+                                            size=(len(object_idx), 1))
+            rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
+            self.init_pos_range = [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.01]]
+            for i in object_idx:
+                p.removeBody(i)
+            object_idx = []
+            for i in range(obj_num):
+
+                rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
+
+                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+                object_csv = object_path + '.csv'
+
+                print(f'this is matching urdf{i}')
+                placement_successful = False
+                while not placement_successful:
+
+                    # Check if the new position is too close to any existing objects
+                    if not self.is_too_close(pos_data, object_idx):
+                        csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
+                        pos_data[2] = csv_lwh[2] / 2
+
+                        object_idx.append((p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+                                                     basePosition=pos_data,
+                                                     baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=False,
+                                                     flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT), pos_data))
+                        p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
+                        placement_successful = True
+            rdm_img = self.get_obs('images', None)
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
@@ -300,7 +341,8 @@ class Arm:
         for i in range(100):
             p.stepSimulation()
 
-        return self.get_obs('images', None)
+        # return self.get_obs('images', None)
+        return np.concatenate((rdm_img, neat_img), axis=1)
 
     def change_config(self):  # this is main function!!!!!!!!!
 
@@ -349,8 +391,8 @@ class Arm:
 
 if __name__ == '__main__':
 
-    # np.random.seed(110)
-    # np.random.seed(110)
+    np.random.seed(110)
+    np.random.seed(110)
 
     command = 'recover'
     before_after = 'after'
@@ -416,10 +458,11 @@ if __name__ == '__main__':
                 image = image[..., :3]
 
                 cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.resizeWindow('zzz', 1280, 960)
                 cv2.imshow("zzz", image)
                 cv2.waitKey()
                 cv2.destroyAllWindows()
+                cv2.imwrite('layout_%s.png' % j, image)
 
             # cv2.imwrite(images_log_path + '%d_%d.png' % (i, j), image)
 

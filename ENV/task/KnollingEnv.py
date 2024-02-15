@@ -1,5 +1,5 @@
 # from arrangement import *
-from ASSET.visual_perception import *
+# from ASSET.visual_perception import *
 # from ASSET.yolo_grasp_deploy import *
 from utils import *
 import pybullet as p
@@ -8,14 +8,9 @@ import os
 import numpy as np
 import random
 import cv2
-
-
-class Sort_objects():
-
-    def __init__(self, para_dict, knolling_para):
-        self.error_rate = 0.05
-        self.para_dict = para_dict
-        self.knolling_para = knolling_para
+import glob
+import pandas
+import json
 
 class knolling_env():
 
@@ -25,7 +20,6 @@ class knolling_env():
         self.knolling_para = knolling_para
 
         self.kImageSize = {'width': 480, 'height': 480}
-        self.endnum = para_dict['end_num']
         self.init_pos_range = para_dict['init_pos_range']
         self.init_ori_range = para_dict['init_ori_range']
         self.init_offset_range = para_dict['init_offset_range']
@@ -33,7 +27,6 @@ class knolling_env():
         self.pybullet_path = pd.getDataPath()
         self.is_render = para_dict['is_render']
         self.save_img_flag = para_dict['save_img_flag']
-        self.boxes_sort = Sort_objects(para_dict=para_dict, knolling_para=knolling_para)
 
         self.x_low_obs = 0.03
         self.x_high_obs = 0.27
@@ -107,8 +100,10 @@ class knolling_env():
         self.kernel = kernel / np.sum(kernel)
 
         self.main_demo_epoch = 0
-
         self.create_entry_num = 0
+
+        with open('./ASSET/urdf/object_color/rgb_info.json') as f:
+            self.color_dict = json.load(f)
 
     def create_scene(self):
 
@@ -141,52 +136,112 @@ class knolling_env():
 
     def get_data_virtual(self):
 
-        xyz_list = []
         length_range = np.round(np.random.uniform(self.para_dict['box_range'][0][0],
                                                   self.para_dict['box_range'][0][1],
-                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
+                                                  size=(self.para_dict['objects_num'], 1)), decimals=3)
         width_range = np.round(np.random.uniform(self.para_dict['box_range'][1][0],
                                                  np.minimum(length_range, 0.036),
-                                                 size=(self.para_dict['boxes_num'], 1)), decimals=3)
+                                                 size=(self.para_dict['objects_num'], 1)), decimals=3)
         height_range = np.round(np.random.uniform(self.para_dict['box_range'][2][0],
                                                   self.para_dict['box_range'][2][1],
-                                                  size=(self.para_dict['boxes_num'], 1)), decimals=3)
-        xyz_list = np.concatenate((length_range, width_range, height_range), axis=1)
-        return xyz_list
+                                                  size=(self.para_dict['objects_num'], 1)), decimals=3)
+        lwh_list = np.concatenate((length_range, width_range, height_range), axis=1)
+        return lwh_list
 
     def create_objects(self, pos_data=None, ori_data=None, lwh_data=None, reverse_flag=False):
 
+        # Create color
+        # Converting dictionary keys to integers
+        dict_map = {i: v for i, (k, v) in enumerate(self.color_dict.items())}
+        temp_color_index = np.random.choice(a=self.para_dict['max_color_num'],
+                                       size=np.random.randint(2, self.para_dict['max_color_num'] + 1),
+                                       replace=False)
+        color_index = np.random.choice(a=temp_color_index, size=self.para_dict['objects_num'])
+        # Mapping array values to dictionary values
+        color_sub_index = np.random.choice(10, len(color_index))
+        mapped_color_values = []
+        for i in range(len(color_index)):
+            mapped_color_values.append(dict_map[color_index[i]][color_sub_index[i]])
+        def is_too_close(new_pos, existing_objects, min_distance=0.08):
+            for _, obj_pos in existing_objects:
+                if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
+                    return True
+            return False
+
         if pos_data is None:
             if self.para_dict['real_operate'] == False:
-                self.lwh_list = self.get_data_virtual()
-                self.num_boxes = np.copy(len(self.lwh_list))
-                rdm_ori_roll  = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.num_boxes, 1))
-                rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.num_boxes, 1))
-                rdm_ori_yaw   = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.num_boxes, 1))
-                rdm_ori = np.concatenate((rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw), axis=1)
-                rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.num_boxes, 1))
-                rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.num_boxes, 1))
-                rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.num_boxes, 1))
+                self.objects_index = []
+                objects_info = []
+
+                rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.para_dict['objects_num'], 1))
+                rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1], size=(self.para_dict['objects_num'], 1))
+                rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1], size=(self.para_dict['objects_num'], 1))
+                rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
+
                 x_offset = np.random.uniform(self.init_offset_range[0][0], self.init_offset_range[0][1])
                 y_offset = np.random.uniform(self.init_offset_range[1][0], self.init_offset_range[1][1])
-                print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
-                rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
 
-                self.objects_index = []
-                for i in range(self.num_boxes):
-                    obj_name = f'object_{i}'
-                    if self.para_dict['object'] == 'box':
-                        create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
-                    elif self.para_dict['object'] == 'polygon':
-                        p.loadURDF(('../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % np.random.uniform(0, 600, 1)[0]),
-                            basePosition=rdm_pos[i],
-                            baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
-                            flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
-                    self.objects_index.append(int(i + 2))
-                    r = np.random.uniform(0, 0.9)
-                    g = np.random.uniform(0, 0.9)
-                    b = np.random.uniform(0, 0.9)
-                    p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
+                if self.para_dict['object'] == 'sundry':
+                    # Place the objects, ensuring they don't overlap
+                    all_urdf_files = os.listdir(self.para_dict['sundry_path'] + 'urdf_file/')
+                    selected_urdf_files = random.sample(all_urdf_files, self.para_dict['objects_num'])
+
+                    self.obj_gt_lwh = []
+                    self.obj_info_total = []
+                    for i in range(self.para_dict['objects_num']):
+                        placement_successful = False
+                        while not placement_successful:
+                            # Generate a new position for the object
+                            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                            new_pos = [rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z]
+
+                            # Check if the new position is too close to any existing objects
+                            if not is_too_close(new_pos, objects_info):
+                                urdf_file = self.para_dict['sundry_path'] + 'urdf_file/' + selected_urdf_files[i % len(selected_urdf_files)]
+                                object_info = selected_urdf_files[i][:-5]
+                                self.obj_info_total.append(object_info)
+                                object_name = object_info.split('_')[0]
+                                object_index = object_info.split('_')[1]
+                                csv_path = (self.para_dict['sundry_path'] + 'generated_stl/' + object_name + '/' + object_info  + '.csv')
+                                csv_lwh = np.asarray(pandas.read_csv(csv_path).iloc[0, [3, 4, 5]].values) * 0.001
+                                new_pos[2] = csv_lwh[2] / 2
+                                self.obj_gt_lwh.append(csv_lwh)
+                                obj_id = p.loadURDF(urdf_file,
+                                                    basePosition=new_pos,
+                                                    baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]),
+                                                    flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+
+                                p.changeVisualShape(obj_id, -1, rgbaColor=mapped_color_values[i] + [1])
+                                objects_info.append((obj_id, new_pos))
+                                self.objects_index.append(obj_id)
+                                placement_successful = True
+
+                else:
+                    self.lwh_list = self.get_data_virtual()
+                    # self.num_objects = np.copy(len(self.lwh_list))
+                    rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1], size=(self.para_dict['objects_num'], 1))
+                    rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1], size=(self.para_dict['objects_num'], 1))
+                    rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1], size=(self.para_dict['objects_num'], 1))
+                    print('this is offset: %.04f, %.04f' % (x_offset, y_offset))
+                    rdm_pos = np.concatenate((rdm_pos_x + x_offset, rdm_pos_y + y_offset, rdm_pos_z), axis=1)
+
+
+                    for i in range(self.para_dict['objects_num']):
+                        obj_name = f'object_{i}'
+                        if self.para_dict['object'] == 'box':
+                            create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
+                        elif self.para_dict['object'] == 'polygon':
+                            p.loadURDF(('../knolling_dataset/' + 'random_polygon/polygon_%d.urdf' % np.random.uniform(0, 600, 1)[0]),
+                                basePosition=rdm_pos[i],
+                                baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=0,
+                                flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+                        self.objects_index.append(int(i + 2))
+                        r = np.random.uniform(0, 0.9)
+                        g = np.random.uniform(0, 0.9)
+                        b = np.random.uniform(0, 0.9)
+                        p.changeVisualShape(self.objects_index[i], -1, rgbaColor=(r, g, b, 1))
 
                 for _ in range(int(100)):
                     p.stepSimulation()
@@ -197,6 +252,8 @@ class knolling_env():
                 # # delete the object extend to the edge
                 # self.delete_objects(manipulator_after)
                 manipulator_init, lwh_list_init, pred_cls, pred_conf = self.get_obs()
+                self.lwh_list = lwh_list_init
+                self.num_objects = np.copy(len(self.lwh_list))
 
             else:
                 # the sequence here is based on area and ratio!!! must be converted additionally!!!
@@ -206,10 +263,10 @@ class knolling_env():
                 rdm_pos = manipulator_init[:, :3]
                 rdm_ori = manipulator_init[:, 3:]
                 self.lwh_list = lwh_list_init
-                self.num_boxes = np.copy(len(self.lwh_list))
+                self.num_objects = np.copy(len(self.lwh_list))
 
                 self.objects_index = []
-                for i in range(self.num_boxes):
+                for i in range(self.num_objects):
                     obj_name = f'object_{i}'
                     create_box(obj_name, rdm_pos[i], p.getQuaternionFromEuler(rdm_ori[i]), size=self.lwh_list[i])
                     self.objects_index.append(int(i + 2))
@@ -229,13 +286,12 @@ class knolling_env():
             return manipulator_init, lwh_list_init, pred_cls, pred_conf
 
         else:
-
             for i in range(len(self.objects_index)):
                 p.removeBody(self.objects_index[i])
             self.lwh_list = lwh_data
-            self.num_boxes = np.copy(len(self.lwh_list))
+            self.num_objects = np.copy(len(self.lwh_list))
             self.objects_index = []
-            for i in range(self.num_boxes):
+            for i in range(self.num_objects):
                 obj_name = f'object_{i}'
                 create_box(obj_name, pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=self.lwh_list[i])
                 self.objects_index.append(int(i + 2))
@@ -287,7 +343,7 @@ class knolling_env():
                 for i in delete_index:
                     p.removeBody(self.objects_index[i])
                     self.objects_index.pop(i)
-                    self.num_boxes -= 1
+                    self.num_objects -= 1
                     self.lwh_list = np.delete(self.lwh_list, i, axis=0)
                     self.gt_pos_ori = np.delete(self.gt_pos_ori, i, axis=0)
                     self.gt_ori_qua = np.delete(self.gt_ori_qua, i, axis=0)
@@ -356,7 +412,7 @@ class knolling_env():
                 # p.changeVisualShape(self.boxes_index[i], -1, rgbaColor=(r, g, b, 1))
             pass
 
-    def get_obs(self, epoch=None, look_flag=False, baseline_flag=False, sub_index=0, img_path=None):
+    def get_obs(self, epoch=None, look_flag=False, sub_index=0, img_path=None):
 
         if epoch is None:
             epoch = self.main_demo_epoch
@@ -401,14 +457,23 @@ class knolling_env():
             if self.para_dict['real_operate'] == False:
                 img, _ = get_images()
                 ################### the results of object detection has changed the order!!!! ####################
-                # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(img=img, epoch=epoch, gt_boxes_num=len(self.objects_index), first_flag=baseline_flag)
+                if self.para_dict['visual_perception_mode'] == 'yolo_pose_lstm_grasp':
+                    # structure of results: x, y, z, length, width, ori
+                    manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(img=img, epoch=epoch, gt_boxes_num=len(self.objects_index))
+                if self.para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
+                    manipulator_before, new_lwh_list, pred_cls, pred_color, pred_grasp = self.visual_perception_model.model_predict(img=img,
+                                                                                                            epoch=epoch,
+                                                                                                            gt_boxes_num=len(self.objects_index))
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
             else:
                 ################### the results of object detection has changed the order!!!! ####################
-                # structure of results: x, y, z, length, width, ori
-                manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(real_flag=True, first_flag=baseline_flag, epoch=epoch, gt_boxes_num=self.para_dict['boxes_num'])
+                if self.para_dict['visual_perception_mode'] == 'yolo_pose_lstm_grasp':
+                    # structure of results: x, y, z, length, width, ori
+                    manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(epoch=epoch, gt_boxes_num=self.para_dict['objects_num'])
+                if self.para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
+                    manipulator_before, new_lwh_list, pred_cls, pred_color, pred_grasp = self.visual_perception_model.model_predict(epoch=epoch,
+                                                                                                            gt_boxes_num=self.para_dict['objects_num'])
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
 
