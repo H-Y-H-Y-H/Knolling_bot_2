@@ -139,7 +139,7 @@ def main():
 
         # model.in_obj_num  = np.random.choice(numbers, p=probabilities)
         tloss = torch.zeros(1,device=device,requires_grad=True)
-        for in_obj in range(2,11):
+        for in_obj in range(1,11):
             model.in_obj_num = in_obj
 
             for input_batch, target_batch in train_loader:
@@ -196,7 +196,7 @@ def main():
                 train_entropy_loss = entropy_loss(pi)
 
 
-                tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + train_entropy_loss
+                tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*train_entropy_loss
 
                 if epoch % 10 == 0 and print_flag:
                     print('output', output_batch[:, 0].flatten())
@@ -270,7 +270,7 @@ def main():
                 # Calucluate Entropy loss:
                 v_entropy_loss = entropy_loss(pi)
 
-                vloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + v_entropy_loss
+                vloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*v_entropy_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
@@ -334,14 +334,14 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 10000 #1 000 000 data
+    DATA_CUT = 1000000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 0
-    policy_num = 3
-    configuration_num = 4
+    SHIFT_DATASET_ID = 3
+    policy_num = 1
+    configuration_num = 1
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
-
+    k_en =1
     inputouput_size = 10
 
     # how many data used during training.

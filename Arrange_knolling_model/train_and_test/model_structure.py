@@ -8,8 +8,8 @@ import math
 import torch.optim as optim
 import torch.nn.functional as F
 import cv2
-DATAROOT = "../../../knolling_dataset/learning_data_205_10/"
-device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+DATAROOT = "../../../knolling_dataset/learning_data_207_10/"
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
 SHIFT_DATA = 100
 SCALE_DATA = 100
@@ -209,9 +209,9 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
 
         pred_pos = ((pred_pos - SHIFT_DATA) / SCALE_DATA)
 
-
     # Calculate half dimensions for easier overlap checking
     half_sizes = obj_length_width / 2.0
+    half_sizes += 0.0075
 
     # Expand dimensions to calculate pairwise differences between all objects
     pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
@@ -374,30 +374,45 @@ class Knolling_Transformer(nn.Module):
                 # Split along the last dimension to extract means, std_devs, and weights
                 means = x[:, :, :, :2]  # First two are means for x and y
                 std_devs = torch.nn.functional.softplus(x[:, :, :, 2:4]) + self.min_std_dev
-                weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
-
-                pis.append(weights[t].unsqueeze(0))
+                # weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
+                #
                 sigmas.append(std_devs[t].unsqueeze(0))
                 mus.append(means[t].unsqueeze(0))
+                #
+                # if temperature != 0:
+                #     # Apply temperature to weights
+                #     weights = torch.exp(weights[t] / temperature)
+                #     weights /= weights.sum(dim=-1, keepdim=True)
+                #
+                # # return the idx of selecting Gaussion
+                # indices = torch.multinomial(weights, 1)
+                # # else:
+                # #     indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
+                #
+                #
+                # # Gather the chosen means and std_devs based on sampled indices
+                # # Batch is the second dimension, we adjust gathering for means and std_devs
+                # chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                # chosen_std_devs = torch.fgather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
 
-                if temperature != 0:
-                    # Apply temperature to weights
-                    weights = torch.exp(weights[t] / temperature)
-                    weights /= weights.sum(dim=-1, keepdim=True)
+                # Compute logits (unnormalized weights) for softmax
+                logits = x[:, :, :, 4]  # Extract logits for weights
 
-                # return the idx of selecting Gaussion
-                indices = torch.multinomial(weights, 1)
-                # else:
-                #     indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
+                # Apply the Gumbel-Softmax trick
+                gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits)))
+                temperature = 0.5  # Temperature parameter controls the discreteness of the distribution
+                soft_weights = F.softmax((logits + gumbel_noise) / temperature, dim=-1)
+                pis.append(soft_weights[t].unsqueeze(0))
 
+                # Now soft_weights can be used in place of weights for differentiable sampling
+                # For example, to compute the expected means and std_devs
+                expected_means = torch.sum(means[t] * soft_weights[t].unsqueeze(-1), dim=1)
+                expected_std_devs = torch.sum(std_devs[t] * soft_weights[t].unsqueeze(-1), dim=1)
 
-                # Gather the chosen means and std_devs based on sampled indices
-                # Batch is the second dimension, we adjust gathering for means and std_devs
-                chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
-                chosen_std_devs = torch.gather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                # Continue with your computation, using expected_means and expected_std_devs
 
                 # Generate output for the current step
-                out = chosen_means + chosen_std_devs * torch.randn_like(chosen_means)
+                out = expected_means + expected_std_devs * torch.randn_like(expected_means)
                 out = out.squeeze()
 
                 outputs.append(out.unsqueeze(0))
@@ -612,7 +627,7 @@ if __name__ == "__main__":
     from datetime import datetime
 
     max_seq_length = 10
-    in_obj_num =2
+    in_obj_num =1
 
     d_dim = 32
     layers_num = 4
@@ -639,10 +654,10 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=20, verbose=True) #tainloss
 
-    DATAROOT = "../../../knolling_dataset/learning_data_0126_10/"
+
 
     EPOCHS = 10000
-    noise_std = 0.1
+    noise_std = 0.005* SCALE_DATA
     batch_size =512
     lr=1e-3
     scheduler_factor=0.1
@@ -669,7 +684,11 @@ if __name__ == "__main__":
     info_per_object = 7
 
     for f in range(SHIFT_DATASET_ID, SHIFT_DATASET_ID+solu_num):
-        raw_data =np.loadtxt(DATAROOT+'test_data.txt')[:1000]
+        raw_data =np.loadtxt(DATAROOT+'test_data.txt')
+        # dataset_path = DATAROOT + 'num_%d_after_%d.txt' % (max_seq_length, f)
+        # raw_data = np.loadtxt(dataset_path)[:10000]
+        # np.savetxt(DATAROOT+'test_data.txt',raw_data)
+
 
         raw_data = raw_data * SCALE_DATA + SHIFT_DATA
 
@@ -722,6 +741,15 @@ if __name__ == "__main__":
     model.to(device)
     abort_learning = 0
     min_loss = np.inf
+
+    # Define the range of numbers from 2 to 10 (inclusive)
+    numbers = np.arange(2, 11)  # This creates an array [2, 3, 4, ..., 10]
+
+    # Define the probabilities for each number
+    # Make sure the probabilities sum up to 1
+    probabilities = [0.05, 0.05, 0.05, 0.1, 0.1, 0.1, 0.15, 0.2, 0.2]
+
+
     for epoch in range(num_epochs):
         print_flag = True
         model.train()
@@ -736,6 +764,13 @@ if __name__ == "__main__":
             input_batch = input_batch.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
 
+            input_batch[model.in_obj_num:] = 0
+            target_batch[model.in_obj_num:] = 0
+            # # zero to False
+            # input_batch_atten_mask = (input_batch == 0).bool()
+            # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
+            # input_batch.masked_fill_(input_batch_atten_mask, -100)
+
             target_batch_atten_mask = (target_batch == 0).bool()
             target_batch.masked_fill_(target_batch_atten_mask, -100)
 
@@ -746,27 +781,39 @@ if __name__ == "__main__":
             # input_target_batch = torch.normal(input_target_batch, noise_std)
             input_target_batch.masked_fill_(mask, -100)
 
+            # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
+            # label_mask[:object_num] = False
+            # target_batch.masked_fill_(label_mask, -100)
+
             # Forward pass
             # object number > masked number
             output_batch, pi, sigma, mu = model(input_batch,
-                                 tart_x_gt=input_target_batch)
+                                                tart_x_gt=input_target_batch)
+            # Calculate min sample loss
+            ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
+                                                                          target_batch[:model.in_obj_num],
+                                                                          contain_id_and_values=True)
 
             # Calculate log-likelihood loss
             ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
-            # Calculate min sample loss
-            ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+
             # Calculate collision loss
-            overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0,1),
-                                                    input_batch[:model.in_obj_num].transpose(0,1))
+            if model.in_obj_num >1:
+                overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1))
+            else:
+                overlap_loss = torch.zeros((),device=device)
             # Calcluate position loss
-            pos_loss = model.masked_MSE_loss(output_batch,target_batch)
+            pos_loss = model.masked_MSE_loss(output_batch_min[:model.in_obj_num], target_batch[:model.in_obj_num])
             # Calucluate Entropy loss:
             train_entropy_loss = entropy_loss(pi)
-            loss = ms_min_smaple_loss+k_op*overlap_loss + k_pos*pos_loss + train_entropy_loss
+
+            loss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + train_entropy_loss
+
             if epoch % 10 == 0 and print_flag:
                 print('output', output_batch[:, 0].flatten())
                 print('target', target_batch[:, 0].flatten())
-                print('loss and overlap loss:', loss.item(), ll_loss.item(), ms_min_smaple_loss.item(),overlap_loss.item())
+                print('loss and overlap loss:', loss.item(), ll_loss.item(), ms_min_sample_loss.item(),overlap_loss.item())
 
                 print_flag = False
 
@@ -817,7 +864,7 @@ if __name__ == "__main__":
                 # Calculate log-likelihood loss
                 ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # Calculate min sample loss
-                ms_min_smaple_loss = min_smaple_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
+                ms_min_smaple_loss = min_sample_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # Calculate collision loss
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
                                                         input_batch[:model.in_obj_num].transpose(0, 1))
