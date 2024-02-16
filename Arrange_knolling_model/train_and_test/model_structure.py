@@ -373,41 +373,48 @@ class Knolling_Transformer(nn.Module):
                 x = x.view(x.shape[0], x.shape[1], self.num_gaussians, 5)
                 # Split along the last dimension to extract means, std_devs, and weights
                 means = x[:, :, :, :2]  # First two are means for x and y
-                std_devs = torch.nn.functional.softplus(x[:, :, :, 2:4]) + self.min_std_dev
-                # weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
-                #
+                std_devs = torch.sigmoid(x[:, :, :, 2:4])*(obj_gap/2)
+
+                weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
+                pis.append(weights[t].unsqueeze(0))
                 sigmas.append(std_devs[t].unsqueeze(0))
                 mus.append(means[t].unsqueeze(0))
-                #
-                # if temperature != 0:
-                #     # Apply temperature to weights
-                #     weights = torch.exp(weights[t] / temperature)
-                #     weights /= weights.sum(dim=-1, keepdim=True)
-                #
-                # # return the idx of selecting Gaussion
-                # indices = torch.multinomial(weights, 1)
-                # # else:
-                # #     indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
-                #
-                #
-                # # Gather the chosen means and std_devs based on sampled indices
-                # # Batch is the second dimension, we adjust gathering for means and std_devs
-                # chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
-                # chosen_std_devs = torch.fgather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
 
-                # Compute logits (unnormalized weights) for softmax
-                logits = x[:, :, :, 4]  # Extract logits for weights
+                if temperature != 0:
+                    # Apply temperature to weights
+                    weights = torch.exp(weights[t] / temperature)
+                    weights /= weights.sum(dim=-1, keepdim=True)
 
-                # Apply the Gumbel-Softmax trick
-                gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits)))
-                temperature = 0.5  # Temperature parameter controls the discreteness of the distribution
-                soft_weights = F.softmax((logits + gumbel_noise) / temperature, dim=-1)
-                pis.append(soft_weights[t].unsqueeze(0))
+                    # return the idx of selecting Gaussion
+                    indices = torch.multinomial(weights, 1)
+                else:
+                    indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
 
-                # Now soft_weights can be used in place of weights for differentiable sampling
-                # For example, to compute the expected means and std_devs
-                expected_means = torch.sum(means[t] * soft_weights[t].unsqueeze(-1), dim=1)
-                expected_std_devs = torch.sum(std_devs[t] * soft_weights[t].unsqueeze(-1), dim=1)
+
+                # Gather the chosen means and std_devs based on sampled indices
+                # Batch is the second dimension, we adjust gathering for means and std_devs
+                chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                chosen_std_devs = torch.gather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+
+                # # Compute logits (unnormalized weights) for softmax
+                # logits = x[:, :, :, 4]  # Extract logits for weights
+                #
+                # # Apply the Gumbel-Softmax trick
+                # gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits)))
+                # temperature = 0.5  # Temperature parameter controls the discreteness of the distribution
+                # soft_weights = F.softmax((logits + gumbel_noise) / temperature, dim=-1)
+                # pis.append(soft_weights[t].unsqueeze(0))
+                #
+                # # Now soft_weights can be used in place of weights for differentiable sampling
+                # # For example, to compute the expected means and std_devs
+                # expected_means = torch.sum(means[t] * soft_weights[t].unsqueeze(-1), dim=1)
+                # expected_std_devs = torch.sum(std_devs[t] * soft_weights[t].unsqueeze(-1), dim=1)
+                #
+                # # Continue with your computation, using expected_means and expected_std_devs
+                #
+                # # Generate output for the current step
+                # out = expected_means + expected_std_devs * torch.randn_like(expected_means)
+                out = chosen_means + chosen_std_devs * torch.randn_like(chosen_means)
 
                 # Continue with your computation, using expected_means and expected_std_devs
 
@@ -627,7 +634,7 @@ if __name__ == "__main__":
     from datetime import datetime
 
     max_seq_length = 10
-    in_obj_num =1
+    in_obj_num =10
 
     d_dim = 32
     layers_num = 4
@@ -800,7 +807,7 @@ if __name__ == "__main__":
             # Calculate collision loss
             if model.in_obj_num >1:
                 overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        input_batch[:model.in_obj_num].transpose(0, 1))
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),scale=False)
             else:
                 overlap_loss = torch.zeros((),device=device)
             # Calcluate position loss
@@ -866,8 +873,11 @@ if __name__ == "__main__":
                 # Calculate min sample loss
                 ms_min_smaple_loss = min_sample_loss(pi, sigma, mu, target_batch[:model.in_obj_num])
                 # Calculate collision loss
-                overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        input_batch[:model.in_obj_num].transpose(0, 1))
+                if model.in_obj_num > 1:
+                    overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),scale=False)
+                else:
+                    overlap_loss = torch.zeros((), device=device)
                 # Calcluate position loss
                 pos_loss = model.masked_MSE_loss(output_batch, target_batch)
                 loss = k_ll * ll_loss + ms_min_smaple_loss + k_op * overlap_loss + k_pos * pos_loss
