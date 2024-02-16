@@ -74,6 +74,7 @@ def main():
     k_ll = config.k_ll
     k_op = config.k_op
     k_pos = config.k_pos
+    k_en = config.k_en
     # Assuming 'config' is your W&B configuration object
     try:
         config_dict = dict(config)  # Convert to dictionary if necessary
@@ -114,7 +115,6 @@ def main():
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
                                                            patience=loss_d_epoch, verbose=True)
 
-    num_epochs = 100000
     train_loss_list = []
     valid_loss_list = []
     train_loss2_list = []
@@ -185,9 +185,14 @@ def main():
                 ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
 
                 # Calculate collision loss
-                if model.in_obj_num >1:
-                    overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        input_batch[:model.in_obj_num].transpose(0, 1))
+                if model.in_obj_num > 1:
+                    overlap_loss_sampled = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),
+                                                            scale = False)
+                    overlap_loss_min = calculate_collision_loss(output_batch_min[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),
+                                                            scale = False)
+                    overlap_loss = overlap_loss_sampled+overlap_loss_min
                 else:
                     overlap_loss = torch.zeros((), device=device)
                 # Calcluate position loss
@@ -260,8 +265,13 @@ def main():
 
                 # Calculate collision loss
                 if model.in_obj_num > 1:
-                    overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
-                                                        input_batch[:model.in_obj_num].transpose(0, 1))
+                    overlap_loss_sampled = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),
+                                                            scale = False)
+                    overlap_loss_min = calculate_collision_loss(output_batch_min[:model.in_obj_num].transpose(0, 1),
+                                                        input_batch[:model.in_obj_num].transpose(0, 1),
+                                                            scale = False)
+                    overlap_loss = overlap_loss_sampled+overlap_loss_min
                 else:
                     overlap_loss = torch.zeros((), device=device)
 
@@ -298,14 +308,14 @@ def main():
                 torch.save(model.state_dict(), PATH)
                 abort_learning = 0
             if avg_loss>10e8:
-                abort_learning=100
+                abort_learning=10000
             else:
                 abort_learning += 1
 
-            if epoch % 100 == 0:
+            if epoch % 20 == 0:
                 torch.save(model.state_dict(), config.log_pth + '/latest_model.pt')
 
-            print(f"{datetime.now()}Epoch {epoch},train_loss: {train_loss}, validation_loss: {avg_loss},"
+            print(f"{datetime.now()}v_Epoch {epoch}, obj_Num{model.in_obj_num},train_loss: {train_loss}, validation_loss: {avg_loss},"
                   f" no_improvements: {abort_learning}")
 
             wandb.log({"train_loss": train_loss,
@@ -316,7 +326,6 @@ def main():
                        "valid_min_sam_loss": all_ms_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
                        "min_loss": min_loss,
-                       "norm_loss": min_loss/(config.SCALE_DATA**2),
                        })
             if abort_learning > config.patience:
                 print('abort training!')
@@ -334,15 +343,15 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000000 #1 000 000 data
+    DATA_CUT = 1000 #1 000 000 data
 
     SHIFT_DATASET_ID = 3
     policy_num = 1
     configuration_num = 1
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
-    k_en =1
     inputouput_size = 10
+    num_epochs = 100000
 
     # how many data used during training.
     max_seq_length = 10
