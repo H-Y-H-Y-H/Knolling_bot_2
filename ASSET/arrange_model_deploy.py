@@ -510,24 +510,6 @@ class Arrange_model():
         self.model.eval()
         with torch.no_grad():
 
-            # lwh_before_input = np.array([[0.025, 0.017],
-            #                              [0.031, 0.023],
-            #                              [0.022, 0.017],
-            #                              [0.020, 0.019],
-            #                              [0.037, 0.021],
-            #                              [0.044, 0.025],
-            #                              [0.016, 0.016],
-            #                              [0.042, 0.031],
-            #                              [0.029, 0.016],
-            #                              [0.038, 0.023]])
-            # pos_before_input = np.array([[0.0265, -0.1415],
-            #                              [0.0705, -0.1450],
-            #                              [0.0315, -0.0960],
-            #                              [0.0775, -0.0960],
-            #                              [0.0360, -0.0525]])
-            # pos_before_grasp = pos_before_input.reshape(1, 5, 2) * self.scale_data + self.shift_data
-            # lwh_before_grasp = lwh_before_input.reshape(1, 5, 2) * self.scale_data + self.shift_data
-
             ########### change the sequence to finished+rest to fit for Transformer ###########
             crowded_index = np.setdiff1d(np.arange(len(pos_before_input)), finish_index)
             new_index = np.concatenate((finish_index, crowded_index))
@@ -537,8 +519,8 @@ class Arrange_model():
             lwh_before_grasp = lwh_before_input[new_index, :2].reshape(1, len(lwh_before_input), 2) * self.scale_data + self.shift_data
 
             # pad based on the model, not the current number
-            pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=self.para_dict['boxes_num'])
-            lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=self.para_dict['boxes_num'])
+            pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=self.para_dict['objects_num'])
+            lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=self.para_dict['objects_num'])
             # pos_before_grasp = pad_sequences(pos_before_grasp, max_seq_length=5)
             # lwh_before_grasp = pad_sequences(lwh_before_grasp, max_seq_length=5)
 

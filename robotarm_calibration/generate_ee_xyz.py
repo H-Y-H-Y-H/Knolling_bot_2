@@ -129,7 +129,7 @@ class calibration_main():
 
 if __name__ == '__main__':
 
-    para_dict = {'reset_pos': np.array([0, 0, 0.12]), 'reset_ori': np.array([0, np.pi / 2, 0]),
+    para_dict = {'arm_reset_pos': np.array([0, 0, 0.12]), 'arm_reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
@@ -152,5 +152,4 @@ if __name__ == '__main__':
 
     env = calibration_main(para_dict=para_dict, generate_dict=generate_dict)
     evaluation = 1
-    for evaluation in range(para_dict['evaluations']):
-        env.step()
+    env.step()

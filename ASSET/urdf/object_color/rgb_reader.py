@@ -22,10 +22,6 @@ for i in range(num_color):
 
     rgb_dict[png_files[i][:-4]] = selected_values
 
-    with open('./rgb_info.json', 'w') as f:
-        json.dump(rgb_dict, f, indent=4)
-
-
     # cv2.namedWindow('zzz', 0)
     # cv2.resizeWindow('zzz', 1280, 960)
     # cv2.imshow('zzz', img)
@@ -33,6 +29,9 @@ for i in range(num_color):
     # cv2.destroyAllWindows()
 
     print('here')
+
+with open('./rgb_info.json', 'w') as f:
+    json.dump(rgb_dict, f, indent=4)
 print('here')
 
 # print([244, 23] / 255)

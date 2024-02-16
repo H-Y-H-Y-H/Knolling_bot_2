@@ -1,3 +1,5 @@
+import numpy as np
+
 from utils import *
 from ENV.task.KnollingEnv import knolling_env
 from ENV.robot.KnollingRobot import knolling_robot
@@ -10,22 +12,22 @@ class knolling_main():
 
         self.para_dict = para_dict
         self.rl_dict = rl_dict
-        self.knolling_para = knolling_para
 
         self.task = knolling_env(para_dict=para_dict, lstm_dict=lstm_dict)
-        self.robot = knolling_robot(para_dict=para_dict, knolling_para=knolling_para)
+        self.robot = knolling_robot(para_dict=para_dict)
 
         if self.para_dict['use_knolling_model'] == True:
             self.arrange_dict = arrange_dict
             from ASSET.arrange_model_deploy import Arrange_model
-            self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['boxes_num'])
-        if self.para_dict['visual_perception_model'] == 'lstm_grasp':
-            # self.lstm_dict = lstm_dict
+            self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['objects_num'])
+        if self.para_dict['visual_perception_mode'] == 'yolo_pose_lstm_grasp':
+            self.lstm_dict = lstm_dict
             from ASSET.visual_perception import Yolo_pose_model
             self.task.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
-            from ASSET.yolo_seg_deploy import Yolo_seg_model
-            self.task.visual_perception_model = Yolo_seg_model(para_dict=para_dict)
-        if self.para_dict['visual_perception_model'] == 'yolo_grasp':
+        if self.para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
+            from ASSET.visual_perception import Yolo_seg_model
+            self.task.visual_perception_model = Yolo_seg_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
+        if self.para_dict['visual_perception_mode'] == 'yolo_pose_yolo_grasp':
             from ASSET.yolo_grasp_deploy import Yolo_grasp_model
             self.task.visual_perception_model = Yolo_grasp_model(para_dict=para_dict)
         if self.para_dict['rl_enable_flag'] == True:
@@ -217,10 +219,12 @@ class knolling_main():
             test_offset = np.array([0, 0, 0]) + self.robot.sim_table_height
 
         while len(crowded_index) >= 1:
-            # action = np.concatenate((self.para_dict['reset_pos'], [self.para_dict['reset_ori'][2]]))
+            # action = np.concatenate((self.para_dict['arm_reset_pos'], [self.para_dict['arm_reset_ori'][2]]))
             action = np.array([0.042, 0, 0.005, 0])
-            last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-            last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+            # last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+            # last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+            last_pos = self.para_dict['arm_reset_pos']
+            last_ori = self.para_dict['arm_reset_ori']
             for i in range(self.rl_dict['max_step']):
                 obs = self.rl_combine_obs(last_action=action)
                 trajectory = self.rl_model.model_pred(obs=obs)
@@ -236,7 +240,7 @@ class knolling_main():
             trajectory_high = np.copy(trajectory)
             trajectory_high[:3] += offset_high
             last_pos = self.robot.move(last_pos, last_ori, trajectory_high[:3], trajectory_high[3:])
-            self.robot.move(last_pos, last_ori, self.para_dict['reset_pos'], self.para_dict['reset_ori'])
+            self.robot.move(last_pos, last_ori, self.para_dict['arm_reset_pos'], self.para_dict['arm_reset_ori'])
 
             self.exclude_objects()
             crowded_index = np.where(self.pred_cls == 0)[0]
@@ -338,14 +342,14 @@ class knolling_main():
                         trajectory_pos_list.append(
                             [(crowded_x_high + crowded_x_low) / 2, (crowded_y_high + crowded_y_low) / 2,
                              offset_high[2]])
-                        trajectory_pos_list.append(self.para_dict['reset_pos'])
+                        trajectory_pos_list.append(self.para_dict['arm_reset_pos'])
 
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
-                        trajectory_ori_list.append(self.para_dict['reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                        trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
                     else:
                         pass
                 else:
@@ -360,26 +364,26 @@ class knolling_main():
                     trajectory_pos_list.append(crowded_pos[i] + offset_low + sequence_point[0])
                     trajectory_pos_list.append(crowded_pos[i] + offset_high + sequence_point[0])
                     # reset the manipulator to read the image
-                    trajectory_pos_list.append(self.para_dict['reset_pos'])
+                    trajectory_pos_list.append(self.para_dict['arm_reset_pos'])
 
-                    trajectory_ori_list.append(self.para_dict['reset_ori'])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
-                    trajectory_ori_list.append(self.para_dict['reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
+                    trajectory_ori_list.append(self.para_dict['arm_reset_ori'] + crowded_ori[i])
                     # reset the manipulator to read the image
                     trajectory_ori_list.append([0, np.pi / 2, 0])
 
                 # only once!
                 if once_flag == True:
                     break
-            last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-            last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
-            # trajectory_pos_list = np.asarray(trajectory_pos_list)
-            # trajectory_ori_list = np.asarray(trajectory_ori_list)
+            # last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+            # last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+            last_pos = self.para_dict['arm_reset_pos']
+            last_ori = self.para_dict['arm_reset_ori']
 
             ######################### add the debug lines for visualization ####################
             line_id = []
@@ -446,7 +450,7 @@ class knolling_main():
         if self.para_dict['real_operate'] == True:
             offset_low = np.array([0, 0, 0.005]) + self.robot.real_table_height
             offset_low_place = np.array([0, 0, 0.010]) + self.robot.real_table_height
-            offset_high = np.array([0, 0, 0.04]) + self.robot.real_table_height
+            offset_high = np.array([0, 0, 0.05]) + self.robot.real_table_height
         else:
             offset_low = np.array([0, 0, 0.005]) + self.robot.sim_table_height
             offset_low_place = np.array([0, 0, 0.010]) + self.robot.sim_table_height
@@ -462,18 +466,20 @@ class knolling_main():
                                    offset_low_place + start_end[i][6:9],  # decline slowly
                                    [0, grasp_width[i]],  # gripper open!
                                    offset_high + start_end[i][6:9]]  # rise without box
-            trajectory_ori_list = [self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
+            trajectory_ori_list = [self.para_dict['arm_reset_ori'] + start_end[i][3:6],
+                                   self.para_dict['arm_reset_ori'] + start_end[i][3:6],
+                                   self.para_dict['arm_reset_ori'] + start_end[i][3:6],
                                    [1, grasp_width[i]],
-                                   self.para_dict['reset_ori'] + start_end[i][3:6],
-                                   self.para_dict['reset_ori'] + start_end[i][9:12],
-                                   self.para_dict['reset_ori'] + start_end[i][9:12],
+                                   self.para_dict['arm_reset_ori'] + start_end[i][3:6],
+                                   self.para_dict['arm_reset_ori'] + start_end[i][9:12],
+                                   self.para_dict['arm_reset_ori'] + start_end[i][9:12],
                                    [0, grasp_width[i]],
-                                   self.para_dict['reset_ori'] + start_end[i][9:12]]
+                                   self.para_dict['arm_reset_ori'] + start_end[i][9:12]]
             if i == 0:
-                last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-                last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+                # last_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
+                # last_ori = np.asarray(p.getEulerFromQuaternion(p.getLinkState(self.arm_id, 9)[1]))
+                last_pos = self.para_dict['arm_reset_pos']
+                last_ori = self.para_dict['arm_reset_ori']
 
             for j in range(len(trajectory_pos_list)):
                 if len(trajectory_pos_list[j]) == 3:
@@ -487,17 +493,19 @@ class knolling_main():
                     self.robot.gripper(trajectory_pos_list[j][0], trajectory_pos_list[j][1])
 
         ############### Back to the reset pos and ori ###############
-        last_pos = self.robot.move(last_pos, last_ori, self.para_dict['reset_pos'], self.para_dict['reset_ori'])
-        last_ori = np.copy(self.para_dict['reset_ori'])
-        ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['reset_pos'],
-                                                  maxNumIterations=200,
-                                                  targetOrientation=p.getQuaternionFromEuler(self.para_dict['reset_ori']))
-        for motor_index in range(5):
-            p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
-                                    targetPosition=ik_angles0[motor_index], maxVelocity=7)
-        for i in range(30):
-            p.stepSimulation()
-            # time.sleep(1 / 48)
+        last_pos = self.robot.move(last_pos, last_ori, self.para_dict['arm_reset_pos'], self.para_dict['arm_reset_ori'])
+        last_ori = np.copy(self.para_dict['arm_reset_ori'])
+
+        if self.para_dict['real_operate'] == False:
+            ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=self.para_dict['arm_reset_pos'],
+                                                      maxNumIterations=200,
+                                                      targetOrientation=p.getQuaternionFromEuler(self.para_dict['arm_reset_ori']))
+            for motor_index in range(5):
+                p.setJointMotorControl2(self.arm_id, motor_index, p.POSITION_CONTROL,
+                                        targetPosition=ik_angles0[motor_index], maxVelocity=7)
+            for i in range(30):
+                p.stepSimulation()
+                # time.sleep(1 / 48)
         ############### Back to the reset pos and ori ###############
 
         # self.task.get_obs(look_flag=True, img_path=self.para_dict['data_source_path'] + 'real_images/after.png')
@@ -540,7 +548,6 @@ class knolling_main():
 
         if recover_flag == False:
             manipulator_before, lwh_list, pred_cls, pred_conf = self.task.create_objects(manipulator_after, lwh_after)
-
         else:
             info_path = self.para_dict['data_source_path'] + 'sim_info/%012d.txt' % epoch
             self.task.recover_objects(info_path)
@@ -563,7 +570,7 @@ class knolling_main():
         self.finished_lwh = []
         self.finished_num = 0
         self.finished_index = []
-        self.rest_index = np.arange(self.para_dict['boxes_num'])
+        self.rest_index = np.arange(self.para_dict['objects_num'])
 
         # reset the table
         self.manipulator_before, self.lwh_list, self.pred_cls, self.pred_conf = self.reset()
@@ -573,7 +580,7 @@ class knolling_main():
         #######################################################################################
         # 1: clean_grasp + knolling, 3: knolling, 4: check_accuracy of knolling, 5: get_camera
         # crowded_index = np.where(self.pred_cls == 0)[0]
-        while self.finished_num < self.task.num_boxes:
+        while self.finished_num < self.task.num_objects:
             if self.para_dict['rl_enable_flag'] == True:
                 self.rl_unstack_table()
             else:
@@ -599,41 +606,47 @@ if __name__ == '__main__':
                  'arm_reset_pos': np.array([0, 0, 0.12]), 'arm_reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
-                 'init_ori_range': [[-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4], [-np.pi / 4, np.pi / 4]],
-                 'boxes_num': np.random.randint(5, 6),
-                 'is_render': True,
+                 'init_ori_range': [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]],
+                 'objects_num': np.random.randint(5, 6), 'max_class_num': 9, 'max_color_num': 7,
+                 'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'real_operate': False,
-                 'object': 'box', # box, polygon
-                 'use_knolling_model': True, 'visual_perception_model': 'lstm_grasp', # lstm_grasp, yolo_grasp, yolo_seg
+                 'sundry_path': '../knolling_dataset/sundry_204/',
+                 'real_operate': True,
+                 'object': 'sundry', # box, polygon, sundry
+                 'use_knolling_model': True, 'visual_perception_mode': 'yolo_seg_lstm_grasp',
                  'lstm_enable_flag': True, 'rl_enable_flag': False,
                 }
 
-    # visual_perception_model： lstm_grasp, yolo_grasp, yolo_seg
+    # visual_perception_model：yolo_pose_lstm_grasp, yolo_pose_yolo_grasp, yolo_seg_lstm_grasp
     # determine to choose which model
-    if para_dict['visual_perception_model'] == 'yolo_grasp':
+    if para_dict['visual_perception_mode'] == 'yolo_grasp':
         para_dict['yolo_model_path'] = './ASSET/models/924_grasp/weights/best.pt'
-    elif para_dict['visual_perception_model'] == 'lstm_grasp':
+    elif para_dict['visual_perception_mode'] == 'yolo_pose_lstm_grasp':
         if para_dict['real_operate'] == True:
             para_dict['yolo_model_path'] = './ASSET/models/1007_pile_sundry/weights/best.pt'
         else:
             para_dict['yolo_model_path'] = './ASSET/models/627_pile_pose/weights/best.pt'
+    elif para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
+        if para_dict['real_operate'] == True:
+            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sundry/weights/best.pt'
+        else:
+            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sundry/weights/best.pt'
     else:
-        if para_dict['visual_perception_model'] == 'yolo_seg':
+        if para_dict['visual_perception_mode'] == 'yolo_seg':
             para_dict['yolo_model_path'] = './ASSET/models/820_pile_seg/weights/best.pt'
 
 
-    knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
-                     'gap_block': 0.015, 'random_offset': False,
-                     'area_num': 2, 'ratio_num': 1,
-                     'kind_num': 5,
-                     'order_flag': 'confidence',
-                     'item_odd_prevent': True,
-                     'block_odd_prevent': True,
-                     'upper_left_max': True,
-                     'forced_rotate_box': False}
+    # knolling_para = {'total_offset': [0.035, -0.17 + 0.016, 0], 'gap_item': 0.015,
+    #                  'gap_block': 0.015, 'random_offset': False,
+    #                  'area_num': 2, 'ratio_num': 1,
+    #                  'kind_num': 5,
+    #                  'order_flag': 'confidence',
+    #                  'item_odd_prevent': True,
+    #                  'block_odd_prevent': True,
+    #                  'upper_left_max': True,
+    #                  'forced_rotate_box': False}
 
     lstm_dict = {'input_size': 6,
                  'hidden_size': 32,
@@ -645,6 +658,7 @@ if __name__ == '__main__':
                  'set_dropout': 0.1,
                  'threshold': 0.55,
                  'grasp_model_path': './ASSET/models/LSTM_918_0/best_model.pt',}
+
     if para_dict['real_operate'] == True:
         lstm_dict['threshold'] = 0.40
 
@@ -654,9 +668,9 @@ if __name__ == '__main__':
                     'arrange_x_offset': 0.03,
                     'arrange_y_offset': 0.00}
 
-    rl_dict = {'logger_id': '16', 'obj_num': para_dict['boxes_num'], 'rl_mode': 'SAC', 'max_step': 3}
+    rl_dict = {'logger_id': '16', 'obj_num': para_dict['objects_num'], 'rl_mode': 'SAC', 'max_step': 3}
 
-    main_env = knolling_main(para_dict=para_dict, knolling_para=knolling_para, lstm_dict=lstm_dict,
+    main_env = knolling_main(para_dict=para_dict, lstm_dict=lstm_dict,
                              arrange_dict=arrange_dict, rl_dict=rl_dict)
 
     evaluation = 1
