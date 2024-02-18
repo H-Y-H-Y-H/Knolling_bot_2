@@ -211,7 +211,7 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
 
     # Calculate half dimensions for easier overlap checking
     half_sizes = obj_length_width / 2.0
-    half_sizes += 0.0075
+    half_sizes += obj_gap/2
 
     # Expand dimensions to calculate pairwise differences between all objects
     pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
@@ -229,9 +229,6 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
     overlap_indicator = (overlap[...,0]>0)&(overlap[...,1]>0)
     overlap_area = overlap[..., 0] * overlap[..., 1] *overlap_indicator.float() # Shape: [Batchsize, 10, 10]
 
-    # Multiply overlap area by 10 to heavily penalize collisions
-    overlap_area *= overlap_loss_weight
-
     batch_size, num_objects, _ = pred_pos.shape
     collision_mask = ~torch.eye(num_objects, dtype=torch.bool,device=device).unsqueeze(0).repeat(batch_size, 1, 1)
     overlap_area *= collision_mask
@@ -244,9 +241,9 @@ def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHI
     collision_loss = collision_loss / num_pairs
 
     if Output_scaler:
-        return collision_loss.mean()
+        return collision_loss.mean()*overlap_loss_weight
     else:
-        return collision_loss
+        return collision_loss*overlap_loss_weight
 
 class Knolling_Transformer(nn.Module):
     def __init__(
@@ -275,7 +272,7 @@ class Knolling_Transformer(nn.Module):
         self.losstype = 1
         self.high_dim_encoder = high_dim_encoder
         self.all_steps = all_steps
-        self.min_std_dev = 3e-3  # Define a minimum standard deviation
+        self.min_std_dev = 3e-3  # Define a minimum standard deviation0.003
 
         self.best_gap = 0.015
         self.padding_value = 1
@@ -320,7 +317,7 @@ class Knolling_Transformer(nn.Module):
         self.acti = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x, tart_x_gt=None,temperature=1):
+    def forward(self, x, tart_x_gt=None,temperature=1,given_idx=None):
         # This section defines the forward pass of the model.
 
         # If positional encoding is needed, apply it
@@ -334,7 +331,6 @@ class Knolling_Transformer(nn.Module):
         else:
             tart_x_gt_high = tart_x_gt
 
-
         # Pass input through the encoder
         enc_x = self.encoder(x)
 
@@ -347,17 +343,13 @@ class Knolling_Transformer(nn.Module):
             out = self.l_out(x)
             return out
 
-
         elif self.forwardtype == 2:
             out = self.decoder(enc_x, tart_x_gt_high)
             out = self.l_out(out)
             return out
 
-        else:
-            # Autoregressive decoding
+        else:# Autoregressive decoding
             tart_x = torch.clone(tart_x_gt)
-            # out = torch.zeros(enc_x.size(-1)).to(
-            #     enc_x.device)  # Initialize with the correct shape and move to the same device as enc_x
             outputs = []
             pis = []  # Collect pi for all timesteps
             sigmas = []  # Collect sigma for all timesteps
@@ -379,49 +371,30 @@ class Knolling_Transformer(nn.Module):
                 pis.append(weights[t].unsqueeze(0))
                 sigmas.append(std_devs[t].unsqueeze(0))
                 mus.append(means[t].unsqueeze(0))
+                if given_idx!=None:
+                    indice_select = given_idx[t]
+                    chosen_means = means[t][:,indice_select]
+                    chosen_std_devs = std_devs[t][:,indice_select]
 
-                if temperature != 0:
-                    # Apply temperature to weights
-                    weights = torch.exp(weights[t] / temperature)
-                    weights /= weights.sum(dim=-1, keepdim=True)
-
-                    # return the idx of selecting Gaussion
-                    indices = torch.multinomial(weights, 1)
                 else:
-                    indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
 
+                    if temperature != 0:
+                        # Apply temperature to weights
+                        weights = torch.exp(weights[t] / temperature)
+                        weights /= weights.sum(dim=-1, keepdim=True)
 
-                # Gather the chosen means and std_devs based on sampled indices
-                # Batch is the second dimension, we adjust gathering for means and std_devs
-                chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
-                chosen_std_devs = torch.gather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                        # return the idx of selecting Gaussion
+                        indices = torch.multinomial(weights, 1)
+                    else:
+                        indices = torch.randint(low=0, high=weights.shape[2], size=(weights.shape[1], 1),device=device)
 
-                # # Compute logits (unnormalized weights) for softmax
-                # logits = x[:, :, :, 4]  # Extract logits for weights
-                #
-                # # Apply the Gumbel-Softmax trick
-                # gumbel_noise = -torch.log(-torch.log(torch.rand_like(logits)))
-                # temperature = 0.5  # Temperature parameter controls the discreteness of the distribution
-                # soft_weights = F.softmax((logits + gumbel_noise) / temperature, dim=-1)
-                # pis.append(soft_weights[t].unsqueeze(0))
-                #
-                # # Now soft_weights can be used in place of weights for differentiable sampling
-                # # For example, to compute the expected means and std_devs
-                # expected_means = torch.sum(means[t] * soft_weights[t].unsqueeze(-1), dim=1)
-                # expected_std_devs = torch.sum(std_devs[t] * soft_weights[t].unsqueeze(-1), dim=1)
-                #
-                # # Continue with your computation, using expected_means and expected_std_devs
-                #
-                # # Generate output for the current step
-                # out = expected_means + expected_std_devs * torch.randn_like(expected_means)
+                    # Gather the chosen means and std_devs based on sampled indices
+                    # Batch is the second dimension, we adjust gathering for means and std_devs
+                    chosen_means = torch.gather(means[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+                    chosen_std_devs = torch.gather(std_devs[t], 1, indices.unsqueeze(-1).expand(-1, -1, 2))
+
                 out = chosen_means + chosen_std_devs * torch.randn_like(chosen_means)
-
-                # Continue with your computation, using expected_means and expected_std_devs
-
-                # Generate output for the current step
-                out = expected_means + expected_std_devs * torch.randn_like(expected_means)
                 out = out.squeeze()
-
                 outputs.append(out.unsqueeze(0))
 
 
@@ -580,11 +553,20 @@ class Knolling_Transformer(nn.Module):
     #         print('this is min overlap num:', self.min_overlap_num)
     #
     #     return penalty
+def to_base_4(n,max_num,n_gaussian=3):
+    """Convert a decimal number to its base-4 representation."""
+    if n == 0:
+        return [0]*max_num
+    digits = []
+    while n:
+        digits.append(n % n_gaussian)
+        n //= n_gaussian
+    if len(digits) < max_num:
+        digits = digits + [0] * (max_num - len(digits))
+    return digits
 
-
-def min_sample_loss(weights, variances, means, target_value,Output_scaler=True,contain_id_and_values =False):
-    std = torch.sqrt(variances)
-    sample_v = std*torch.randn(std.shape,device=device)
+def min_sample_loss(weights, variances, means, target_value, Output_scaler=True,contain_id_and_values =False):
+    sample_v = variances*torch.randn(variances.shape,device=device)
     samples = sample_v + means
     samples_errors = abs(samples - target_value.unsqueeze(2)).sum(3)
     # Calculate the values between

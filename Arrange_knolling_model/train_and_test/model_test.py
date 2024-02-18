@@ -12,7 +12,7 @@ worst_index = 0
 success_list = []
 
 
-def test_model_batch(val_loader, model, log_path, num_obj=10):
+def test_model_batch(val_loader, model, log_path, selec_list, num_obj=10):
 
     model.to(device)
     model.eval()
@@ -34,7 +34,7 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             # input_cls = torch.from_numpy(np.asarray(input_cls, dtype=np.float32)).to(device)
             input_batch = input_batch.transpose(1, 0)
             target_batch = target_batch.transpose(1, 0)
-            # input_cls = input_cls.transpose(1, 0)
+
 
             # # zero to False
             # input_batch_atten_mask = (input_batch == 0).bool()
@@ -51,12 +51,12 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
 
             # Forward pass
             output_batch, pi, sigma, mu = model(input_batch,
-                                 tart_x_gt=input_target_batch)
+                                 tart_x_gt=input_target_batch,given_idx = selec_list)
 
-            # output_batch=output_batch[: model.in_obj_num]
+            output_batch=output_batch[: model.in_obj_num]
 
             # Calculate min sample loss
-            ms_min_sample_loss, ms_id,min_output_batch = min_sample_loss(pi, sigma, mu,
+            ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
                                                  target_batch[:model.in_obj_num],
                                                  Output_scaler=False,
                                                  contain_id_and_values = True)
@@ -68,17 +68,18 @@ def test_model_batch(val_loader, model, log_path, num_obj=10):
             # Calculate collision loss
             overlap_loss = calculate_collision_loss(output_batch.transpose(0, 1),
                                                     input_batch[:model.in_obj_num].transpose(0, 1),
+                                                    scale=False,
                                                     Output_scaler=False)
             # Calcluate position loss
             pos_loss = model.masked_MSE_loss(output_batch, target_batch[:model.in_obj_num],Output_scaler=False)
             # Calucluate Entropy loss:
-            v_entropy_loss = entropy_loss(pi,Output_scaler=False)
+            v_entropy_loss = entropy_loss(pi, Output_scaler=False)
 
-            ll_loss_list.append(ll_loss.transpose(1,0).detach().cpu().numpy())
-            ms_min_sample_loss_list.append(ms_min_sample_loss.transpose(1,0).squeeze(-1).detach().cpu().numpy())
+            ll_loss_list.append(ll_loss.transpose(1, 0).detach().cpu().numpy())
+            ms_min_sample_loss_list.append(ms_min_sample_loss.transpose(1, 0).squeeze(-1).detach().cpu().numpy())
             overlap_loss_list.append(overlap_loss.detach().cpu().numpy())
-            pos_loss_list.append(pos_loss.transpose(1,0).detach().cpu().numpy())
-            v_entropy_loss_list.append(v_entropy_loss.transpose(1,0).detach().cpu().numpy())
+            pos_loss_list.append(pos_loss.transpose(1, 0).detach().cpu().numpy())
+            v_entropy_loss_list.append(v_entropy_loss.transpose(1, 0).detach().cpu().numpy())
 
             output_batch = output_batch.transpose(1, 0)
             target_batch = target_batch[:model.in_obj_num].transpose(1, 0)
@@ -152,8 +153,9 @@ if __name__ == '__main__':
         print('load data:', object_num)
 
         raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))[:,:object_num*info_per_object]
+        raw_data = raw_data[:test_num_scenario]
 
-        raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        # raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
         total_raw_data.append(raw_data)
         test_data = raw_data * config.SCALE_DATA + config.SHIFT_DATA
         valid_lw = []
@@ -187,7 +189,7 @@ if __name__ == '__main__':
             all_zero_target=config.all_zero_target,
             forwardtype=config.forwardtype,
             all_steps=config.all_steps,
-            in_obj_num=config.inputouput_size,
+            in_obj_num=object_num,
             num_gaussians=config.num_gaussian
         )
 
@@ -201,12 +203,15 @@ if __name__ == '__main__':
     os.makedirs(log_path, exist_ok=True)
 
     raw_data = np.concatenate(total_raw_data)
-    outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=object_num)
     np.savetxt(log_path + '/num_%d_gt.txt' % object_num, raw_data)
 
-    for i in range(object_num):
-        raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
+    for id_solutions in range(config.num_gaussian**object_num):
+        selec_list = to_base_4(id_solutions,object_num,n_gaussian=config.num_gaussian)
+        outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=object_num,selec_list=selec_list)
 
-    np.savetxt(log_path + '/num_%d_pred.txt' % object_num, raw_data)
+        for i in range(object_num):
+            raw_data[:, i * info_per_object:i * info_per_object + 2] = outputs[:, i * 2:i * 2 + 2]
+
+        np.savetxt(log_path + f'/num_{object_num}_pred_{id_solutions}.txt', raw_data)
 
 
