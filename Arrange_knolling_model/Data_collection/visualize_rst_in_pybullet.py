@@ -436,25 +436,40 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
+    y_axis_shift = -0.17 + 0.016
     # object_num = 2
     # name = 'gentle-river-106'
 
-    object_num = 4
-    name = 'luminous-fireworks-118'
+    # object_num = 5
+    # name = 'filigreed-dog-3'
 
+    object_num = 2
+    name = 'silvery-sweep-2'
+
+
+    num_gaussian = 3
+    n_all_solutions = num_gaussian**object_num
 
     images_log_path = f'../train_and_test/results/{name}/output_images/'
     data_path = f'../train_and_test/results/{name}/'
     os.makedirs(images_log_path, exist_ok=True)
 
-    pred_data = np.loadtxt(data_path + '/num_%d_pred.txt' % object_num)
     gt_data = np.loadtxt(data_path + '/num_%d_gt.txt' % object_num)
-    ms_min_sample_loss = np.loadtxt(data_path+f'ms_min_sample_loss{object_num}.csv')
-    ll_loss = np.loadtxt(data_path+f'll_loss{object_num}.csv')
-    overlap_loss = np.loadtxt(data_path + f'overlap_loss{object_num}.csv')
-    pos_loss = np.loadtxt(data_path + f'pos_loss{object_num}.csv')
-    entropy_loss = np.loadtxt(data_path + f'v_entropy_loss{object_num}.csv')
 
+    pred_data          = []
+    ms_min_sample_loss = []
+    ll_loss            = []
+    overlap_loss       = []
+    pos_loss           = []
+    entropy_loss       = []
+    for i in range(n_all_solutions):
+        pred_data         .append(np.loadtxt(data_path + f'/num_{object_num}_pred_{i}.txt')    )
+        ms_min_sample_loss.append(np.loadtxt(data_path+f'ms_min_sample_loss{object_num}.csv'))
+        ll_loss           .append(np.loadtxt(data_path+f'll_loss{object_num}.csv')           )
+        overlap_loss      .append(np.loadtxt(data_path + f'overlap_loss{object_num}.csv')    )
+        pos_loss          .append(np.loadtxt(data_path + f'pos_loss{object_num}.csv')        )
+        entropy_loss      .append(np.loadtxt(data_path + f'v_entropy_loss{object_num}.csv')  )
+    pred_data = np.asarray(pred_data)
     all_loss = [ms_min_sample_loss,
                 ll_loss,
                 overlap_loss,
@@ -471,46 +486,42 @@ if __name__ == '__main__':
     env = Arm(is_render=True)
     with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
         color_dict = json.load(f)
-
-    pred_data = pred_data[:, :object_num * info_per_object]
-    print('this is pred data shape',pred_data.shape)
+    env.get_parameters(box_num=object_num)
 
     new_data = []
-    image_list = []
-    for i in range(len(pred_data)*2):
-        if i%2 ==0:
-            data = pred_data
-            for i_loss in range(len(all_loss)):
-                print(all_loss_name[i_loss],all_loss[i_loss][i//2])
-        else:
-            data = gt_data
-        j = i//2
-        env.get_parameters(box_num=object_num)
-        print(f'this is data {j}')
-        one_img_data = data[j][:info_per_object*object_num].reshape(-1, info_per_object)
+    for i in range(len(pred_data[0])):
+        print(f'this is data {i}')
+        all_ready = False
+        image_list = []
+        images_log_f_path = images_log_path+'%d/'%i
+        os.makedirs(images_log_f_path,exist_ok=True)
+        for solu_i in range(n_all_solutions+1):
+            if solu_i==0:
+                #this is gt data
+                data = gt_data[:, :object_num * info_per_object]
 
-        box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
+            else:
+                data = pred_data[solu_i-1][:, :object_num * info_per_object]
+            one_img_data = data[i][:info_per_object*object_num].reshape(-1, info_per_object)
+            box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
+            one_img_data = one_img_data[box_order].reshape(-1,)
+            new_data.append(one_img_data)
+            image = env.label2image(one_img_data)
+            # image_list.append(image[..., :3])
+            plt.imsave(images_log_f_path+f"{solu_i}.jpg",image[...,:3])
+        # image_comb = np.hstack((image_list[0],image_list[1]))
 
-        one_img_data = one_img_data[box_order].reshape(-1,)
-
-        new_data.append(one_img_data)
-
-        image = env.label2image(one_img_data)
-        image_list.append(image[..., :3])
-
-        if i%2==1:
-            image_comb = np.hstack((image_list[0],image_list[1]))
-            cv2.imwrite(images_log_path+'%d.png'%j,image_comb)
-            image_list = []
-
-        cv2.namedWindow('zzz', 0)
-        cv2.resizeWindow('zzz', 1280, 960)
-        image= cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        cv2.imshow("zzz", image)
-        data_reshape = data[j].reshape(-1, 7)
-        pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
-        length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
-
-        cv2.waitKey()
-        cv2.destroyAllWindows()
+        # cv2.imwrite(images_log_path+'%d.png'%j,image_comb)
+        # image_list = []
+        #
+        # cv2.namedWindow('zzz', 0)
+        # cv2.resizeWindow('zzz', 1280, 960)
+        # image= cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        # cv2.imshow("zzz", image)
+        # data_reshape = data[j].reshape(-1, 7)
+        # pred_pos = torch.tensor(data_reshape[:, :2], device=device).unsqueeze(0)
+        # length_width = torch.tensor(data_reshape[:, 2:4], device=device).unsqueeze(0)
+        #
+        # cv2.waitKey()
+        # cv2.destroyAllWindows()
 
