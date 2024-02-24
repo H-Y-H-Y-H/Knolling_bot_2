@@ -12,6 +12,8 @@ import torch
 import sys
 sys.path.append('../train_and_test')
 from model_structure import *
+import pandas
+import matplotlib.pyplot as plt
 # from urdfpy import URDF
 
 from Arrange_knolling_model.Data_collection.arrange_policy import configuration_zzz
@@ -119,6 +121,8 @@ class Arm:
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
+        self.dataset_path = '../../../knolling_dataset/sundry_204/'
+
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
         if self.is_render:
@@ -225,7 +229,14 @@ class Arm:
             image = get_images()
             return image
 
-    def label2image(self, labels_data):
+    def is_too_close(self, new_pos, existing_objects, min_distance=0.01):
+        for _, obj_pos in existing_objects:
+            if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
+                return True
+        return False
+
+
+    def label2image(self, labels_data,labels_name=None):
 
         labels_data = labels_data.reshape(-1, 7)
 
@@ -271,18 +282,47 @@ class Arm:
                                        1])
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
-
         ################### recover urdf boxes based on lw_data ###################
-        obj_name = []
-        for i in range(len(lw_data)):
-            # print(f'this is matching urdf{j}')
-            # print(pos_data[i])
-            # print(lw_data[i])
-            # print(ori_data[i])
-            pos_data[i, 2] += 0.006
-            obj_name.append(f'object_{i}')
-            create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
-            p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
+        # obj_name = []
+        # for i in range(len(lw_data)):
+        #     # print(f'this is matching urdf{j}')
+        #     # print(pos_data[i])
+        #     # print(lw_data[i])
+        #     # print(ori_data[i])
+        #     pos_data[i, 2] += 0.006
+        #     pos_data[i, 1] += y_axis_shift
+        #
+        #     obj_name.append(f'object_{i}')
+        #     create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
+        #     p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
+
+
+        # urdf_path_one_img = self.obj_urdf + 'OpensCAD_generate/urdf_file/'
+        object_idx = []
+        print('position\n', pos_data)
+        print('lwh\n', lw_data)
+        for i in range(len(labels_name)):
+
+            # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+            object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+            object_csv = object_path + '.csv'
+            # object_stl = object_path + '.stl'
+
+            print(f'this is matching urdf{i}')
+            csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
+            pos_data[i, 2] = csv_lwh[2] / 2
+            pos_data[i, 1] += y_axis_shift
+
+            if lw_data[i, 0] < lw_data[i, 1]:
+                ori_data[i, 2] += np.pi / 2
+            object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+                                         basePosition=pos_data[i],
+                                         baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+                                         flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+            p.changeVisualShape(p.getBodyUniqueId(i + 1), -1, rgbaColor=mapped_color_values[i] + [1])
+
+        neat_img = self.get_obs('images', None)
+
 
         ################### recover urdf boxes based on lw_data ###################
 
@@ -455,6 +495,7 @@ if __name__ == '__main__':
     os.makedirs(images_log_path, exist_ok=True)
 
     gt_data = np.loadtxt(data_path + '/num_%d_gt.txt' % object_num)
+    obj_name_data = np.loadtxt(data_path + '/obj_name_%d.txt' % object_num, dtype=str)
 
     pred_data          = []
     ms_min_sample_loss = []
@@ -496,6 +537,7 @@ if __name__ == '__main__':
         images_log_f_path = images_log_path+'%d/'%i
         os.makedirs(images_log_f_path,exist_ok=True)
         for solu_i in range(n_all_solutions+1):
+            print("solution:",solu_i)
             if solu_i==0:
                 #this is gt data
                 data = gt_data[:, :object_num * info_per_object]
@@ -506,7 +548,7 @@ if __name__ == '__main__':
             box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
             one_img_data = one_img_data[box_order].reshape(-1,)
             new_data.append(one_img_data)
-            image = env.label2image(one_img_data)
+            image = env.label2image(one_img_data,obj_name_data[i])
             # image_list.append(image[..., :3])
             plt.imsave(images_log_f_path+f"{solu_i}.jpg",image[...,:3])
         # image_comb = np.hstack((image_list[0],image_list[1]))
