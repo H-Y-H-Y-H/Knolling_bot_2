@@ -144,19 +144,24 @@ if __name__ == '__main__':
 
     # load the test dataset
     file_num = 10
-    test_num_scenario = 1000
+    test_num_scenario = 10
 
     solu_num = 1 #12
     info_per_object = 7
-    SHIFT_DATASET_ID = 3 # color 3,4,5
+    SHIFT_DATASET_ID = 0 # color 3,4,5
+    obj_name_list = []
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', object_num)
 
         raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))[:,:object_num*info_per_object]
         raw_data = raw_data[:test_num_scenario]
 
-        # raw_data = raw_data[int(len(raw_data) * 0.8):int(len(raw_data) * 0.8) + test_num_scenario]
+        obj_name_data = np.loadtxt(DATAROOT + 'num_%d_after_name_%d.txt' % (file_num, s), dtype=str)[:,:object_num]
+        obj_name_data = obj_name_data[:test_num_scenario]
+
         total_raw_data.append(raw_data)
+        obj_name_list.append(obj_name_data)
+
         test_data = raw_data * config.SCALE_DATA + config.SHIFT_DATA
         valid_lw = []
         valid_pos = []
@@ -203,10 +208,18 @@ if __name__ == '__main__':
     os.makedirs(log_path, exist_ok=True)
 
     raw_data = np.concatenate(total_raw_data)
-    np.savetxt(log_path + '/num_%d_gt.txt' % object_num, raw_data)
+    obj_name_list = np.concatenate(obj_name_list)
 
-    for id_solutions in range(config.num_gaussian**object_num):
-        selec_list = to_base_4(id_solutions,object_num,n_gaussian=config.num_gaussian)
+
+    np.savetxt(log_path + '/num_%d_gt.txt' % object_num, raw_data)
+    np.savetxt(log_path+'/obj_name_%d.txt' % object_num, obj_name_list,fmt="%s")
+    n_solu = 20 #config.num_gaussian**object_num
+    m = config.num_gaussian
+    n = object_num
+    import random
+    for id_solutions in range(n_solu):
+        # selec_list = to_base_4(id_solutions,object_num,n_gaussian=config.num_gaussian)
+        selec_list = random.choices(range(m), k=n)
         outputs, loss_list = test_model_batch(val_loader, model, log_path, num_obj=object_num,selec_list=selec_list)
 
         for i in range(object_num):
