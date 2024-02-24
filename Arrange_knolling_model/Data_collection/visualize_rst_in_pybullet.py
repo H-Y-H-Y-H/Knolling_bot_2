@@ -241,6 +241,7 @@ class Arm:
         labels_data = labels_data.reshape(-1, 7)
 
         pos_data = np.concatenate((labels_data[:, :2], np.ones((len(labels_data), 1)) * 0.003), axis=1)
+
         lw_data = labels_data[:, 2:5]
         # ori_data = labels_data[:, 3:6]
         ori_data = np.zeros((len(lw_data), 3))
@@ -283,43 +284,26 @@ class Arm:
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
         ################### recover urdf boxes based on lw_data ###################
-        # obj_name = []
-        # for i in range(len(lw_data)):
-        #     # print(f'this is matching urdf{j}')
-        #     # print(pos_data[i])
-        #     # print(lw_data[i])
-        #     # print(ori_data[i])
-        #     pos_data[i, 2] += 0.006
-        #     pos_data[i, 1] += y_axis_shift
-        #
-        #     obj_name.append(f'object_{i}')
-        #     create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
-        #     p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
-
-
-        # urdf_path_one_img = self.obj_urdf + 'OpensCAD_generate/urdf_file/'
-        object_idx = []
-        print('position\n', pos_data)
-        print('lwh\n', lw_data)
-        for i in range(len(labels_name)):
-
-            # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
-            object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
-            object_csv = object_path + '.csv'
-            # object_stl = object_path + '.stl'
-
-            print(f'this is matching urdf{i}')
-            csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
-            pos_data[i, 2] = csv_lwh[2] / 2
+        obj_name = []
+        for i in range(len(lw_data)):
+            # print(f'this is matching urdf{j}')
+            # print(pos_data[i])
+            # print(lw_data[i])
+            # print(ori_data[i])
+            pos_data[i, 2] += 0.006
             pos_data[i, 1] += y_axis_shift
-
+            pos_data[i,0] += 0.016
             if lw_data[i, 0] < lw_data[i, 1]:
                 ori_data[i, 2] += np.pi / 2
-            object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+
+            obj_name.append(f'object_{i}')
+            # create_box(f'object_{i}', pos_data[i], p.getQuaternionFromEuler(ori_data[i]), size=lw_data[i])
+            p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
                                          basePosition=pos_data[i],
                                          baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-                                         flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-            p.changeVisualShape(p.getBodyUniqueId(i + 1), -1, rgbaColor=mapped_color_values[i] + [1])
+                                         flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
+
+            p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
         neat_img = self.get_obs('images', None)
 
@@ -547,8 +531,9 @@ if __name__ == '__main__':
             one_img_data = data[i][:info_per_object*object_num].reshape(-1, info_per_object)
             box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
             one_img_data = one_img_data[box_order].reshape(-1,)
+            one_img_data_obj = obj_name_data[i][box_order]
             new_data.append(one_img_data)
-            image = env.label2image(one_img_data,obj_name_data[i])
+            image = env.label2image(one_img_data,one_img_data_obj)
             # image_list.append(image[..., :3])
             plt.imsave(images_log_f_path+f"{solu_i}.jpg",image[...,:3])
         # image_comb = np.hstack((image_list[0],image_list[1]))
