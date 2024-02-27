@@ -277,10 +277,10 @@ class Arm:
         baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        textureId = p.loadTexture(self.urdf_path + "floor_1.png")
-        p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
-                            rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1),
-                                       1])
+        textureId = p.loadTexture(self.urdf_path + "floor_white.png")
+        # p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
+        #                     rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1),
+        #                                1])
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
         ################### recover urdf boxes based on lw_data ###################
@@ -305,7 +305,33 @@ class Arm:
 
             p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
-        neat_img = self.get_obs('images', None)
+
+        ################### recover objects  ###################
+
+        # object_idx = []
+        # print('position\n', pos_data)
+        # print('lwh\n', lw_data)
+        # for i in range(len(labels_name)):
+        #
+        #     # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+        #     object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+        #     object_csv = object_path + '.csv'
+        #     # object_stl = object_path + '.stl'
+        #
+        #     print(f'this is matching urdf{i}')
+        #     csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
+        #     pos_data[i, 2] = csv_lwh[2] / 2
+        #     pos_data[i, 1] += y_axis_shift
+        #
+        #     if lw_data[i, 0] < lw_data[i, 1]:
+        #         ori_data[i, 2] += np.pi / 2
+        #     object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+        #                                  basePosition=pos_data[i],
+        #                                  baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+        #                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+        #     p.changeVisualShape(p.getBodyUniqueId(i + 1), -1, rgbaColor=mapped_color_values[i] + [1])
+
+        # neat_img = self.get_obs('images', None)
 
 
         ################### recover urdf boxes based on lw_data ###################
