@@ -11,8 +11,10 @@ import cv2
 DATAROOT = "../../../knolling_dataset/learning_data_207_10/"
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(device)
-SHIFT_DATA = 100
-SCALE_DATA = 100
+SHIFT_DATA = 0
+SCALE_DATA = 1
+obj_gap = 0.014 # 0.016
+MASK_VALUE = 0
 
 def pad_sequences(sequences, max_seq_length=10, pad_value=0):
     padded_sequences = []
@@ -198,8 +200,12 @@ class Decoder(nn.Module):
         return out
 
 
+# Boundary conditions
+x_min = 0
+y_min = 0
+y_max = 0.34
 
-def calculate_collision_loss(pred_pos, obj_length_width, overlap_loss_weight=SHIFT_DATA*SHIFT_DATA,scale=True,Output_scaler=True):
+def calculate_collision_loss(pred_pos, obj_length_width,overlap_loss_weight=1000,scale=True,Output_scaler=True):
 
     if scale:
         # The length and width of objects:
@@ -441,9 +447,93 @@ class Knolling_Transformer(nn.Module):
             out = torch.cat(outputs, dim=0)
             return out, pi, sigma, mu
 
+    def forward_min(self, x, tart_x_gt=None,gt_decoder=None,temperature=1,given_idx=None):
+        # This section defines the forward pass of the model.
+
+        # If positional encoding is needed, apply it
+        if self.pos_encoding_Flag == True:
+            x = self.positional_encoding(x)
+
+        # If high dimensional encoder is set, apply it
+        if self.high_dim_encoder:
+            x = self.position_encoder(x)
+            tart_x_gt_high = self.position_encoder(tart_x_gt)
+        else:
+            tart_x_gt_high = tart_x_gt
+
+        # Pass input through the encoder
+        enc_x = self.encoder(x)
+
+        # Depending on the forwardtype, pass through a specific set of layers
+        if self.forwardtype == 0:
+            x = self.l1(enc_x)
+            x = self.acti(x)
+            x = self.l2(x)
+            x = self.acti(x)
+            out = self.l_out(x)
+            return out
+
+        elif self.forwardtype == 2:
+            out = self.decoder(enc_x, tart_x_gt_high)
+            out = self.l_out(out)
+            return out
+
+        else:# Autoregressive decoding
+            tart_x = torch.clone(tart_x_gt)
+            outputs = []
+            pis = []  # Collect pi for all timesteps
+            sigmas = []  # Collect sigma for all timesteps
+            mus = []  # Collect mu for all timesteps
+            loss_min = 0
+            results = 0
+            for t in range(self.in_obj_num):
+                tart_x_gt_high = self.position_encoder(tart_x)
+                dec_output = self.decoder(enc_x, tart_x_gt_high)
+
+                x = self.l0_out(dec_output)
+                x = self.l1_out(x)
+                x = x.view(x.shape[0], x.shape[1], self.num_gaussians, 5)
+                # Split along the last dimension to extract means, std_devs, and weights
+                means = x[:, :, :, :2]  # First two are means for x and y
+                std_devs = torch.sigmoid(x[:, :, :, 2:4])*(obj_gap/2)
+                weights = F.softmax(x[:, :, :, 4],dim=-1)  # Last one is the weight, apply softmax across gaussians for each object
+
+                ms_min_sample_loss, min_samples_errors_id, out = min_sample_loss(weights[t:t+1], std_devs[t:t+1], means[t:t+1],
+                                                                                 gt_decoder[t:t+1],
+                                                                                 Output_scaler=True,
+                                                                                 contain_id_and_values=True)
+                loss_min += ms_min_sample_loss
+                pis.append(weights[t].unsqueeze(0))
+                sigmas.append(std_devs[t].unsqueeze(0))
+                mus.append(means[t].unsqueeze(0))
+
+                out = out.squeeze()
+                outputs.append(out.unsqueeze(0))
+
+
+                if t == 0:
+                    tart_x = torch.cat((out.unsqueeze(0), tart_x[1:]), dim=0)
+
+                elif t < tart_x.size(0):
+                    tart_x = torch.cat((torch.cat(outputs), tart_x[t + 1:]), dim=0)
+
+            # Concatenate collected pi, sigma, mu for all timesteps
+            pi = torch.cat(pis, dim=0)
+            sigma = torch.cat(sigmas, dim=0)
+            mu = torch.cat(mus, dim=0)
+
+            if self.all_steps:
+                return results, pi, sigma, mu, loss_min
+
+            elif self.in_obj_num < tart_x.size(0):
+                pad_data_shape = outputs[0].shape
+                outputs = outputs + [torch.zeros(pad_data_shape, device=device) for _ in range(tart_x.size(0) - self.in_obj_num)]
+            out = torch.cat(outputs, dim=0)
+            return out, pi, sigma, mu, loss_min
+
     # def calculate_loss(self, pred_pos, tar_pos, obj_length_width):
     #
-    #     MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=-100)
+    #     MSE_loss = self.masked_MSE_loss(pred_pos, tar_pos, ignore_index=MASK_VALUE)
     #
     #     # The length and width of objects:
     #     obj_length_width = ((obj_length_width - SHIFT_DATA) / SCALE_DATA).transpose(1, 0)
@@ -520,7 +610,7 @@ class Knolling_Transformer(nn.Module):
         # loss = -loss.mean()
         # return loss
 
-    def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=-100,Output_scaler=True):
+    def masked_MSE_loss(self, pred_pos, tar_pos, ignore_index=MASK_VALUE,Output_scaler=True):
 
         mask = tar_pos.ne(ignore_index)
         mse_loss = (pred_pos - tar_pos).pow(2) * mask
@@ -781,30 +871,32 @@ if __name__ == "__main__":
             # # zero to False
             # input_batch_atten_mask = (input_batch == 0).bool()
             # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
-            # input_batch.masked_fill_(input_batch_atten_mask, -100)
+            # input_batch.masked_fill_(input_batch_atten_mask, MASK_VALUE)
 
             target_batch_atten_mask = (target_batch == 0).bool()
-            target_batch.masked_fill_(target_batch_atten_mask, -100)
+            target_batch.masked_fill_(target_batch_atten_mask, MASK_VALUE)
 
-            # create all -100 input for decoder
+            # create all MASK_VALUE input for decoder
             mask = torch.ones_like(target_batch, dtype=torch.bool)
             input_target_batch = torch.clone(target_batch)
 
             # input_target_batch = torch.normal(input_target_batch, noise_std)
-            input_target_batch.masked_fill_(mask, -100)
+            input_target_batch.masked_fill_(mask, MASK_VALUE)
 
             # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
             # label_mask[:object_num] = False
-            # target_batch.masked_fill_(label_mask, -100)
+            # target_batch.masked_fill_(label_mask, MASK_VALUE)
 
             # Forward pass
             # object number > masked number
-            output_batch, pi, sigma, mu = model(input_batch,
-                                                tart_x_gt=input_target_batch)
-            # Calculate min sample loss
-            ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
-                                                                          target_batch[:model.in_obj_num],
-                                                                          contain_id_and_values=True)
+            output_batch, pi, sigma, mu, ms_min_sample_loss = model.forward_min(input_batch,
+                                                                                tart_x_gt=input_target_batch,
+                                                                                gt_decoder=target_batch)
+
+            # # Calculate min sample loss
+            # ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
+            #                                                               target_batch[:model.in_obj_num],
+            #                                                               contain_id_and_values=True)
 
             # Calculate log-likelihood loss
             ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
@@ -816,7 +908,7 @@ if __name__ == "__main__":
             else:
                 overlap_loss = torch.zeros((),device=device)
             # Calcluate position loss
-            pos_loss = model.masked_MSE_loss(output_batch_min[:model.in_obj_num], target_batch[:model.in_obj_num])
+            pos_loss = model.masked_MSE_loss(output_batch[:model.in_obj_num], target_batch[:model.in_obj_num])
             # Calucluate Entropy loss:
             train_entropy_loss = entropy_loss(pi)
 
@@ -852,21 +944,21 @@ if __name__ == "__main__":
                 # # zero to False
                 # input_batch_atten_mask = (input_batch == 0).bool()
                 # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
-                # input_batch.masked_fill_(input_batch_atten_mask, -100)
+                # input_batch.masked_fill_(input_batch_atten_mask, MASK_VALUE)
 
                 target_batch_atten_mask = (target_batch == 0).bool()
-                target_batch.masked_fill_(target_batch_atten_mask, -100)
+                target_batch.masked_fill_(target_batch_atten_mask, MASK_VALUE)
 
-                # create all -100 input for decoder
+                # create all MASK_VALUE input for decoder
                 mask = torch.ones_like(target_batch, dtype=torch.bool)
                 input_target_batch = torch.clone(target_batch)
 
                 # input_target_batch = torch.normal(input_target_batch, noise_std)
-                input_target_batch.masked_fill_(mask, -100)
+                input_target_batch.masked_fill_(mask, MASK_VALUE)
 
                 # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
                 # label_mask[:object_num] = False
-                # target_batch.masked_fill_(label_mask, -100)
+                # target_batch.masked_fill_(label_mask, MASK_VALUE)
 
                 # Forward pass
                 # object number > masked number

@@ -21,7 +21,7 @@ torch.manual_seed(42)
 
 class Arm:
 
-    def __init__(self, is_render, arrange_policy):
+    def __init__(self, is_render, arrange_policy,total_offset):
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
@@ -48,6 +48,8 @@ class Arm:
         self.z_low_obs = self.low_scale[2]
         self.z_high_obs = self.high_scale[2]
         self.table_boundary = 0.03
+        self.total_offset = total_offset
+
 
         self.lateral_friction = 1
         self.spinning_friction = 1
@@ -191,14 +193,13 @@ class Arm:
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
 
-        total_offset = [0.016, -0.17 + 0.016, 0]
         labels_data = labels_data.reshape(-1, 7)
         # labels_data = labels_data[:np.random.randint(low=4, high=len(labels_data)-2), :]
         obj_num = np.sum(np.any(labels_data, axis=1))
 
         pos_data = np.concatenate((labels_data[:, :2], np.ones((len(labels_data), 1)) * 0.003), axis=1)
-        pos_data[:, 0] += total_offset[0]
-        pos_data[:, 1] += total_offset[1]
+        pos_data[:, 0] += self.total_offset[0]
+        pos_data[:, 1] += self.total_offset[1]
         lw_data = labels_data[:, 2:5]
         # ori_data = labels_data[:, 3:6]
         ori_data = np.zeros((len(lw_data), 3))
@@ -397,15 +398,17 @@ if __name__ == '__main__':
     command = 'recover'
     before_after = 'after'
     obj_num = 10
-    SHIFT_DATASET_ID = 3
+    SHIFT_DATASET_ID = 0
 
-    start_evaluations = 950000
-    end_evaluations =   1000000
+    total_offset = [0.016, -0.17 + 0.016, 0]
+
+    start_evaluations = 0
+    end_evaluations =10000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
     target_path = f'../../../knolling_dataset/learning_data_207_{obj_num}/'
-    images_log_path = target_path + 'images_%s/' % before_after
+    images_log_path = target_path + 'images_after/'
     os.makedirs(images_log_path, exist_ok=True)
 
     arrange_policy = {
@@ -427,12 +430,9 @@ if __name__ == '__main__':
     solution_num = 1
 
     if command == 'recover':
-
-        env = Arm(is_render=True, arrange_policy=arrange_policy)
-
+        env = Arm(is_render=True, arrange_policy=arrange_policy,total_offset = total_offset)
         with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
             color_dict = json.load(f)
-
         names = locals()
         # data_before = []
         save_urdf_path = []
@@ -458,13 +458,13 @@ if __name__ == '__main__':
                 image = image[..., :3]
 
                 cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
+                cv2.resizeWindow('zzz', 1280, 960)
                 cv2.imshow("zzz", image)
                 cv2.waitKey()
                 cv2.destroyAllWindows()
                 cv2.imwrite('layout_%s.png' % j, image)
 
-            # cv2.imwrite(images_log_path + '%d_%d.png' % (i, j), image)
+            cv2.imwrite(images_log_path + 'label%d.png' % (j), image)
 
     if command == 'knolling':
 
@@ -472,7 +472,7 @@ if __name__ == '__main__':
         with open(target_path[:-1] + "_readme.json", "w") as f:
             json.dump(arrange_policy, f, indent=4)
 
-        env = Arm(is_render=False, arrange_policy=arrange_policy)
+        env = Arm(is_render=False, arrange_policy=arrange_policy,total_offset = total_offset)
 
         change_cfg_flag = False
 

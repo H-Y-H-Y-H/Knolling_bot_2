@@ -7,7 +7,6 @@ import wandb
 import argparse
 
 
-
 def main():
     # if sweep_train_flag == True:
     #     wandb.init(project='knolling_tuning')  # ,mode = 'disabled'
@@ -41,7 +40,8 @@ def main():
 
         model_path = None
     else:
-        pretrained_model = 'lucky-firecracker-6'
+        pretrained_model =  'tough-sweep-1'
+
         wandb.init(project=proj_name)
         running_name = wandb.run.name
         # Load the YAML file
@@ -50,7 +50,6 @@ def main():
 
         model_path = f'data/{pretrained_model}/best_model.pt'
 
-
         config = {k: v for k, v in config_dict.items() if not k.startswith('_')}
         config = argparse.Namespace(**config)
 
@@ -58,16 +57,16 @@ def main():
         os.makedirs(config.log_pth,exist_ok=True)
         config.pre_trained = True
         config.inputouput_size = inputouput_size
-        config.k_ll = 0.01
+        config.k_ll = 0.0001
         config.k_op = 1
-        config.k_pos= 0.01
-
+        config.k_pos= 0.1
+        config.k_en = 0.001
 
         print(config)
 
     config.inputouput_size=inputouput_size
-    config.patience = 300
-    loss_d_epoch = 50
+    config.patience = 80
+    loss_d_epoch = 20
     config.dataset_path = DATAROOT
     config.scheduler_factor = 0.1
     os.makedirs(config.log_pth, exist_ok=True)
@@ -109,7 +108,7 @@ def main():
 
     num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     config.model_params = num_params
-    config.lr = 1e-4
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=config.scheduler_factor,
@@ -130,7 +129,7 @@ def main():
     # Make sure the probabilities sum up to 1
     probabilities = [0.05, 0.05, 0.05, 0.05, 0.05, 0.1, 0.15, 0.2, 0.3]
 
-
+    MIN_PRED = False
     for epoch in range(num_epochs):
         print_flag = True
         model.train()
@@ -139,8 +138,9 @@ def main():
 
         # model.in_obj_num  = np.random.choice(numbers, p=probabilities)
         tloss = torch.zeros(1,device=device,requires_grad=True)
-        for in_obj in range(1,11):
+        for in_obj in [6,8,10]:
             model.in_obj_num = in_obj
+
 
             for input_batch, target_batch in train_loader:
                 optimizer.zero_grad()
@@ -151,35 +151,38 @@ def main():
                 target_batch = target_batch.transpose(1, 0)
 
                 input_batch[model.in_obj_num:] = 0
-                target_batch[model.in_obj_num:] = 0
 
                 # # zero to False
                 # input_batch_atten_mask = (input_batch == 0).bool()
                 # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
-                # input_batch.masked_fill_(input_batch_atten_mask, -100)
+                # input_batch.masked_fill_(input_batch_atten_mask, MASK_VALUE)
 
                 target_batch_atten_mask = (target_batch == 0).bool()
-                target_batch.masked_fill_(target_batch_atten_mask, -100)
+                target_batch.masked_fill_(target_batch_atten_mask, MASK_VALUE)
 
-                # create all -100 input for decoder
+                # create all MASK_VALUE input for decoder
                 mask = torch.ones_like(target_batch, dtype=torch.bool)
                 input_target_batch = torch.clone(target_batch)
 
                 # input_target_batch = torch.normal(input_target_batch, noise_std)
-                input_target_batch.masked_fill_(mask, -100)
+                input_target_batch.masked_fill_(mask, MASK_VALUE)
 
                 # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
                 # label_mask[:object_num] = False
-                # target_batch.masked_fill_(label_mask, -100)
+                # target_batch.masked_fill_(label_mask, MASK_VALUE)
 
                 # Forward pass
                 # object number > masked number
-                output_batch, pi, sigma, mu = model(input_batch,
-                                                    tart_x_gt=input_target_batch)
-                # Calculate min sample loss
-                ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
-                                                                              target_batch[:model.in_obj_num],
-                                                                              contain_id_and_values=True)
+                # Forward pass.
+
+                output_batch_min, pi, sigma, mu, ms_min_sample_loss = model.forward_min(input_batch,
+                                                                                    tart_x_gt=input_target_batch,
+                                                                                    gt_decoder=target_batch)
+
+                ms_min_sample_loss =  model.masked_MSE_loss(output_batch_min[:model.in_obj_num], target_batch[:model.in_obj_num])
+
+
+                output_batch, pi, sigma, mu = model.forward(input_batch, tart_x_gt=input_target_batch)
 
                 # Calculate log-likelihood loss
                 ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
@@ -200,13 +203,19 @@ def main():
                 # Calucluate Entropy loss:
                 train_entropy_loss = entropy_loss(pi)
 
-
-                tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*train_entropy_loss
+                tloss = ms_min_sample_loss+k_pos * pos_loss
+                # tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*train_entropy_loss
 
                 if epoch % 10 == 0 and print_flag:
                     print('output', output_batch[:, 0].flatten())
                     print('target', target_batch[:, 0].flatten())
-                    print('loss and overlap loss:', tloss.item(), ll_loss.item(), ms_min_sample_loss.item(),overlap_loss.item(),pos_loss.item())
+                    print('loss and overlap loss:',
+                          tloss.item(),
+                          ll_loss.item(),
+                          ms_min_sample_loss.item(),
+                          overlap_loss.item(),
+                          pos_loss.item(),
+                          train_entropy_loss.item())
 
                     print_flag = False
 
@@ -225,6 +234,7 @@ def main():
             total_loss = 0
             all_ll_loss = 0
             all_ms_loss = 0
+            all_pos_loss = 0
             valid_overlap_loss = 0
             for input_batch, target_batch in val_loader:
                 input_batch = torch.from_numpy(np.asarray(input_batch, dtype=np.float32)).to(device)
@@ -235,69 +245,73 @@ def main():
                 # # zero to False
                 # input_batch_atten_mask = (input_batch == 0).bool()
                 # input_batch = torch.normal(input_batch, noise_std)  ## Add noise
-                # input_batch.masked_fill_(input_batch_atten_mask, -100)
+                # input_batch.masked_fill_(input_batch_atten_mask, MASK_VALUE)
 
                 target_batch_atten_mask = (target_batch == 0).bool()
-                target_batch.masked_fill_(target_batch_atten_mask, -100)
+                target_batch.masked_fill_(target_batch_atten_mask, MASK_VALUE)
 
-                # create all -100 input for decoder
+                # create all MASK_VALUE input for decoder
                 mask = torch.ones_like(target_batch, dtype=torch.bool)
                 input_target_batch = torch.clone(target_batch)
 
                 # input_target_batch = torch.normal(input_target_batch, noise_std)
-                input_target_batch.masked_fill_(mask, -100)
+                input_target_batch.masked_fill_(mask, MASK_VALUE)
 
-                # label_mask = torch.ones_like(target_batch, dtype=torch.bool)
-                # label_mask[:object_num] = False
-                # target_batch.masked_fill_(label_mask, -100)
 
                 # Forward pass
                 # object number > masked number
-                output_batch, pi, sigma, mu = model(input_batch,
-                                                    tart_x_gt=input_target_batch)
-                # Calculate min sample loss
-                ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
-                                                                              target_batch[:model.in_obj_num],
-                                                                              contain_id_and_values=True)
+                output_batch, pi, sigma, mu, ms_min_sample_loss = model.forward_min(input_batch,
+                                                    tart_x_gt=input_target_batch,
+                                                    gt_decoder = target_batch)
+                # # Calculate min sample loss
+                # ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
+                #                                                               target_batch[:model.in_obj_num],
+                #                                                               contain_id_and_values=True)
 
                 # Calculate log-likelihood loss
                 ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num])
 
                 # Calculate collision loss
                 if model.in_obj_num > 1:
-                    overlap_loss_sampled = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
+                    overlap_loss = calculate_collision_loss(output_batch[:model.in_obj_num].transpose(0, 1),
                                                         input_batch[:model.in_obj_num].transpose(0, 1),
                                                             scale = False)
-                    overlap_loss_min = calculate_collision_loss(output_batch_min[:model.in_obj_num].transpose(0, 1),
-                                                        input_batch[:model.in_obj_num].transpose(0, 1),
-                                                            scale = False)
-                    overlap_loss = overlap_loss_sampled+overlap_loss_min
+                    # overlap_loss_min = calculate_collision_loss(output_batch_min[:model.in_obj_num].transpose(0, 1),
+                    #                                     input_batch[:model.in_obj_num].transpose(0, 1),
+                    #                                         scale = False)
+                    # overlap_loss = overlap_loss_sampled+overlap_loss_min
                 else:
                     overlap_loss = torch.zeros((), device=device)
 
                 # Calcluate position loss
                 pos_loss = model.masked_MSE_loss(output_batch[:model.in_obj_num], target_batch[:model.in_obj_num])
+
                 # Calucluate Entropy loss:
                 v_entropy_loss = entropy_loss(pi)
 
-                vloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*v_entropy_loss
+                vloss = pos_loss
+
+                # vloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*v_entropy_loss
                 if epoch % 10 == 0 and print_flag:
                     print('val_output', output_batch[:, 0].flatten())
                     print('val_target', target_batch[:, 0].flatten())
                     print('loss and overlap loss:', vloss.item(), ll_loss.item(), ms_min_sample_loss.item(),
-                          overlap_loss.item(), pos_loss.item())
+                          overlap_loss.item(), pos_loss.item(),v_entropy_loss.item())
 
                     print_flag = False
 
                 total_loss += vloss.item()
                 all_ll_loss += ll_loss.item()
                 all_ms_loss += ms_min_sample_loss.item()
+                all_pos_loss += pos_loss.item()
                 valid_overlap_loss += overlap_loss.item()
             avg_loss = total_loss / len(val_loader)
             all_ll_loss = all_ll_loss / len(val_loader)
             all_ms_loss = all_ms_loss / len(val_loader)
             valid_overlap_loss = valid_overlap_loss/len(val_loader)
-            scheduler.step(vloss)
+            all_pos_loss = all_pos_loss/len(val_loader)
+
+            scheduler.step(avg_loss)
 
             valid_loss_list.append(avg_loss)
             valid_loss2_list.append(valid_overlap_loss)
@@ -307,8 +321,8 @@ def main():
                 PATH = config.log_pth + '/best_model.pt'
                 torch.save(model.state_dict(), PATH)
                 abort_learning = 0
-            if avg_loss>10e8:
-                abort_learning=10000
+            if avg_loss > 10e8:
+                abort_learning = 10000
             else:
                 abort_learning += 1
 
@@ -326,6 +340,7 @@ def main():
                        "valid_min_sam_loss": all_ms_loss,
                        "learning_rate": optimizer.param_groups[0]['lr'],
                        "min_loss": min_loss,
+                       'pos_loss':all_pos_loss
                        })
             if abort_learning > config.patience:
                 print('abort training!')
@@ -343,11 +358,11 @@ if __name__ == '__main__':
     valid_output_data = []
     valid_cls_data = []
 
-    DATA_CUT = 1000 #1 000 000 data
+    DATA_CUT = 10000 #1 000 000 data
 
-    SHIFT_DATASET_ID = 3
-    policy_num = 1
-    configuration_num = 1
+    SHIFT_DATASET_ID = 0
+    policy_num = 4
+    configuration_num = 3
     solu_num = int(policy_num * configuration_num)
     info_per_object = 7
     inputouput_size = 10
@@ -413,26 +428,26 @@ if __name__ == '__main__':
 
     sweep_train_flag = False
 
-    proj_name = "knolling0210_10_overlap"
+    proj_name = "knolling_0217"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
             "metric": {"goal": "minimize", "name": "min_loss"},
             "parameters": {
                 # "mse_loss_factor": {"max": 2.0, "min": 0.1},
-                # "overlap_loss_factor": {"max": 2.0, "min": 0.1},
+                'data_amount':{'values':[DATA_CUT*solu_num]},
                 "lr": {"values": [1e-4]},
-                "map_embed_d_dim": {"values": [128]},#32,64,
-                "num_attention_heads": {"values": [16]},#,16,32
-                "num_layers":{"values":[8]},
-                # "batch_size":{"values":[512]},
-                "SCALE_DATA": {"values": [100]},
-                "SHIFT_DATA": {"values": [100]},
-                "num_gaussian":{"values":[16]},
-                "batch_size":{"values":[2048]},
-                "k_ll":{"values":[0.01]},
-                "k_op":{'values':[1]},
-                'k_pos':{'values':[0.01]}
+                "map_embed_d_dim": {"values": [64]},#32,64,
+                "num_attention_heads": {"values": [4]},#,16,32
+                "num_layers":{"values":[4]},
+                "SCALE_DATA": {"values": [SCALE_DATA]},
+                "SHIFT_DATA": {"values": [SHIFT_DATA]},
+                "num_gaussian":{"values":[3]},
+                "batch_size":{"values":[4]},
+                "k_ll":{"values":[0.001]},
+                "k_op":{'values':[0.1]},
+                'k_pos':{'values':[0.1]},
+                'k_en':{'values':[0.001]}
             },
         }
 

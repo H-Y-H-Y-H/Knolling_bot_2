@@ -493,12 +493,10 @@ if __name__ == '__main__':
     # object_num = 5
     # name = 'filigreed-dog-3'
 
-    object_num = 2
-    name = 'silvery-sweep-2'
+    object_num = 10
+    name = 'lively-elevator-68'
 
-
-    num_gaussian = 3
-    n_all_solutions = num_gaussian**object_num
+    n_all_solutions = 20 #num_gaussian**object_num
 
     images_log_path = f'../train_and_test/results/{name}/output_images/'
     data_path = f'../train_and_test/results/{name}/'
@@ -557,7 +555,10 @@ if __name__ == '__main__':
             one_img_data = data[i][:info_per_object*object_num].reshape(-1, info_per_object)
             box_order = np.lexsort((one_img_data[:, 1], one_img_data[:, 0]))
             one_img_data = one_img_data[box_order].reshape(-1,)
-            one_img_data_obj = obj_name_data[i][box_order]
+            if len(box_order) == 1:
+                one_img_data_obj = [obj_name_data[i]]
+            else:
+                one_img_data_obj = obj_name_data[i][box_order]
             new_data.append(one_img_data)
             image = env.label2image(one_img_data,one_img_data_obj)
             # image_list.append(image[..., :3])

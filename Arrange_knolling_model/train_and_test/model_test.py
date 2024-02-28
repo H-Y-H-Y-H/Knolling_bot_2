@@ -38,29 +38,32 @@ def test_model_batch(val_loader, model, log_path, selec_list, num_obj=10):
 
             # # zero to False
             # input_batch_atten_mask = (input_batch == 0).bool()
-            # input_batch.masked_fill_(input_batch_atten_mask, -100)
+            # input_batch.masked_fill_(input_batch_atten_mask, MASK_VALUE)
 
             # zero to False
             target_batch_atten_mask = (target_batch == 0).bool()
-            target_batch.masked_fill_(target_batch_atten_mask, -100)
+            target_batch.masked_fill_(target_batch_atten_mask, MASK_VALUE)
 
-            # create all -100 input for decoder
+            # create all MASK_VALUE input for decoder
             mask = torch.ones_like(target_batch, dtype=torch.bool)
             input_target_batch = torch.clone(target_batch)
-            input_target_batch.masked_fill_(mask, -100)
+            input_target_batch.masked_fill_(mask, MASK_VALUE)
 
-            # Forward pass
-            output_batch, pi, sigma, mu = model(input_batch,
-                                 tart_x_gt=input_target_batch,given_idx = selec_list)
+            # Forward pass.
+            if MIN_PRED:
+                output_batch, pi, sigma, mu, ms_min_sample_loss = model.forward_min(input_batch,
+                                                                                tart_x_gt=input_target_batch,
+                                                                                gt_decoder=target_batch)
 
-            output_batch=output_batch[: model.in_obj_num]
 
-            # Calculate min sample loss
-            ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
-                                                 target_batch[:model.in_obj_num],
-                                                 Output_scaler=False,
-                                                 contain_id_and_values = True)
+            else:
+                output_batch, pi, sigma, mu = model.forward(input_batch,tart_x_gt=input_target_batch,given_idx = selec_list)
 
+                ms_min_sample_loss, ms_id, output_batch_min = min_sample_loss(pi, sigma, mu,
+                                                     target_batch[:model.in_obj_num],
+                                                     Output_scaler=True,
+                                                     contain_id_and_values = True)
+            output_batch = output_batch[: model.in_obj_num]
             # Calculate log-likelihood loss
             ll_loss = model.mdn_loss_function(pi, sigma, mu, target_batch[:model.in_obj_num],
                                               Output_scaler=False)
@@ -76,7 +79,7 @@ def test_model_batch(val_loader, model, log_path, selec_list, num_obj=10):
             v_entropy_loss = entropy_loss(pi, Output_scaler=False)
 
             ll_loss_list.append(ll_loss.transpose(1, 0).detach().cpu().numpy())
-            ms_min_sample_loss_list.append(ms_min_sample_loss.transpose(1, 0).squeeze(-1).detach().cpu().numpy())
+            ms_min_sample_loss_list.append(ms_min_sample_loss.detach().cpu().numpy())
             overlap_loss_list.append(overlap_loss.detach().cpu().numpy())
             pos_loss_list.append(pos_loss.transpose(1, 0).detach().cpu().numpy())
             v_entropy_loss_list.append(v_entropy_loss.transpose(1, 0).detach().cpu().numpy())
@@ -99,7 +102,7 @@ def test_model_batch(val_loader, model, log_path, selec_list, num_obj=10):
     outputs = np.concatenate(outputs)
 
     ll_loss_list= np.concatenate(ll_loss_list)
-    ms_min_sample_loss_list= np.concatenate(ms_min_sample_loss_list)
+    # ms_min_sample_loss_list= np.concatenate(ms_min_sample_loss_list)
     overlap_loss_list= np.concatenate(overlap_loss_list)
     pos_loss_list= np.concatenate(pos_loss_list)
     v_entropy_loss_list= np.concatenate(v_entropy_loss_list)
@@ -126,7 +129,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     # runs = api.runs("knolling0205_2_overlap")
 
-    name = 'vibrant-fuse-15'
+    name = 'lively-elevator-68'
 
     model_name = "best_model.pt"
 
@@ -135,9 +138,8 @@ if __name__ == '__main__':
     config = {k: v for k, v in config_dict.items() if not k.startswith('_')}
 
     config = argparse.Namespace(**config)
-
+    MIN_PRED = True
     object_num = 10
-
     valid_lw_data = []
     valid_pos_data = []
     total_raw_data = []
@@ -148,13 +150,15 @@ if __name__ == '__main__':
 
     solu_num = 1 #12
     info_per_object = 7
-    SHIFT_DATASET_ID = 0 # color 3,4,5
+    SHIFT_DATASET_ID = 3 # color 3,4,5
     obj_name_list = []
     for s in range(SHIFT_DATASET_ID,solu_num+SHIFT_DATASET_ID):
         print('load data:', object_num)
-
         raw_data = np.loadtxt(DATAROOT + 'num_%d_after_%d.txt' % (file_num, s))[:,:object_num*info_per_object]
+
+        # raw_data = np.loadtxt('test_batch.txt')
         raw_data = raw_data[:test_num_scenario]
+        # np.savetxt('test_batch.txt',raw_data,fmt='%s')
 
         obj_name_data = np.loadtxt(DATAROOT + 'num_%d_after_name_%d.txt' % (file_num, s), dtype=str)[:,:object_num]
         obj_name_data = obj_name_data[:test_num_scenario]
