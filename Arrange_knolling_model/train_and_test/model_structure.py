@@ -217,11 +217,11 @@ def calculate_collision_loss(pred_pos, obj_length_width,overlap_loss_weight=1000
 
     # Calculate half dimensions for easier overlap checking
     half_sizes = obj_length_width / 2.0
-    half_sizes += obj_gap/2
+    half_sizes_with_paddings = half_sizes + obj_gap/2
 
     # Expand dimensions to calculate pairwise differences between all objects
     pred_pos_expanded = pred_pos.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
-    half_sizes_expanded = half_sizes.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
+    half_sizes_expanded = half_sizes_with_paddings.unsqueeze(1)  # Shape: [Batchsize, 1, 10, 2]
 
     # Compute differences in positions and sum of half sizes for all pairs
     pos_diff = torch.abs(pred_pos_expanded - pred_pos_expanded.transpose(1, 2))  # Shape: [Batchsize, 10, 10, 2]
@@ -457,9 +457,7 @@ class Knolling_Transformer(nn.Module):
         # If high dimensional encoder is set, apply it
         if self.high_dim_encoder:
             x = self.position_encoder(x)
-            tart_x_gt_high = self.position_encoder(tart_x_gt)
-        else:
-            tart_x_gt_high = tart_x_gt
+            # tart_x_gt_high = self.position_encoder(tart_x_gt)
 
         # Pass input through the encoder
         enc_x = self.encoder(x)
@@ -473,10 +471,10 @@ class Knolling_Transformer(nn.Module):
             out = self.l_out(x)
             return out
 
-        elif self.forwardtype == 2:
-            out = self.decoder(enc_x, tart_x_gt_high)
-            out = self.l_out(out)
-            return out
+        # elif self.forwardtype == 2:
+        #     out = self.decoder(enc_x, tart_x_gt_high)
+        #     out = self.l_out(out)
+        #     return out
 
         else:# Autoregressive decoding
             tart_x = torch.clone(tart_x_gt)
@@ -487,7 +485,8 @@ class Knolling_Transformer(nn.Module):
             loss_min = 0
             results = 0
             for t in range(self.in_obj_num):
-                tart_x_gt_high = self.position_encoder(tart_x)
+                tart_x_pos= self.positional_encoding(tart_x)
+                tart_x_gt_high = self.position_encoder(tart_x_pos)
                 dec_output = self.decoder(enc_x, tart_x_gt_high)
 
                 x = self.l0_out(dec_output)
