@@ -12,12 +12,13 @@ class knolling_main():
 
         self.para_dict = para_dict
         self.rl_dict = rl_dict
+        self.arrange_dict = arrange_dict
 
         self.task = knolling_env(para_dict=para_dict, lstm_dict=lstm_dict)
         self.robot = knolling_robot(para_dict=para_dict)
 
-        if self.para_dict['use_knolling_model'] == True:
-            self.arrange_dict = arrange_dict
+        if self.para_dict['knolling_model_online'] == True:
+            # self.arrange_dict = arrange_dict
             from ASSET.arrange_model_deploy import Arrange_model
             self.arrange_model = Arrange_model(para_dict=para_dict, arrange_dict=arrange_dict, max_num=self.para_dict['objects_num'])
         if self.para_dict['visual_perception_mode'] == 'yolo_pose_lstm_grasp':
@@ -94,27 +95,49 @@ class knolling_main():
 
             return self.selected_image_index
 
-    def get_knolling_data(self, pos_before, ori_before, lwh_list, success_index, offline_flag=True):
+    def get_knolling_data(self, pos_before, ori_before, lwh_list, success_index):
 
         # test for all objects!!!!!!!!
         success_index = np.arange(len(pos_before))
 
-        if offline_flag == True:
+        if self.para_dict['knolling_model_online'] == False:
 
-            demo_data = np.loadtxt('./knolling_demo/num_10_after.txt')[0].reshape(-1, 5)
-            record_data = np.loadtxt('./knolling_demo/num_10_lwh.txt').reshape(-1, 5)
+            demo_data = np.loadtxt('knolling_demo/knolling_bot_3/demo_999/test24(11).txt').reshape(-1, 7)[:, :]
+            # demo_data[0, 0] -= 0.010
+            # demo_data[1, 0] -= 0.008
+            # demo_data[0, 1] -= 0.005
+            # demo_data[-2, 1] += 0.005
+            # demo_data[-2, 0] += 0.008
+            # demo_data[-1, 0] += 0.020
+            # demo_data[:, 0] -= 0.005
             lwh_list_classify = lwh_list
             # lwh_list_classify = record_data[:, 2:4]
             # pos_before = np.concatenate((record_data[:, :2], np.ones((len(record_data), 1)) * 0.006), axis=1)
             # ori_before = np.concatenate((np.zeros((len(demo_data), 2)), record_data[:, -1].reshape(len(record_data), 1)), axis=1)
 
-            recover_config = np.concatenate((demo_data[:, :2],
-                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
-                                             np.zeros((len(demo_data), 2)),
-                                             demo_data[:, -1].reshape(len(demo_data), 1),
-                                             demo_data[:, 2:4],
-                                             np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
-            self.task.recover_objects(config_data=recover_config)
+            # recover_config = np.concatenate((demo_data[:, :2],
+            #                                  np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.006,
+            #                                  np.zeros((len(demo_data), 2)),
+            #                                  demo_data[:, -1].reshape(len(demo_data), 1),
+            #                                  demo_data[:, 2:4],
+            #                                  np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
+            # self.task.recover_objects(config_data=recover_config)
+
+            rotate_index = np.where(demo_data[:, 2] < demo_data[:, 3])[0]
+            ori_after = np.zeros((len(demo_data), 3))
+            for idx in rotate_index:
+                if ori_before[idx, 2] > 0:
+                    ori_after[idx, 2] += np.pi / 2
+                elif ori_before[idx, 2] < 0:
+                    ori_after[idx, 2] -= np.pi / 2
+            # ori_after[rotate_index, 2] += np.pi / 2
+            pos_after = np.copy(demo_data[:, :2])
+            pos_after[:, 0] += self.arrange_dict['arrange_x_offset']
+            pos_after[:, 1] += self.arrange_dict['arrange_y_offset']
+
+            recover_config = np.concatenate((pos_after,
+                                             np.zeros((len(demo_data), 1)).reshape((len(demo_data)), 1),
+                                             ori_after), axis=1)
 
             manipulator_before = np.concatenate((pos_before, ori_before), axis=1)
             manipulator_after = recover_config[:, :6]
@@ -193,8 +216,7 @@ class knolling_main():
             manipulator_after = candidate_after[candidate_index]
             lwh_list_classify = candidate_lwh[candidate_index]
 
-        p.restoreState(self.before_arrange_state)
-        print('here')
+            p.restoreState(self.before_arrange_state)
 
         return manipulator_before, manipulator_after, lwh_list_classify
 
@@ -433,8 +455,7 @@ class knolling_main():
         manipulator_before, manipulator_after, lwh_list = self.get_knolling_data(pos_before=pos_before,
                                                                                  ori_before=ori_before,
                                                                                  lwh_list=lwh_list,
-                                                                                 success_index=success_index,
-                                                                                 offline_flag=False)
+                                                                                 success_index=success_index)
 
         # manipulator_before = manipulator_before[self.success_num:]
         # manipulator_after = manipulator_after[self.success_num:]
@@ -453,7 +474,7 @@ class knolling_main():
             offset_high = np.array([0, 0, 0.05]) + self.robot.real_table_height
         else:
             offset_low = np.array([0, 0, 0.005]) + self.robot.sim_table_height
-            offset_low_place = np.array([0, 0, 0.010]) + self.robot.sim_table_height
+            offset_low_place = np.array([0, 0, 0.0010]) + self.robot.sim_table_height
             offset_high = np.array([0, 0, 0.04]) + self.robot.sim_table_height
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
@@ -602,12 +623,12 @@ if __name__ == '__main__':
 
     # default: conf 0.6, iou 0.6
     np.set_printoptions(precision=5)
-    para_dict = {'yolo_conf': 0.3, 'yolo_iou': 0.4, 'device': 'cuda:0',
+    para_dict = {'yolo_conf': 0.3, 'yolo_iou': 0.6, 'device': 'cuda:0',
                  'arm_reset_pos': np.array([0, 0, 0.12]), 'arm_reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
                  'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
                  'init_ori_range': [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]],
-                 'objects_num': np.random.randint(5, 6), 'max_class_num': 9, 'max_color_num': 7,
+                 'objects_num': np.random.randint(10, 11), 'max_class_num': 9, 'max_color_num': 7,
                  'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'data_source_path': './IMAGE/',
@@ -615,8 +636,8 @@ if __name__ == '__main__':
                  'sundry_path': '../knolling_dataset/sundry_204/',
                  'real_operate': True,
                  'object': 'sundry', # box, polygon, sundry
-                 'use_knolling_model': True, 'visual_perception_mode': 'yolo_seg_lstm_grasp',
-                 'lstm_enable_flag': True, 'rl_enable_flag': False,
+                 'knolling_model_online': False, 'visual_perception_mode': 'yolo_seg_lstm_grasp',
+                 'lstm_enable_flag': False, 'rl_enable_flag': False,
                 }
 
     # visual_perception_model：yolo_pose_lstm_grasp, yolo_pose_yolo_grasp, yolo_seg_lstm_grasp
@@ -630,9 +651,9 @@ if __name__ == '__main__':
             para_dict['yolo_model_path'] = './ASSET/models/627_pile_pose/weights/best.pt'
     elif para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
         if para_dict['real_operate'] == True:
-            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sundry/weights/best.pt'
+            para_dict['yolo_model_path'] = './ASSET/models/301_seg_real_sundry/weights/best.pt'
         else:
-            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sundry/weights/best.pt'
+            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sim_sundry/weights/best.pt'
     else:
         if para_dict['visual_perception_mode'] == 'yolo_seg':
             para_dict['yolo_model_path'] = './ASSET/models/820_pile_seg/weights/best.pt'
@@ -663,10 +684,13 @@ if __name__ == '__main__':
         lstm_dict['threshold'] = 0.40
 
     arrange_dict = {'running_name': 'autumn-meadow-16',
-                    'transformer_model_path': './ASSET/models/devoted-terrain-29',
                     'use_yaml': False,
-                    'arrange_x_offset': 0.03,
-                    'arrange_y_offset': 0.00}
+                    'arrange_x_offset': 0.025,
+                    'arrange_y_offset': -0.15}
+    # 'arrange_x_offset': 0.03,
+    # 'arrange_y_offset': 0.00
+    if arrange_dict['use_yaml'] == True:
+        arrange_dict['transformer_model_path'] = './ASSET/models/devoted-terrain-29'
 
     rl_dict = {'logger_id': '16', 'obj_num': para_dict['objects_num'], 'rl_mode': 'SAC', 'max_step': 3}
 

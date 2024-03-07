@@ -474,6 +474,10 @@ class knolling_env():
                 if self.para_dict['visual_perception_mode'] == 'yolo_seg_lstm_grasp':
                     manipulator_before, new_lwh_list, pred_cls, pred_color, pred_grasp = self.visual_perception_model.model_predict(epoch=epoch,
                                                                                                             gt_boxes_num=self.para_dict['objects_num'])
+                    # self.main_demo_epoch += 1
+                    # manipulator_before, new_lwh_list, pred_cls, pred_color, pred_grasp = self.visual_perception_model.model_predict(epoch=epoch + 1,
+                    #                                                                                         gt_boxes_num=self.para_dict['objects_num'],
+                    #                                                                                         show_mask=True)
                 self.main_demo_epoch += 1
                 ################### the results of object detection has changed the order!!!! ####################
 

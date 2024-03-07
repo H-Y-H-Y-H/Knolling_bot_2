@@ -453,20 +453,20 @@ class Arrange_model():
 
             import json
 
-            # api = wandb.Api()
-            # # Project is specified by <entity/project-name>
-            # runs = api.runs("knolling_multi")
+            api = wandb.Api()
+            # Project is specified by <entity/project-name>
+            runs = api.runs("knolling_multi")
             #
             name = self.arrange_dict['running_name']
             model_name = "best_model.pt"
-            # summary_list, config_list, name_list = [], [], []
-            # config = None
-            # for run in runs:
-            #     if run.name == name:
-            #         print("found: ", name)
-            #         config = {k: v for k, v in run.config.items() if not k.startswith('_')}
-            # print(config)
-            # json_object = json.dumps(config, indent=19)
+            summary_list, config_list, name_list = [], [], []
+            config = None
+            for run in runs:
+                if run.name == name:
+                    print("found: ", name)
+                    config = {k: v for k, v in run.config.items() if not k.startswith('_')}
+            print(config)
+            json_object = json.dumps(config, indent=19)
 
             # # Writing to sample.json
             # with open("./para.json", "w") as outfile:

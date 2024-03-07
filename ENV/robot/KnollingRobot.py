@@ -93,8 +93,10 @@ class knolling_robot():
             self.keep_obj_width = obj_width + 0.010
         obj_width += 0.010
         if self.para_dict['real_operate'] == True:
-            obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.057])
-            motor_pos_range = np.array([2100, 2200, 2250, 2350, 2450, 2550, 2650])
+            obj_width_range = np.array([0.021, 0.026, 0.032, 0.039, 0.045, 0.052, 0.055])
+            motor_pos_range = np.array([2100, 2200, 2250, 2350, 2450, 2550, 2600])
+            # motor_pos_range = np.array([2100, 2200, 2250, 2350, 2450, 2550, 2650])
+
 
             formula_parameters = np.polyfit(obj_width_range, motor_pos_range, 3)
             motor_pos = np.poly1d(formula_parameters)
