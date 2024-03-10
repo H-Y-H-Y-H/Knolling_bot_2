@@ -107,12 +107,17 @@ class knolling_env():
 
     def create_scene(self):
 
+        # if random.uniform(0, 1) > 0.5:
+        #     p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
+        #                                shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
+        # else:
+        #     p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2],
+        #                                shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
         if random.uniform(0, 1) > 0.5:
-            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
-                                       shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
+            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2])
         else:
-            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2],
-                                       shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
+            p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2])
+
         self.baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useMaximalCoordinates=True)
 
         p.addUserDebugLine(
@@ -204,7 +209,7 @@ class knolling_env():
                                 self.obj_info_total.append(object_info)
                                 object_name = object_info.split('_')[0]
                                 object_index = object_info.split('_')[1]
-                                csv_path = (self.para_dict['sundry_path'] + 'generated_stl/' + object_name + '/' + object_info  + '.csv')
+                                csv_path = (self.para_dict['sundry_path'] + 'generated_stl/' + object_name + '/' + object_info + '.csv')
                                 csv_lwh = np.asarray(pandas.read_csv(csv_path).iloc[0, [3, 4, 5]].values) * 0.001
                                 new_pos[2] = csv_lwh[2] / 2
                                 self.obj_gt_lwh.append(csv_lwh)
@@ -442,7 +447,7 @@ class knolling_env():
             # cv2.waitKey(0)
             # cv2.destroyAllWindows()
             if img_path is None:
-                output_img_path = self.para_dict['data_source_path'] + 'sim_images/%012d.png' % (epoch)
+                output_img_path = self.para_dict['data_source_path'] + 'sim_images/%d.png' % (epoch)
             # elif self.para_dict['real_operate'] == False:
             #     output_img_path = self.para_dict['dataset_path'] + 'sim_images/%012d' % (epoch) + '_after.png'
             # else:

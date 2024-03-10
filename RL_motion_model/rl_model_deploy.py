@@ -27,6 +27,18 @@ class rl_unstack_model(gym.Env):
 
         log_path = './RL_motion_model/' + f"logger/{rl_dict['rl_mode']}_{rl_dict['obj_num']}objobs/log{rl_dict['logger_id']}/"
         self.model = SAC.load(log_path + "/ppo_model_best.zip")
+
+    def boundary_check(self, trajectory):
+
+        check_flag = True
+
+        if trajectory[0] > self.x_high_obs or trajectory[0] < self.x_low_obs or trajectory[1] > self.y_high_obs \
+            or trajectory[1] < self.y_low_obs or trajectory[2] > self.z_high_obs or trajectory[2] < self.z_low_obs:
+            print('RL output out of boundary!!!')
+            check_flag = False
+
+        return check_flag
+
     def model_pred(self, obs):
 
         action, _states = self.model.predict(obs, deterministic=True)
@@ -37,7 +49,9 @@ class rl_unstack_model(gym.Env):
 
         arm_action = np.concatenate((action[:3], [0, np.pi / 2, action[3]]))
 
-        return arm_action
+        check_flag = self.boundary_check(trajectory=arm_action)
+
+        return arm_action, check_flag
 
 if __name__ == '__main__':
 

@@ -16,7 +16,8 @@ from stable_baselines3.common.env_checker import check_env
 
 class Arm_env(gym.Env):
 
-    def __init__(self, para_dict, knolling_para=None, offline_data= True, init_scene = 40, init_num_obj=0,two_obj_obs=True):
+    def __init__(self, para_dict, knolling_para=None, offline_data= True, init_scene = 40, init_num_obj=0,two_obj_obs=True,
+                 lstm_dict=None):
         super(Arm_env, self).__init__()
 
         self.para_dict = para_dict
@@ -61,20 +62,34 @@ class Arm_env(gym.Env):
         else:
             p.connect(p.DIRECT)
 
-        self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.150, 0, 0], #0.175
+        self.camera_parameters = {
+            'width': 640.,
+            'height': 480,
+            'fov': 42,
+            'near': 0.1,
+            'far': 100.,
+            'camera_up_vector':
+                [1, 0, 0],  # I really do not know the parameter's effect.
+            'light_direction': [
+                0.5, 0, 1
+            ],  # the direction is from the light source position to the origin of the world frame.
+        }
+        self.view_matrix = p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=[0.150, 0, 0],  # 0.175
                                                                distance=0.4,
                                                                yaw=90,
-                                                               pitch = -90,
+                                                               pitch=-90,
                                                                roll=0,
                                                                upAxisIndex=2)
-        self.projection_matrix = p.computeProjectionMatrixFOV(fov=42,
-                                                              aspect=640/480,
-                                                              nearVal=0.1,
-                                                              farVal=100)
+        self.projection_matrix = p.computeProjectionMatrixFOV(fov=self.camera_parameters['fov'],
+                                                              aspect=self.camera_parameters['width'] /
+                                                                     self.camera_parameters['height'],
+                                                              nearVal=self.camera_parameters['near'],
+                                                              farVal=self.camera_parameters['far'])
         p.resetDebugVisualizerCamera(cameraDistance=0.5,
                                      cameraYaw=45,
                                      cameraPitch=-45,
                                      cameraTargetPosition=[0.1, 0, 0])
+
         p.setAdditionalSearchPath(pd.getDataPath())
         p.setTimeStep(1. / 120.)
 
@@ -111,8 +126,13 @@ class Arm_env(gym.Env):
         self.max_offline_scene_num = init_scene
         self.create_scene()
         self.create_arm()
-        self.reset(fix_num_obj=init_num_obj) # fix_num_obj == 0: random 2-8 objects
+        # self.reset(fix_num_obj=init_num_obj) # fix_num_obj == 0: random 2-8 objects
 
+        self.lstm_dict = lstm_dict
+        from ASSET.visual_perception import Yolo_pose_model
+        self.visual_perception_model = Yolo_pose_model(para_dict=para_dict, lstm_dict=lstm_dict, use_lstm=True)
+
+        self.record_action = []
 
 
     def create_scene(self,random_lightness=True,use_texture=True):
@@ -139,7 +159,7 @@ class Arm_env(gym.Env):
 
         if use_texture:
             background = np.random.randint(1, 5)
-            textureId = p.loadTexture(self.urdf_path + f"img_{background}.png")
+            textureId = p.loadTexture(self.urdf_path + f"floor_{background}.png")
             p.changeVisualShape(self.baseid, -1, textureUniqueId=textureId, specularColor=[0, 0, 0])
         p.setGravity(0, 0, -10)
 
@@ -200,6 +220,7 @@ class Arm_env(gym.Env):
                    (pitch_list > self.angle_obj_limit).any():
                     for k in self.boxes_index: p.removeBody(k)
                     self.boxes_index = []
+                    print('flipped box!')
 
                     continue
 
@@ -230,7 +251,40 @@ class Arm_env(gym.Env):
 
         return state_list
 
-    def reset(self, seed=None, return_observation=True, fix_num_obj = 0):
+    def get_img_obs(self, epoch=None, look_flag=False, sub_index=0, img_path=None):
+
+        if epoch is None:
+            epoch = self.main_demo_epoch
+
+        def get_images():
+            (width, length, image, image_depth, seg_mask) = p.getCameraImage(width=640,
+                                                                             height=480,
+                                                                             viewMatrix=self.view_matrix,
+                                                                             projectionMatrix=self.projection_matrix,
+                                                                             renderer=p.ER_BULLET_HARDWARE_OPENGL)
+            far_range = self.camera_parameters['far']
+            near_range = self.camera_parameters['near']
+            depth_data = far_range * near_range / (far_range - (far_range - near_range) * image_depth)
+            top_height = 0.4 - depth_data
+            my_im = image[:, :, :3]
+            temp = np.copy(my_im[:, :, 0])  # change rgb image to bgr for opencv to save
+            my_im[:, :, 0] = my_im[:, :, 2]
+            my_im[:, :, 2] = temp
+            img = np.copy(my_im)
+            return img, top_height
+
+        img, _ = get_images()
+        ################### the results of object detection has changed the order!!!! ####################
+        manipulator_before, new_lwh_list, pred_cls = self.visual_perception_model.model_predict(img=img, epoch=epoch, gt_boxes_num=len(self.obs_list_all))
+
+        # self.main_demo_epoch += 1
+        num_true = np.count_nonzero(pred_cls)
+
+        return num_true
+
+    def reset(self, seed=None, return_observation=True, fix_num_obj = 0, epoch=0):
+
+        self.reset_epoch = epoch
 
         if fix_num_obj == 0:
             np.random.seed(seed)
@@ -259,15 +313,23 @@ class Arm_env(gym.Env):
             self.create_objects()
             obs_list_flatten = self.get_obs()
 
-            obs_list_all, state_list = self.get_all_obj_info()
+            self.obs_list_all, state_list = self.get_all_obj_info()
 
             self.real_obs = np.copy(obs_list_flatten)
 
+            # adjust the arm to take a photo
+            temp_loc = np.copy(home_loc)
+            temp_loc[2] += 0.12
+            temp_loc[0] -= 0.1
+            self.act(input_a=temp_loc)
+            self.num_true = self.get_img_obs(epoch=self.reset_epoch)
+            self.act(input_a=home_loc)
+
             # whether the objs are in the scene.
-            if (self.x_low_obs<obs_list_all[:self.boxes_num, 0]).all() and \
-                    (self.x_high_obs > obs_list_all[:self.boxes_num, 0]).all() and \
-                (self.y_low_obs<obs_list_all[:self.boxes_num, 1]).all() and \
-                    (self.y_high_obs > obs_list_all[:self.boxes_num, 1]).all():
+            if (self.x_low_obs<self.obs_list_all[:self.boxes_num, 0]).all() and \
+                    (self.x_high_obs > self.obs_list_all[:self.boxes_num, 0]).all() and \
+                (self.y_low_obs<self.obs_list_all[:self.boxes_num, 1]).all() and \
+                    (self.y_high_obs > self.obs_list_all[:self.boxes_num, 1]).all():
 
                 # # whether the objects are too closed to each other.
                 # dist = []
@@ -278,7 +340,9 @@ class Arm_env(gym.Env):
                 # dist = np.array(dist)
                 # if (dist<0.04).any():
                 #     print('successful scene generated.')
-                    break
+                # print('out of boundary')
+
+                break
 
         self.current_step = 0
         p.changeDynamics(self.baseid, -1, lateralFriction=self.para_dict['base_lateral_friction'],
@@ -299,6 +363,7 @@ class Arm_env(gym.Env):
         # a[2]-=0.003 # wrap the action space to make the model output 0.002
 
         target_location = [a[:3],[0,np.pi/2,a[3]]]
+        self.record_action.append(np.concatenate((target_location[0], target_location[1])))
 
         ik_angles0 = p.calculateInverseKinematics(self.arm_id, 9, targetPosition=target_location[0],
                                                   maxNumIterations=200,
@@ -359,7 +424,7 @@ class Arm_env(gym.Env):
 
         else: return -100, True
 
-    def step(self,a):
+    def step(self, a):
         self.act(a)
         obs_list = self.get_obs()
         r, Done = self.get_r()
@@ -378,6 +443,25 @@ class Arm_env(gym.Env):
         self.current_step +=1
         # Check if maximum steps have been reached
         if self.current_step >= self.max_steps:
+            home_loc = np.concatenate([self.para_dict['reset_pos'], self.para_dict['reset_ori'][2:]])
+            temp_loc = np.copy(home_loc)
+            temp_loc[2] += 0.12
+            temp_loc[0] -= 0.1
+            self.act(input_a=temp_loc)
+            new_num_true = self.get_img_obs(epoch=str(self.reset_epoch) + '_' + str(self.current_step))
+
+            if new_num_true > self.num_true:
+                print('success epoch:', self.reset_epoch)
+                record_obs_after = obs_list[:-4].reshape(-1, 5)
+                record_obs_before = self.real_obs[:-4].reshape(-1, 5)
+                record_path = self.para_dict['data_source_path'] + 'sim_obs/%s' % (self.reset_epoch)
+                self.record_action = np.asarray(self.record_action[3:6])
+                np.savetxt(record_path + '_after.txt', record_obs_after)
+                np.savetxt(record_path + '_before.txt', record_obs_before)
+
+                np.savetxt(record_path + '_action.txt', self.record_action)
+                self.record_action = []
+
             Done = True
 
         truncated = False

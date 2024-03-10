@@ -5,6 +5,7 @@ from ENV.task.KnollingEnv import knolling_env
 from ENV.robot.KnollingRobot import knolling_robot
 import cv2
 
+
 class knolling_main():
 
     def __init__(self, para_dict=None, knolling_para=None, lstm_dict=None, arrange_dict=None, rl_dict=None):
@@ -234,7 +235,7 @@ class knolling_main():
 
 
         self.robot.gripper(1, 0)
-        offset_high = np.array([0, 0, 0.04])
+        offset_high = np.array([0, 0, 0.05])
         if self.para_dict['real_operate'] == True:
             test_offset = np.array([0, 0, 0.007]) + self.robot.real_table_height # this is temporary offset for RL model
         else:
@@ -249,8 +250,11 @@ class knolling_main():
             last_ori = self.para_dict['arm_reset_ori']
             for i in range(self.rl_dict['max_step']):
                 obs = self.rl_combine_obs(last_action=action)
-                trajectory = self.rl_model.model_pred(obs=obs)
+                trajectory, check_flag = self.rl_model.model_pred(obs=obs)
                 print('this is trajectory', trajectory)
+
+                if check_flag == False:
+                    break
 
                 trajectory[:3] += test_offset
 
@@ -475,7 +479,7 @@ class knolling_main():
         else:
             offset_low = np.array([0, 0, 0.005]) + self.robot.sim_table_height
             offset_low_place = np.array([0, 0, 0.0010]) + self.robot.sim_table_height
-            offset_high = np.array([0, 0, 0.04]) + self.robot.sim_table_height
+            offset_high = np.array([0, 0, 0.05]) + self.robot.sim_table_height
         grasp_width = np.min(lwh_list[:, :2], axis=1)
         for i in range(len(start_end)):
             trajectory_pos_list = [[0, grasp_width[i]],  # gripper open!
@@ -626,18 +630,18 @@ if __name__ == '__main__':
     para_dict = {'yolo_conf': 0.3, 'yolo_iou': 0.6, 'device': 'cuda:0',
                  'arm_reset_pos': np.array([0, 0, 0.12]), 'arm_reset_ori': np.array([0, np.pi / 2, 0]),
                  'save_img_flag': True,
-                 'init_pos_range': [[0.03, 0.27], [-0.13, 0.13], [0.01, 0.02]], 'init_offset_range': [[-0.0, 0.0], [-0., 0.]],
+                 'init_pos_range': [[0.13, 0.17], [-0.03, 0.03], [0.01, 0.02]], 'init_offset_range': [[-0.05, 0.05], [-0.1, 0.1]],
                  'init_ori_range': [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]],
-                 'objects_num': np.random.randint(10, 11), 'max_class_num': 9, 'max_color_num': 7,
+                 'objects_num': np.random.randint(5, 6), 'max_class_num': 9, 'max_color_num': 7,
                  'is_render': False,
                  'box_range': [[0.016, 0.048], [0.016], [0.01, 0.02]],
                  'data_source_path': './IMAGE/',
                  'urdf_path': './ASSET/urdf/',
-                 'sundry_path': '../knolling_dataset/sundry_204/',
+                 'sundry_path': '../knolling_dataset/sundry_301/',
                  'real_operate': True,
-                 'object': 'sundry', # box, polygon, sundry
-                 'knolling_model_online': False, 'visual_perception_mode': 'yolo_seg_lstm_grasp',
-                 'lstm_enable_flag': False, 'rl_enable_flag': False,
+                 'object': 'box', # box, polygon, sundry
+                 'knolling_model_online': True, 'visual_perception_mode': 'yolo_pose_lstm_grasp',
+                 'lstm_enable_flag': True, 'rl_enable_flag': True,
                 }
 
     # visual_perception_model：yolo_pose_lstm_grasp, yolo_pose_yolo_grasp, yolo_seg_lstm_grasp
@@ -653,7 +657,7 @@ if __name__ == '__main__':
         if para_dict['real_operate'] == True:
             para_dict['yolo_model_path'] = './ASSET/models/301_seg_real_sundry/weights/best.pt'
         else:
-            para_dict['yolo_model_path'] = './ASSET/models/205_seg_sim_sundry/weights/best.pt'
+            para_dict['yolo_model_path'] = './ASSET/models/301_seg_sim_sundry/weights/best.pt'
     else:
         if para_dict['visual_perception_mode'] == 'yolo_seg':
             para_dict['yolo_model_path'] = './ASSET/models/820_pile_seg/weights/best.pt'
@@ -677,7 +681,7 @@ if __name__ == '__main__':
                  'batch_size': 1,
                  'device': 'cuda:0',
                  'set_dropout': 0.1,
-                 'threshold': 0.55,
+                 'threshold': 0.35, # 0.55 real, 0.35 sim
                  'grasp_model_path': './ASSET/models/LSTM_918_0/best_model.pt',}
 
     if para_dict['real_operate'] == True:
@@ -686,13 +690,16 @@ if __name__ == '__main__':
     arrange_dict = {'running_name': 'autumn-meadow-16',
                     'use_yaml': False,
                     'arrange_x_offset': 0.025,
-                    'arrange_y_offset': -0.15}
+                    'arrange_y_offset': 0}
     # 'arrange_x_offset': 0.03,
     # 'arrange_y_offset': 0.00
     if arrange_dict['use_yaml'] == True:
         arrange_dict['transformer_model_path'] = './ASSET/models/devoted-terrain-29'
 
     rl_dict = {'logger_id': '16', 'obj_num': para_dict['objects_num'], 'rl_mode': 'SAC', 'max_step': 3}
+
+    np.random.seed(1)
+    random.seed(1)
 
     main_env = knolling_main(para_dict=para_dict, lstm_dict=lstm_dict,
                              arrange_dict=arrange_dict, rl_dict=rl_dict)

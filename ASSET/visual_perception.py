@@ -168,7 +168,7 @@ class Yolo_pose_model():
 
         self.epoch = epoch
         model = self.para_dict['yolo_model_path']
-        if real_flag == True:
+        if self.para_dict['real_operate'] == True:
             self.img_path = self.para_dict['data_source_path'] + 'real_images/%012d' % (self.epoch)
 
 
@@ -177,9 +177,13 @@ class Yolo_pose_model():
             # set the resolution width
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 
+            for i in range(10):  # Camera warm-up
+                ret, resized_color_image = cap.read()
+
             while True:
 
                 ret, resized_color_image = cap.read()
+                resized_color_image = cv2.flip(resized_color_image, -1)
 
                 # cv2.imwrite(img_path + '.png', resized_color_image)
                 # img_path_input = img_path + '.png'
@@ -254,15 +258,15 @@ class Yolo_pose_model():
                     break
 
         else:
-            if self.para_dict['save_img_flag'] == True and first_flag == True:
-                self.img_path = self.para_dict['data_source_path'] + 'sim_images/%012d' % (self.epoch)
-                # cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
-                # cv2.imshow('zzz', origin_img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                img_path_output = self.img_path + '.png'
-                # cv2.imwrite(img_path_output, img)
+            # if self.para_dict['save_img_flag'] == True and first_flag == True:
+            self.img_path = self.para_dict['data_source_path'] + 'sim_images/%012s' % (self.epoch)
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', origin_img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            img_path_output = self.img_path + '.png'
+            # cv2.imwrite(img_path_output, img)
 
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             from ultralytics import YOLO
@@ -404,7 +408,7 @@ class Yolo_pose_model():
         # cv2.destroyAllWindows()
 
         # img_path_output = self.para_dict['data_source_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
-        img_path_output = self.para_dict['data_source_path'] + 'sim_images/grasp.png'
+        img_path_output = self.img_path + '_grasp.png'
         # img_path_output = self.para_dict['data_source_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
         pass
