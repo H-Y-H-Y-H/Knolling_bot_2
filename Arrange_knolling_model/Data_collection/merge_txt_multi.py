@@ -12,6 +12,38 @@ step_num = 200
 solution_num = 12
 save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
+def generate_rdm():
+
+
+    # generate rdm pos and ori before the knolling
+    collect_ori = []
+    collect_pos = []
+    restrict = np.max(self.xyz_list)
+    gripper_height = 0.012
+    last_pos = np.array([[0, 0, 1]])
+    for i in range(len(self.xyz_list)):
+        rdm_pos = np.array([random.uniform(self.x_low_obs, self.x_high_obs),
+                            random.uniform(self.y_low_obs, self.y_high_obs), 0.0])
+        ori = [0, 0, random.uniform(0, np.pi)]
+        # ori = [0, 0, 0]
+        collect_ori.append(ori)
+        check_list = np.zeros(last_pos.shape[0])
+
+        while 0 in check_list:
+            rdm_pos = [random.uniform(self.x_low_obs, self.x_high_obs),
+                       random.uniform(self.y_low_obs, self.y_high_obs), 0.0]
+            for z in range(last_pos.shape[0]):
+                if np.linalg.norm(last_pos[z] - rdm_pos) < restrict + gripper_height:
+                    check_list[z] = 0
+                else:
+                    check_list[z] = 1
+        collect_pos.append(rdm_pos)
+
+        last_pos = np.append(last_pos, [rdm_pos], axis=0)
+    collect_pos = np.asarray(collect_pos)[:, :2]
+    collect_ori = np.asarray(collect_ori)[:, 2]
+    # generate rdm pos and ori before the knolling
+
 def merge(): # after that, the structure of dataset is cfg0_0, cfg0_1, cfg0_2,
                                                      # cfg1_0, cfg1_1, cfg1_2,
                                                      # cfg2_0, cfg2_1, cfg2_2

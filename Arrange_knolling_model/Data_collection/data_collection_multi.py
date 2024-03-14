@@ -25,7 +25,7 @@ class Arm:
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
-        self.dataset_path = '../../../knolling_dataset/sundry_204/'
+        self.dataset_path = '../../../knolling_dataset/sundry_301/'
         self.obj_urdf = '../../../knolling_dataset/'
         self.pybullet_path = pd.getDataPath()
         self.is_render = is_render
@@ -86,8 +86,9 @@ class Arm:
             p.configureDebugVisualizer(lightPosition=[random.randint(1, 3), random.randint(1, 2), 5])
         else:
             p.configureDebugVisualizer(lightPosition=[random.randint(1, 3), random.randint(-2, -1), 5])
-        p.configureDebugVisualizer(lightPosition=[random.randint(1, 3), random.randint(1, 2), 5],
-                                   shadowMapResolution=8192, shadowMapIntensity=np.random.randint(5, 8) / 10)
+        p.configureDebugVisualizer(p.COV_ENABLE_SHADOWS, 0)
+        # p.configureDebugVisualizer(lightPosition=[random.randint(1, 3), random.randint(1, 2), 5],
+        #                            shadowMapResolution=8192, shadowMapIntensity=np.random.randint(5, 8) / 10)
         p.resetDebugVisualizerCamera(cameraDistance=0.5,
                                      cameraYaw=45,
                                      cameraPitch=-45,
@@ -183,7 +184,7 @@ class Arm:
             image[:, :, 2] = temp
             return image
 
-    def is_too_close(self, new_pos, existing_objects, min_distance=0.01):
+    def is_too_close(self, new_pos, existing_objects, min_distance=0.06):
         for _, obj_pos in existing_objects:
             if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
                 return True
@@ -233,12 +234,12 @@ class Arm:
             lineFromXYZ=[self.x_high_obs + self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs],
             lineToXYZ=[self.x_low_obs - self.table_boundary, self.y_high_obs + self.table_boundary, self.z_low_obs])
 
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useFixedBase=1,
+        baseid = p.loadURDF(self.urdf_path + "plane.urdf", useFixedBase=1,
                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
-        textureId = p.loadTexture(self.urdf_path + "floor_1.png")
-        p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
-                            rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), 1])
+        textureId = p.loadTexture(self.urdf_path + "floor_white.png")
+        # p.changeVisualShape(baseid, -1, textureUniqueId=textureId,
+        #                     rgbaColor=[np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), np.random.uniform(0.9, 1), 1])
         p.changeDynamics(baseid, -1, lateralFriction=1, spinningFriction=1, rollingFriction=0.002, linearDamping=0.5,
                          angularDamping=0.5)
 
@@ -296,6 +297,8 @@ class Arm:
                 p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
             neat_img = self.get_obs('images', None)
+
+
             # p.restoreState(self.state_blank)
             self.init_ori_range = [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]]
             rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1],
@@ -309,6 +312,23 @@ class Arm:
             for i in object_idx:
                 p.removeBody(i)
             object_idx = []
+
+            # add the wall while generating rdm positions
+            wall_id = []
+            wall_pos = np.array([[self.x_low_obs - self.table_boundary, 0, 0],
+                                 [(self.x_low_obs + self.x_high_obs) / 2, self.y_low_obs - self.table_boundary, 0],
+                                 [self.x_high_obs + self.table_boundary, 0, 0],
+                                 [(self.x_low_obs + self.x_high_obs) / 2, self.y_high_obs + self.table_boundary, 0]])
+            wall_ori = np.array([[0, 1.57, 0],
+                                 [0, 1.57, 1.57],
+                                 [0, 1.57, 0],
+                                 [0, 1.57, 1.57]])
+            for i in range(len(wall_pos)):
+                wall_id.append(p.loadURDF(os.path.join(self.urdf_path, "wall.urdf"), basePosition=wall_pos[i],
+                                          baseOrientation=p.getQuaternionFromEuler(wall_ori[i]), useFixedBase=1,
+                                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
+
             for i in range(obj_num):
 
                 rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
@@ -332,15 +352,19 @@ class Arm:
                                                      basePosition=pos_data,
                                                      baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=False,
                                                      flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT), pos_data))
-                        p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
+                        p.changeVisualShape(p.getBodyUniqueId(i+5), -1, rgbaColor=mapped_color_values[i] + [1])
                         placement_successful = True
-            rdm_img = self.get_obs('images', None)
+                    else:
+                        rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                        rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                        rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                        pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
         ################### recover urdf boxes based on lw_data ###################
 
         # shutil.rmtree(save_urdf_path_one_img)
-        print('here')
         for i in range(100):
             p.stepSimulation()
+        rdm_img = self.get_obs('images', None)
 
         # return self.get_obs('images', None)
         return np.concatenate((rdm_img, neat_img), axis=1)
@@ -398,12 +422,12 @@ if __name__ == '__main__':
     command = 'recover'
     before_after = 'after'
     obj_num = 10
-    SHIFT_DATASET_ID = 0
+    SHIFT_DATASET_ID = 6
 
     total_offset = [0.016, -0.17 + 0.016, 0]
 
-    start_evaluations = 0
-    end_evaluations =10000
+    start_evaluations = 50
+    end_evaluations =100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
@@ -457,14 +481,14 @@ if __name__ == '__main__':
                 image = env.label2image(names['data_' + str(m)][j], labels_name=names['name_' + str(m)][j])
                 image = image[..., :3]
 
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow("zzz", image)
-                cv2.waitKey()
-                cv2.destroyAllWindows()
-                cv2.imwrite('layout_%s.png' % j, image)
+                # cv2.namedWindow('zzz', 0)
+                # cv2.resizeWindow('zzz', 1280, 960)
+                # cv2.imshow("zzz", image)
+                # cv2.waitKey()
+                # cv2.destroyAllWindows()
+                # cv2.imwrite('layout_%s.png' % j, image)
 
-            cv2.imwrite(images_log_path + 'label%d.png' % (j), image)
+                cv2.imwrite(images_log_path + 'label_%d_%d.png' % (j, m), image)
 
     if command == 'knolling':
 

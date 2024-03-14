@@ -34,7 +34,7 @@ class calibration_main(Arm_env):
         else:
             p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2],
                                        shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)
-        baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useMaximalCoordinates=True)
+        baseid = p.loadURDF(self.urdf_path + "plane.urdf", useMaximalCoordinates=True)
 
         ######################################### Draw workspace lines ####################################3
         p.addUserDebugLine(

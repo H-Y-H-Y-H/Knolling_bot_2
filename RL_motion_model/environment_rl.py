@@ -136,7 +136,7 @@ class Arm_env(gym.Env):
 
 
     def create_scene(self,random_lightness=True,use_texture=True):
-        self.baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useMaximalCoordinates=True)
+        self.baseid = p.loadURDF(self.urdf_path + "plane.urdf", useMaximalCoordinates=True)
         if random_lightness:
             p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(0, 1.5), 2],
                                        shadowMapResolution=8192, shadowMapIntensity=np.random.randint(0, 1) / 10)

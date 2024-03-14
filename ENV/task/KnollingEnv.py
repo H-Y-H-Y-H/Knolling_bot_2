@@ -118,7 +118,7 @@ class knolling_env():
         else:
             p.configureDebugVisualizer(lightPosition=[np.random.randint(1, 2), np.random.uniform(-1.5, 0), 2])
 
-        self.baseid = p.loadURDF(self.urdf_path + "plane_zzz.urdf", useMaximalCoordinates=True)
+        self.baseid = p.loadURDF(self.urdf_path + "plane.urdf", useMaximalCoordinates=True)
 
         p.addUserDebugLine(
             lineFromXYZ=[self.x_low_obs - self.table_boundary, self.y_low_obs - self.table_boundary, self.z_low_obs],
