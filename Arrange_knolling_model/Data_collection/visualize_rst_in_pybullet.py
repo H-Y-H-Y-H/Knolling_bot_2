@@ -494,9 +494,9 @@ if __name__ == '__main__':
     # name = 'filigreed-dog-3'
 
     object_num = 10
-    name = 'lively-elevator-68'
+    name = 'daily-sweep-1'
 
-    n_all_solutions = 20 #num_gaussian**object_num
+    n_all_solutions = 2 #num_gaussian**object_num
 
     images_log_path = f'../train_and_test/results/{name}/output_images/'
     data_path = f'../train_and_test/results/{name}/'

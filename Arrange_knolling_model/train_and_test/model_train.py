@@ -36,11 +36,9 @@ def main():
         config.forward_expansion = 4
         config.pre_trained = False
         config.all_steps = False
-
-
         model_path = None
     else:
-        pretrained_model =  'tough-sweep-1'
+        pretrained_model = 'glad-sweep-1'
 
         wandb.init(project=proj_name)
         running_name = wandb.run.name
@@ -58,8 +56,8 @@ def main():
         config.pre_trained = True
         config.inputouput_size = inputouput_size
         config.k_ll = 0.0001
-        config.k_op = 1
-        config.k_pos= 0.1
+        config.k_op = 0.001
+        config.k_pos= 0.01
         config.k_en = 0.001
 
         print(config)
@@ -138,7 +136,7 @@ def main():
 
         # model.in_obj_num  = np.random.choice(numbers, p=probabilities)
         tloss = torch.zeros(1,device=device,requires_grad=True)
-        for in_obj in [6,8,10]:
+        for in_obj in range(1,11):#
             model.in_obj_num = in_obj
 
 
@@ -203,7 +201,7 @@ def main():
                 # Calucluate Entropy loss:
                 train_entropy_loss = entropy_loss(pi)
 
-                tloss = ms_min_sample_loss+k_pos * pos_loss
+                tloss = ms_min_sample_loss+k_pos * pos_loss + k_op * overlap_loss
                 # tloss = k_ll * ll_loss + ms_min_sample_loss + k_op * overlap_loss + k_pos * pos_loss + k_en*train_entropy_loss
 
                 if epoch % 10 == 0 and print_flag:
@@ -426,9 +424,9 @@ if __name__ == '__main__':
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 
-    sweep_train_flag = False
+    sweep_train_flag = True
 
-    proj_name = "knolling_0217"
+    proj_name = "knolling_0301"
     if sweep_train_flag:
         sweep_configuration = {
             "method": "random",
@@ -438,16 +436,16 @@ if __name__ == '__main__':
                 'data_amount':{'values':[DATA_CUT*solu_num]},
                 "lr": {"values": [1e-4]},
                 "map_embed_d_dim": {"values": [64]},#32,64,
-                "num_attention_heads": {"values": [4]},#,16,32
+                "num_attention_heads": {"values": [8]},#,16,32
                 "num_layers":{"values":[4]},
                 "SCALE_DATA": {"values": [SCALE_DATA]},
                 "SHIFT_DATA": {"values": [SHIFT_DATA]},
                 "num_gaussian":{"values":[3]},
                 "batch_size":{"values":[4]},
-                "k_ll":{"values":[0.001]},
-                "k_op":{'values':[0.1]},
-                'k_pos':{'values':[0.1]},
-                'k_en':{'values':[0.001]}
+                "k_ll":{"values":[0.0001]},
+                "k_op":{'values':[0.001]},
+                'k_pos':{'values':[0.01]},
+                'k_en':{'values':[0.0001]}
             },
         }
 

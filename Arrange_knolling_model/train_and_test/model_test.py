@@ -129,7 +129,7 @@ if __name__ == '__main__':
     # Project is specified by <entity/project-name>
     # runs = api.runs("knolling0205_2_overlap")
 
-    name = 'lively-elevator-68'
+    name = 'daily-sweep-1'
 
     model_name = "best_model.pt"
 
@@ -138,7 +138,7 @@ if __name__ == '__main__':
     config = {k: v for k, v in config_dict.items() if not k.startswith('_')}
 
     config = argparse.Namespace(**config)
-    MIN_PRED = True
+    MIN_PRED = False
     object_num = 10
     valid_lw_data = []
     valid_pos_data = []

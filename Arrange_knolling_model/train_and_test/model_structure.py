@@ -252,12 +252,12 @@ def calculate_collision_loss(pred_pos, obj_length_width,overlap_loss_weight=1000
     x_violation = torch.clamp(-(pred_pos[..., 0] - half_sizes[..., 0]), min=0)  # x < 0 considering object size
     y_violation_lower = torch.clamp(-(pred_pos[..., 1] - y_min - half_sizes[..., 1]),
                                     min=0)  # y < -0.17 considering object size
-    y_violation_upper = torch.clamp(pred_pos[..., 1] - y_max + half_sizes[..., 1],
-                                    min=0)  # y > 0.17 considering object size
+    # y_violation_upper = torch.clamp(pred_pos[..., 1] - y_max + half_sizes[..., 1],
+    #                                 min=0)  # y > 0.17 considering object size
 
 
     # Combine violations into a single tensor
-    boundary_violations = x_violation + y_violation_lower + y_violation_upper
+    boundary_violations = x_violation + y_violation_lower #+ y_violation_upper
 
     # Calculate boundary loss as the sum of all violations
     boundary_loss = boundary_violations.sum(dim=[1])  # Sum over all objects and dimensions
