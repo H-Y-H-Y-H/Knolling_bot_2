@@ -425,7 +425,6 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-
     sweep_train_flag = False
 
     proj_name = "knolling_0217"

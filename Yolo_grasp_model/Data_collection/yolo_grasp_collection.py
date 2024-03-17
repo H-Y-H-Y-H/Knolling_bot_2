@@ -84,7 +84,7 @@ class yolo_grasp_collection_main():
             print('no pile in the environment, try to reset!')
             return self.img_per_epoch
 
-        # yolo_img = self.task.get_obs(look_flag=True, epoch=img_index_start + self.img_per_epoch)
+        # yolo_img = self.Env.get_obs(look_flag=True, epoch=img_index_start + self.img_per_epoch)
         _, check_flag = self.task.check_bound()
         # output_data: xyz, rpy, lwh, qua
         if check_flag == False:

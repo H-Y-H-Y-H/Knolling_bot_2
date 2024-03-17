@@ -1,7 +1,7 @@
 import numpy as np
 
-from robot.SundryRobot import Sundry_robot
-from task.SundryEnv import Sundry_env
+from Robot.SundryRobot import Sundry_robot
+from Env.SundryEnv import Sundry_env
 from utils import *
 
 class sundry_grasp_main():
@@ -96,7 +96,7 @@ if __name__ == '__main__':
         'gripper_lateral_friction': 1, 'gripper_contact_damping': 1, 'gripper_contact_stiffness': 50000,
         'obj_lateral_friction': 1, 'obj_contact_damping': 1, 'obj_contact_stiffness': 50000,
         'base_lateral_friction': 1, 'base_contact_damping': 1, 'base_contact_stiffness': 50000,
-        'object_urdf_path': '../ASSET/urdf/OpensCAD_generate/urdf_file/',
+        'object_path': '../../knolling_dataset/sundry_301/',
         'urdf_path': '../ASSET/urdf/',
         'real_operate': False,
         'gripper_threshold': 0.002, 'gripper_sim_step': 10, 'gripper_force': 3,

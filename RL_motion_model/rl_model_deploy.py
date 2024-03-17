@@ -124,7 +124,7 @@ if __name__ == '__main__':
         env = Arm_env(para_dict=para_dict, init_scene=num_scene, offline_data = False)
 
         for i in range(10000):
-            # control robot arm manually:
+            # control Robot arm manually:
 
             x_ml = p.readUserDebugParameter(env.x_manual_id)
             y_ml = p.readUserDebugParameter(env.y_manual_id)

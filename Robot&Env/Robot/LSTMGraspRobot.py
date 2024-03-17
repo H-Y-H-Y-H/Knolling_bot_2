@@ -6,7 +6,7 @@ import os
 import socket
 from utils import *
 
-class Sundry_robot():
+class LSTM_grasp_collection_robot():
 
     def __init__(self, para_dict, knolling_para=None):
 
@@ -26,8 +26,8 @@ class Sundry_robot():
 
         if self.para_dict['real_operate'] == True:
 
-            HOST = "192.168.1.112"  # Standard loopback interface address (localhost)
-            PORT = 8882 # Port to listen on (non-privileged ports are > 1023)
+            HOST = "192.168.0.187"  # Standard loopback interface address (localhost)
+            PORT = 8881 # Port to listen on (non-privileged ports are > 1023)
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.bind((HOST, PORT))
             # It should be an integer from 1 to 65535, as 0 is reserved. Some systems may require superuser privileges if the port number is less than 8192.
@@ -54,7 +54,7 @@ class Sundry_robot():
             real_xyz, _ = forward_kinematic(real_motor)
         else:
             self.conn = None
-            self.real_table_height = 0.03
+            self.real_table_height = 0.026
             self.sim_table_height = -0.014
 
         return self.conn, self.real_table_height, self.sim_table_height
@@ -66,7 +66,7 @@ class Sundry_robot():
                                                   targetOrientation=p.getQuaternionFromEuler(
                                                       self.para_dict['reset_ori']))
 
-        # after reset the position of the robot arm manually, we should add the force to keep the arm
+        # after reset the position of the Robot arm manually, we should add the force to keep the arm
         for motor_index in range(5):
             p.resetJointState(self.arm_id, motor_index, ik_angles0[motor_index])
         for motor_index in range(5):
@@ -78,8 +78,8 @@ class Sundry_robot():
 
     def create_arm(self):
 
-        self.arm_id = p.loadURDF(self.para_dict['urdf_path'] + "robot_arm928/robot_arm.urdf",
-                                 basePosition=[-0.08, 0, -0.005], useFixedBase=True,
+        self.arm_id = p.loadURDF(os.path.join(self.para_dict['urdf_path'], "robot_arm928/robot_arm.urdf"),
+                                 basePosition=[-0.08, 0, 0.02], useFixedBase=True,
                                  flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT)
 
         p.changeDynamics(self.arm_id, 7, lateralFriction=self.para_dict['gripper_lateral_friction'],
@@ -180,9 +180,9 @@ class Sundry_robot():
                 target_ori[2] - tar_ori[2]) < 0.001:
                 break
         ee_pos = np.asarray(p.getLinkState(self.arm_id, 9)[0])
-        # if ee_pos[2] - target_pos[2] > 0.002 and index == 3 and move_success_flag == True:
-        #     move_success_flag = False
-        #     print('ee can not reach the bottom, fail!')
+        if ee_pos[2] - target_pos[2] > 0.002 and index == 3 and move_success_flag == True:
+            move_success_flag = False
+            print('ee can not reach the bottom, fail!')
 
         self.gripper_left_pos = np.asarray(p.getLinkState(self.arm_id, 7)[0])
         self.gripper_right_pos = np.asarray(p.getLinkState(self.arm_id, 8)[0])

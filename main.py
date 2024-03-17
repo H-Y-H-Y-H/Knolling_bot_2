@@ -122,7 +122,7 @@ class knolling_main():
             #                                  demo_data[:, -1].reshape(len(demo_data), 1),
             #                                  demo_data[:, 2:4],
             #                                  np.ones(len(demo_data)).reshape(len(demo_data), 1) * 0.016), axis=1)
-            # self.task.recover_objects(config_data=recover_config)
+            # self.Env.recover_objects(config_data=recover_config)
 
             rotate_index = np.where(demo_data[:, 2] < demo_data[:, 3])[0]
             ori_after = np.zeros((len(demo_data), 3))
@@ -533,7 +533,7 @@ class knolling_main():
                 # time.sleep(1 / 48)
         ############### Back to the reset pos and ori ###############
 
-        # self.task.get_obs(look_flag=True, img_path=self.para_dict['data_source_path'] + 'real_images/after.png')
+        # self.Env.get_obs(look_flag=True, img_path=self.para_dict['data_source_path'] + 'real_images/after.png')
 
     def exclude_objects(self):
 
@@ -568,7 +568,7 @@ class knolling_main():
         # create the gripper mapping from sim to real
         self.robot.calculate_gripper()
 
-        # setup and connect the real world robot arm
+        # setup and connect the real world Robot arm
         self.conn, self.real_table_height, self.sim_table_height = self.robot.arm_setup()
 
         if recover_flag == False:

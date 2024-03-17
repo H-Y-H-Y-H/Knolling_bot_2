@@ -318,7 +318,7 @@ class yolo_grasp_collection_env():
                                                   targetOrientation=p.getQuaternionFromEuler(
                                                       self.para_dict['reset_ori']))
 
-        # after reset the position of the robot arm manually, we should add the force to keep the arm
+        # after reset the position of the Robot arm manually, we should add the force to keep the arm
         for motor_index in range(5):
             p.resetJointState(self.arm_id, motor_index, ik_angles0[motor_index])
         for motor_index in range(5):

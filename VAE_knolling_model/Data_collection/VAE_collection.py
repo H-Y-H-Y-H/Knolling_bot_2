@@ -19,9 +19,9 @@ from arrange_policy import configuration_zzz, arrangement
 
 torch.manual_seed(42)
 
-class Arm:
+class Collection_env:
 
-    def __init__(self, is_render, arrange_policy, total_offset=None):
+    def __init__(self, is_render, arrange_policy,total_offset):
 
         self.kImageSize = {'width': 480, 'height': 480}
         self.urdf_path = '../../ASSET/urdf/'
@@ -388,7 +388,7 @@ class Arm:
             arranger.arrange_policy['ratio_classify_flag'] = policy_switch[i][3]
 
             times = 0
-            while True: # generate several results for each configuration, now is 3
+            while True: # generate several results for each configuration, now is 4
                 data_after, name_after = arranger.generate_arrangement(data=data_before, data_name=object_name_list)
                 # the sequence of self.items_pos_list, self.items_ori_list are the same as those in self.xyz_list
 
@@ -419,9 +419,9 @@ if __name__ == '__main__':
     np.random.seed(110)
     np.random.seed(110)
 
-    command = 'knolling'
+    command = 'recover'
     before_after = 'after'
-    obj_num = 8
+    obj_num = 10
     SHIFT_DATASET_ID = 6
 
     total_offset = [0.016, -0.17 + 0.016, 0]
@@ -431,7 +431,7 @@ if __name__ == '__main__':
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/learning_data_0314_{obj_num}/'
+    target_path = f'../../../knolling_dataset/learning_data_207_{obj_num}/'
     images_log_path = target_path + 'images_after/'
     os.makedirs(images_log_path, exist_ok=True)
 
@@ -454,7 +454,7 @@ if __name__ == '__main__':
     solution_num = 1
 
     if command == 'recover':
-        env = Arm(is_render=True, arrange_policy=arrange_policy,total_offset = total_offset)
+        env = Collection_env(is_render=True, arrange_policy=arrange_policy, total_offset = total_offset)
         with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
             color_dict = json.load(f)
         names = locals()
@@ -490,13 +490,13 @@ if __name__ == '__main__':
 
                 cv2.imwrite(images_log_path + 'label_%d_%d.png' % (j, m), image)
 
-    if command == 'knolling':
+    if command == 'collection':
 
         # save the parameters of data collection
         with open(target_path[:-1] + "_readme.json", "w") as f:
             json.dump(arrange_policy, f, indent=4)
 
-        env = Arm(is_render=False, arrange_policy=arrange_policy)
+        env = Collection_env(is_render=False, arrange_policy=arrange_policy, total_offset = total_offset)
 
         change_cfg_flag = False
 

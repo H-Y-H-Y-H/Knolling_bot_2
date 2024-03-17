@@ -161,7 +161,7 @@ def sim_cmd2tarpos(tar_pos_cmds):
     return tar_pos
 
 
-# real robot:motor limit:0-4095(0 to 360 degrees)
+# real Robot:motor limit:0-4095(0 to 360 degrees)
 
 def real_cmd2tarpos(tar_pos_cmds):  # sim to real!!!!!!!!!!!!!!!!
 

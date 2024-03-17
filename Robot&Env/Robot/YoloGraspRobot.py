@@ -6,12 +6,11 @@ import os
 import socket
 from utils import *
 
-class LSTM_grasp_collection_robot():
+class yolo_grasp_collection_robot():
 
-    def __init__(self, para_dict, knolling_para=None):
+    def __init__(self, para_dict):
 
         self.para_dict = para_dict
-        self.knolling_para = knolling_para
         self.is_render = para_dict['is_render']
 
     def calculate_gripper(self):
@@ -66,7 +65,7 @@ class LSTM_grasp_collection_robot():
                                                   targetOrientation=p.getQuaternionFromEuler(
                                                       self.para_dict['reset_ori']))
 
-        # after reset the position of the robot arm manually, we should add the force to keep the arm
+        # after reset the position of the Robot arm manually, we should add the force to keep the arm
         for motor_index in range(5):
             p.resetJointState(self.arm_id, motor_index, ik_angles0[motor_index])
         for motor_index in range(5):

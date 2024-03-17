@@ -186,7 +186,7 @@ class Arm_env(gym.Env):
 
     def create_objects(self): # a list of objects states
 
-        if not self.offline_data: # random initialize the env for robot.
+        if not self.offline_data: # random initialize the env for Robot.
             while 1:
                 self.lwh_list = self.get_data_virtual()
                 rdm_ori_roll  = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1], size=(self.boxes_num, 1))
@@ -429,7 +429,7 @@ class Arm_env(gym.Env):
         obs_list = self.get_obs()
         r, Done = self.get_r()
 
-        # robot arm becomes crazy
+        # Robot arm becomes crazy
         bar_pos = np.asarray(p.getLinkState(self.arm_id, 6)[0])
         if bar_pos[0] < 0:
             p.resetSimulation()
@@ -605,7 +605,7 @@ if __name__ == '__main__':
         env = Arm_env(para_dict=para_dict, init_scene=num_scene, offline_data = False)
 
         for i in range(10000):
-            # control robot arm manually:
+            # control Robot arm manually:
 
             x_ml = p.readUserDebugParameter(env.x_manual_id)
             y_ml = p.readUserDebugParameter(env.y_manual_id)
