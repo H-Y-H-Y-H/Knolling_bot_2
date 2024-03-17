@@ -261,7 +261,7 @@ class Yolo_seg_model():
 if __name__ == '__main__':
 
     para_dict = {'device': 'cuda:0', 'yolo_conf': 0.7, 'yolo_iou': 0.6, 'real_operate': False,
-                 'yolo_model_path': '../ASSET/models/205_seg_sundry/weights/best.pt',
+                 'yolo_model_path': '../ASSET/models/205_seg_sim_sundry/weights/best.pt',
                  'dataset_path': '../../knolling_dataset/yolo_seg_sundry_205/images/val/',
                  'index_begin': 44000}
 

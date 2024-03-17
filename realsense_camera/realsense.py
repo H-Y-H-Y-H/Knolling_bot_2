@@ -66,10 +66,10 @@ try:
         second_point = int((640 - 640 * y_ratio) / 2 + int(640 * y_ratio)), int((480 - 480 * x_ratio) / 2) + int(480 * x_ratio)
         print(first_point)
         print(second_point)
-        resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
-
-        resized_color_image = cv2.line(resized_color_image, (320, 0), (320, 480), (255, 255, 0), 1)
-        resized_color_image = cv2.line(resized_color_image, (0, 240), (640, 240), (255, 255, 0), 1)
+        # resized_color_image = cv2.rectangle(resized_color_image, first_point, second_point, (0, 0, 255))
+        #
+        # resized_color_image = cv2.line(resized_color_image, (320, 0), (320, 480), (255, 255, 0), 1)
+        # resized_color_image = cv2.line(resized_color_image, (0, 240), (640, 240), (255, 255, 0), 1)
 
         # visualize_img = cv2.resize(resized_color_image,(1280,960),interpolation = cv2.INTER_AREA)
         # Show images

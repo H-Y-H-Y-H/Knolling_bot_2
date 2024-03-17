@@ -215,7 +215,7 @@ data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 def train_model(model, X_train, Y_train, epochs=3000, lr=0.01,alpha= 0.5):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     for epoch in range(epochs):
-        model.train()
+        model.main()
         total_loss = 0
 
         for X_batch, Y_batch in data_loader:

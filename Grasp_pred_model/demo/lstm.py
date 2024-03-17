@@ -106,7 +106,7 @@ def binary_acc(preds, y):
 def train(rnn, iterator, optimizer, criteon):
     
     avg_acc = []
-    rnn.train()
+    rnn.main()
     
     for i, batch in enumerate(iterator):
         

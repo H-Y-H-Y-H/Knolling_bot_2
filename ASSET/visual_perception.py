@@ -6,7 +6,7 @@ import numpy as np
 import json
 from utils import *
 from ASSET.grasp_model_deploy import *
-
+import time
 
 class Yolo_pose_model():
 
@@ -168,7 +168,7 @@ class Yolo_pose_model():
 
         self.epoch = epoch
         model = self.para_dict['yolo_model_path']
-        if real_flag == True:
+        if self.para_dict['real_operate'] == True:
             self.img_path = self.para_dict['data_source_path'] + 'real_images/%012d' % (self.epoch)
 
 
@@ -177,9 +177,13 @@ class Yolo_pose_model():
             # set the resolution width
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 
+            for i in range(10):  # Camera warm-up
+                ret, resized_color_image = cap.read()
+
             while True:
 
                 ret, resized_color_image = cap.read()
+                resized_color_image = cv2.flip(resized_color_image, -1)
 
                 # cv2.imwrite(img_path + '.png', resized_color_image)
                 # img_path_input = img_path + '.png'
@@ -254,15 +258,15 @@ class Yolo_pose_model():
                     break
 
         else:
-            if self.para_dict['save_img_flag'] == True and first_flag == True:
-                self.img_path = self.para_dict['data_source_path'] + 'sim_images/%012d' % (self.epoch)
-                # cv2.namedWindow('zzz', 0)
-                # cv2.resizeWindow('zzz', 1280, 960)
-                # cv2.imshow('zzz', origin_img)
-                # cv2.waitKey(0)
-                # cv2.destroyAllWindows()
-                img_path_output = self.img_path + '.png'
-                # cv2.imwrite(img_path_output, img)
+            # if self.para_dict['save_img_flag'] == True and first_flag == True:
+            self.img_path = self.para_dict['data_source_path'] + 'sim_images/%012s' % (self.epoch)
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', origin_img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            img_path_output = self.img_path + '.png'
+            # cv2.imwrite(img_path_output, img)
 
             args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'], iou=self.para_dict['yolo_iou'], device=self.yolo_device)
             from ultralytics import YOLO
@@ -404,7 +408,7 @@ class Yolo_pose_model():
         # cv2.destroyAllWindows()
 
         # img_path_output = self.para_dict['data_source_path'] + 'sim_images/%012d' % (output_epoch) + '_grasp.png'
-        img_path_output = self.para_dict['data_source_path'] + 'sim_images/grasp.png'
+        img_path_output = self.img_path + '_grasp.png'
         # img_path_output = self.para_dict['data_source_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
         pass
@@ -424,8 +428,12 @@ class Yolo_seg_model():
         else:
             self.grasp_model = Grasp_model(para_dict=para_dict, lstm_dict=lstm_dict)
 
-        with open('./ASSET/urdf/object_color/rgb_info.json') as f:
-            self.color_dict = json.load(f)
+        try:
+            with open('./ASSET/urdf/object_color/rgb_info.json') as f:
+                self.color_dict = json.load(f)
+        except FileNotFoundError:
+            with open('./urdf/object_color/rgb_info.json') as f:
+                self.color_dict = json.load(f)
 
     def adjust_box(self, box, center_image, factor):
         center_box = np.mean(box, axis=0)
@@ -446,12 +454,17 @@ class Yolo_seg_model():
 
     def calculate_color(self, image, mask):
 
-        mask = mask[:, :, 0].astype(bool)
+        kernel = np.ones((10, 10), np.uint8)
+
+        # Apply erosion to shrink the object's margin
+        mask = cv2.erode(mask[:, :, 0], kernel, iterations=1).astype(bool)
+
+        # mask = mask[:, :, 0].astype(bool)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        masked_rgb = np.mean(image_rgb[mask], axis=0)
+        masked_rgb = np.mean(image_rgb[mask], axis=0) / 255
         return masked_rgb
 
-    def plot_result(self, result_one_img, truth_flag=False):
+    def plot_result(self, result_one_img, info_flag=False):
 
         result = []
 
@@ -502,11 +515,12 @@ class Yolo_seg_model():
                 total_color_value.append(np.mean(np.asarray(value), axis=0))
                 total_color_name.append(color_name)
             total_color_value = np.asarray(total_color_value)
-            pred_color_idx = np.argmin(np.linalg.norm(total_color_value - (pred_color_rgb / 255), axis=1))
+            pred_color_idx = np.argmin(np.linalg.norm(total_color_value - pred_color_rgb, axis=1))
 
             # Blend the original image and the red overlay in the "special area"
-            special_area_mask[:, :, :] = special_area_mask[:, :, :] * highlight_overlay
-            # img = cv2.addWeighted(img, 1, special_area_mask, 0.5, 0)
+            if info_flag == False:
+                special_area_mask[:, :, :] = special_area_mask[:, :, :] * highlight_overlay
+                img = cv2.addWeighted(img, 1, special_area_mask, 0.2, 0)
 
             correct_box, rect = self.find_rotated_bounding_box(masks[i])
             kpt_x = ((correct_box[:, 1] - 6) / self.mm2px).reshape(-1, 1)
@@ -522,33 +536,33 @@ class Yolo_seg_model():
             length_idx = np.argmax([np.linalg.norm(kpt_mm[0] - kpt_mm[1]), np.linalg.norm(kpt_mm[0] - kpt_mm[-1])])
             temp = np.where(length_idx == 1, [-1], [1])[0]
             ori = np.arctan2(kpt_mm[temp, 1] - kpt_mm[0, 1], kpt_mm[temp, 0] - kpt_mm[0, 0])
-            if ori > np.pi:
+            # the output of np.arctan2 is (pi / 2, -pi / 2)
+            if ori > np.pi / 2:
                 ori -= np.pi
-            elif ori < 0:
+            elif ori < -np.pi / 2:
                 ori += np.pi
 
             # Plot the bounding box
-            img = cv2.line(img, (correct_box[0, 0], correct_box[0, 1]), (correct_box[1, 0], correct_box[1, 1]),
-                           box_color, 1)
-            img = cv2.line(img, (correct_box[1, 0], correct_box[1, 1]), (correct_box[2, 0], correct_box[2, 1]),
-                           box_color, 1)
-            img = cv2.line(img, (correct_box[2, 0], correct_box[2, 1]), (correct_box[3, 0], correct_box[3, 1]),
-                           box_color, 1)
-            img = cv2.line(img, (correct_box[3, 0], correct_box[3, 1]), (correct_box[0, 0], correct_box[0, 1]),
-                           box_color, 1)
-
-            # plot label
-            label1 = 'cls: %s, conf: %.5f, color: %s' % (
-            pred_cls_name[i], pred_conf[i], total_color_name[pred_color_idx])
-            label2 = 'index: %d, x: %.4f, y: %.4f' % (i, kpt_center[0], kpt_center[1])
-            label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (length_mm, width_mm, ori)
-            w, h = cv2.getTextSize('', 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
-            p1 = np.array([int(pred_xylws[i, 0] * 640), int(pred_xylws[i, 1] * 480)])
-            outside = p1[1] - h >= 3
-            if truth_flag == True:
-                txt_color = (0, 0, 255)
-                pass
+            if info_flag == False:
+                img = cv2.line(img, (correct_box[0, 0], correct_box[0, 1]), (correct_box[1, 0], correct_box[1, 1]),
+                               box_color, 1)
+                img = cv2.line(img, (correct_box[1, 0], correct_box[1, 1]), (correct_box[2, 0], correct_box[2, 1]),
+                               box_color, 1)
+                img = cv2.line(img, (correct_box[2, 0], correct_box[2, 1]), (correct_box[3, 0], correct_box[3, 1]),
+                               box_color, 1)
+                img = cv2.line(img, (correct_box[3, 0], correct_box[3, 1]), (correct_box[0, 0], correct_box[0, 1]),
+                               box_color, 1)
             else:
+                # plot label
+                label1 = 'cls: %s, conf: %.5f, color: %s' % (pred_cls_name[i], pred_conf[i], total_color_name[pred_color_idx])
+                # label1 = 'cls: %s, conf: %.5f' % (pred_cls_name[i], pred_conf[i])
+
+                label2 = 'index: %d, x: %.4f, y: %.4f' % (i, kpt_center[0], kpt_center[1])
+                label3 = 'l: %.4f, w: %.4f, ori: %.4f' % (length_mm, width_mm, ori)
+                w, h = cv2.getTextSize('', 0, fontScale=zzz_lw / 3, thickness=tf)[0]  # text width, z_mm_center
+                p1 = np.array([int(pred_xylws[i, 0] * 640), int(pred_xylws[i, 1] * 480)])
+                outside = p1[1] - h >= 3
+
                 img = cv2.putText(img, label1, (p1[0] - 50, p1[1] + 22 if outside else p1[1] + h + 2),
                                   0, zzz_lw / 3, (0, 0, 0), thickness=tf, lineType=cv2.LINE_AA)
                 img = cv2.putText(img, label2, (p1[0] - 50, p1[1] + 32 if outside else p1[1] + h + 12),
@@ -556,79 +570,60 @@ class Yolo_seg_model():
                 img = cv2.putText(img, label3, (p1[0] - 50, p1[1] + 42 if outside else p1[1] + h + 22),
                                   0, zzz_lw / 3, txt_color, thickness=tf, lineType=cv2.LINE_AA)
 
-            result.append(
-                [kpt_center[0], kpt_center[1], length_mm, width_mm, ori, pred_cls_idx[i], pred_color_idx, pred_conf[i]])
+            result.append([kpt_center[0], kpt_center[1], length_mm, width_mm, ori, pred_cls_idx[i], pred_color_idx, pred_conf[i]])
 
         ################### zzz plot mask ####################
         result = np.asarray(result)
 
         return img, result
 
-    def model_predict(self, start_index=0, end_index=0, use_dataset=False, img=None, epoch=0, gt_boxes_num=None):
+    def model_predict(self, start_index=0, end_index=0, use_dataset=False,
+                      img=None, epoch=0, gt_boxes_num=None, show_mask=False, capture_video=False):
 
+        from ultralytics import YOLO
         self.epoch = epoch
         model = self.para_dict['yolo_model_path']
         if self.para_dict['real_operate'] == False:
 
-            if use_dataset == True:
-                mask_dir = '../../knolling_dataset/yolo_seg_sundry_205/masks/'
-                os.makedirs(mask_dir, exist_ok=True)
-                for i in range(int(end_index - start_index)):
-                    image_source = self.para_dict['dataset_path'] + '%012d.png' % (start_index + i)
-                    args = dict(model=model, source=image_source, conf=self.para_dict['yolo_conf'],
-                                iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-                    from ultralytics import YOLO
-                    pre_images = YOLO(model)(**args)
-                    if len(pre_images) == 0:
-                        print('yolo no more than 1')
-                        continue
-                    else:
-                        result_one_img = pre_images[0]
-                        # results: x, y, length, width, ori, cls
-                        new_img, results = self.plot_result(result_one_img)
+            args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'],
+                        iou=self.para_dict['yolo_iou'], device=self.para_dict['device'], agnostic_nms=True)
+            from ultralytics import YOLO
+            pre_images = YOLO(model)(**args)
+            result_one_img = pre_images[0][:gt_boxes_num]
+            if len(result_one_img) == 0:
+                print('yolo no more than 1')
+                return []
 
-                    cv2.namedWindow('zzz', 0)
-                    cv2.resizeWindow('zzz', 1280, 960)
-                    cv2.imshow('zzz', new_img)
-                    cv2.waitKey(0)
-                    cv2.destroyAllWindows()
+            if show_mask == False:
+                new_img, results = self.plot_result(result_one_img, info_flag=True)
             else:
-                args = dict(model=model, source=img, conf=self.para_dict['yolo_conf'],
-                            iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
-                from ultralytics import YOLO
-                pre_images = YOLO(model)(**args)
-                result_one_img = pre_images[0][:gt_boxes_num]
-                if len(result_one_img) == 0:
-                    print('yolo no more than 1')
-                    return []
-
                 new_img, results = self.plot_result(result_one_img)
 
-                manipulator_before = np.concatenate((results[:, :2], np.zeros((len(results), 3)), results[:, 4].reshape(-1, 1)), axis=1)
-                pred_lwh_list = np.concatenate((results[:, 2:4], np.ones((len(results), 1)) * 0.016), axis=1)
-                pred_cls = results[:, -3]
-                pred_color = results[:, -2]
-                pred_conf = results[:, -1]
-                self.img_output = img
+            manipulator_before = np.concatenate((results[:, :2], np.zeros((len(results), 3)), results[:, 4].reshape(-1, 1)), axis=1)
+            pred_lwh_list = np.concatenate((results[:, 2:4], np.ones((len(results), 1)) * 0.016), axis=1)
+            pred_cls = results[:, -3]
+            pred_color = results[:, -2]
+            pred_conf = results[:, -1]
+            self.img_output = img
 
-                if self.para_dict['lstm_enable_flag'] == True:
-                    input_data = np.concatenate((manipulator_before[:, :2],
-                                                 pred_lwh_list[:, :2],
-                                                 manipulator_before[:, -1].reshape(-1, 1),
-                                                 pred_conf.reshape(-1, 1)), axis=1)
-                    pred_grasp, model_output = self.grasp_model.pred_test(input_data)
+            # if self.para_dict['lstm_enable_flag'] == True and show_mask == False:
+            #     input_data = np.concatenate((manipulator_before[:, :2],
+            #                                  pred_lwh_list[:, :2],
+            #                                  manipulator_before[:, -1].reshape(-1, 1),
+            #                                  pred_conf.reshape(-1, 1)), axis=1)
+            #     pred_grasp, model_output = self.grasp_model.pred_test(input_data)
+            #
+            #     # yolo_baseline_threshold = 0.92
+            #     # prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
+            #     # model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
+            #     print('this is prediction', pred_grasp)
+            #     self.plot_grasp(manipulator_before, pred_grasp, model_output)
 
-                    # yolo_baseline_threshold = 0.92
-                    # prediction = np.where(pred_conf < yolo_baseline_threshold, 0, 1)
-                    # model_output = np.concatenate((np.zeros((len(prediction), 1)), pred_conf.reshape(len(prediction), 1)), axis=1)
-                    print('this is prediction', pred_grasp)
-                    self.plot_grasp(manipulator_before, pred_grasp, model_output)
-
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', new_img)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+            cv2.namedWindow('zzz', 0)
+            cv2.resizeWindow('zzz', 1280, 960)
+            cv2.imshow('zzz', new_img)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
         else:
             self.img_path = self.para_dict['data_source_path'] + 'real_images/%012d' % (epoch)
 
@@ -637,34 +632,60 @@ class Yolo_seg_model():
             # set the resolution width
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 
+            if capture_video == True:
+                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                fps = 9#int(cap.get(cv2.CAP_PROP_FPS))
+
+                # Define the codec and create VideoWriter object
+                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                out_origin = cv2.VideoWriter('origin_video.avi', fourcc, fps, (w, h))
+                out_landmark = cv2.VideoWriter('landmark_video.avi', fourcc, fps, (w, h))
+                out_info = cv2.VideoWriter('info_video.avi', fourcc, fps, (w, h))
+                print('capture warmed up, recording start!')
+
             for i in range(10):  # Camera warm-up
                 ret, resized_color_image = cap.read()
-
+            count = 0
             while True:
+                time0 = time.time()
                 ret, resized_color_image = cap.read()
                 resized_color_image = cv2.flip(resized_color_image, -1)
 
                 args = dict(model=model, source=resized_color_image, conf=self.para_dict['yolo_conf'],
-                            iou=self.para_dict['yolo_iou'], device=self.para_dict['device'])
+                            iou=self.para_dict['yolo_iou'], device=self.para_dict['device'], agnostic_nms=True, verbose=False)
 
-                from ultralytics import YOLO
+
                 pre_images = YOLO(model)(**args)
                 result_one_img = pre_images[0][:gt_boxes_num]
+                origin_img = np.copy(result_one_img.orig_img)
                 if len(result_one_img) == 0:
                     continue
-                new_img, results = self.plot_result(result_one_img)
+
+                landmark_img, results = self.plot_result(result_one_img)
+                info_img, results = self.plot_result(result_one_img, info_flag=True)
+                # if show_mask == False:
+                #     new_img, results = self.plot_result(result_one_img)
+                # else:
+                #     new_img, results = self.plot_result(result_one_img, mask_flag=True)
 
                 manipulator_before = np.concatenate((results[:, :2], np.zeros((len(results), 3)), results[:, 4].reshape(-1, 1)), axis=1)
                 pred_lwh_list = np.concatenate((results[:, 2:4], np.ones((len(results), 1)) * 0.016), axis=1)
                 pred_cls = results[:, -3]
                 pred_color = results[:, -2]
                 pred_conf = results[:, -1]
-                self.img_output = new_img
+                self.img_output = landmark_img
 
                 if self.para_dict['lstm_enable_flag'] == True:
+                    input_ori = np.copy(manipulator_before[:, -1].reshape(-1, 1))
+                    for ori in input_ori:
+                        if ori > np.pi:
+                            ori -= np.pi
+                        elif ori < 0:
+                            ori += np.pi
                     input_data = np.concatenate((manipulator_before[:, :2],
                                                  pred_lwh_list[:, :2],
-                                                 manipulator_before[:, -1].reshape(-1, 1),
+                                                 input_ori,
                                                  pred_conf.reshape(-1, 1)), axis=1)
                     pred_grasp, model_output = self.grasp_model.pred_test(input_data)
 
@@ -674,19 +695,41 @@ class Yolo_seg_model():
                     print('this is prediction', pred_grasp)
                     self.plot_grasp(manipulator_before, pred_grasp, model_output)
 
-                cv2.namedWindow('zzz', 0)
-                cv2.resizeWindow('zzz', 1280, 960)
-                cv2.imshow('zzz', new_img)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    cv2.destroyAllWindows()
-                    img_path_output = self.img_path + '_pred.png'
-                    cv2.imwrite(img_path_output, new_img)
-                    break
+                if capture_video == True:
+                    # print(count)
 
-        if self.para_dict['lstm_enable_flag'] == True:
-            return manipulator_before, pred_lwh_list, pred_cls, pred_color, pred_grasp
-        else:
-            return manipulator_before, pred_lwh_list, pred_conf
+                    # key = cv2.waitKey(1) & 0xFF
+                    # if key == ord('q'):
+                    #     break
+                    # elif key == ord('s'):
+                    #     print('start recording')
+                    #     recording = not recording  # Toggle recording state
+                    # elif key == ord('p'):
+                    #     print('pause recording')
+                    #     recording = not recording  # Toggle recording state
+
+                    out_origin.write(origin_img)
+                    out_landmark.write(landmark_img)
+                    out_info.write(info_img)
+                    t1 = time.time()
+                    print(1/(t1-time0))
+                else:
+                    cv2.namedWindow('zzz_landmark', 0)
+                    cv2.resizeWindow('zzz_landmark', 1280, 960)
+                    cv2.imshow('zzz_landmark', landmark_img)
+                    cv2.namedWindow('zzz_info', 0)
+                    cv2.resizeWindow('zzz_info', 1280, 960)
+                    cv2.imshow('zzz_info', info_img)
+                    key = cv2.waitKey(1) & 0xFF
+                    if key == ord('s'):
+                        cv2.destroyAllWindows()
+                        img_path_landmark = self.img_path + '_pred_landmark.png'
+                        cv2.imwrite(img_path_landmark, landmark_img)
+                        img_path_info = self.img_path + '_pred_info.png'
+                        cv2.imwrite(img_path_info, info_img)
+                        break
+
+        return manipulator_before, pred_lwh_list, pred_cls, pred_color, None
 
     def plot_grasp(self, manipulator_before, prediction, model_output, img=None, epoch=None):
 
@@ -719,17 +762,147 @@ class Yolo_seg_model():
         # img_path_output = self.para_dict['data_source_path'] + 'unstack_images/%012d' % (output_epoch) + '_grasp.png'
         cv2.imwrite(img_path_output, output_img)
 
-if __name__ == '__main__':
-    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.7, 'yolo_iou': 0.6, 'real_operate': True,
-                 'yolo_model_path': '../ASSET/models/205_seg_sundry/weights/best.pt',
-                 'dataset_path': '../../knolling_dataset/yolo_seg_sundry_205/images/val/',
-                 'index_begin': 44000}
+    def evaluation(self, start_index, end_index):
 
-    model_threshold_start = 0.3
-    model_threshold_end = 0.8
-    check_point = 10
-    valid_num = 20000
-    model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
+        none_output = 0
+        h_distance = []
+        center_offset = []
+        category_accuracy = []
+
+        model = self.para_dict['yolo_model_path']
+
+        for i in range(int(end_index - start_index)):
+            image_source = self.para_dict['dataset_path'] + 'images/val/%012d.png' % (start_index + i)
+            with open(self.para_dict['dataset_path'] + 'labels/val/%012d.txt' % (start_index + i)) as f:
+                gt_label = f.readlines()
+
+            args = dict(model=model, source=image_source, conf=self.para_dict['yolo_conf'],
+                        iou=self.para_dict['yolo_iou'], device=self.para_dict['device'], agnostic_nms=True)
+            from ultralytics import YOLO
+            pre_results = YOLO(model)(**args)
+            if len(pre_results) == 0:
+                print('yolo no more than 1')
+                none_output += 1
+                continue
+            else:
+                result_one_img = pre_results[0]
+                # results: x, y, length, width, ori, cls
+                weighted_h_distance_per_img, center_offset_per_img, category_accuracy_per_img = self.eval_metrics(result_one_img, gt_label)
+                h_distance.append(weighted_h_distance_per_img)
+                center_offset.append(center_offset_per_img)
+                category_accuracy.append(category_accuracy_per_img)
+                new_img, results = self.plot_result(result_one_img)
+
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', new_img)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+        h_distance = np.asarray(h_distance)
+        m_h_distance = np.mean(h_distance)
+        center_offset = np.asarray(center_offset)
+        m_center_offset = np.mean(center_offset)
+        category_accuracy = np.asarray(category_accuracy)
+        m_category_accuracy = np.mean(category_accuracy)
+
+        log_path = self.para_dict['yolo_model_path'][:-15] + '/evaluate_log/'
+        os.makedirs(log_path, exist_ok=True)
+        with open(log_path + "log_mask.txt", "w") as f:
+            f.write(f'Dataset: {self.para_dict["dataset_path"]}\n')
+            f.write(f'mean hamming distance: {m_h_distance}\n')
+            f.write(f'mean center offset: {m_center_offset}\n')
+            f.write(f'mean category accuracy: {m_category_accuracy}\n')
+
+            for i in range(int(end_index - start_index)):
+                f.write(f'index: {start_index + i}, hamming distance: {h_distance[i]}, center offset: {center_offset[i]}, category accuracy: {category_accuracy[i]}\n')
+
+    def eval_metrics(self, results, gt_label):
+
+        results = results[:len(gt_label)]
+        img = results.orig_img
+        masks = results.masks.data.cpu().detach().numpy()
+        pred_cls_idx = results.boxes.cls.cpu().detach().numpy()
+        pred_conf = results.boxes.conf.cpu().detach().numpy()
+        name_dict = results.names
+        pred_xylws = results.boxes.xywhn.cpu().detach().numpy()
+
+        ######## order based on distance to draw it on the image!!!
+        x_px_center = pred_xylws[:, 1] * 480
+        y_px_center = pred_xylws[:, 0] * 640
+        mm_center = np.concatenate(
+            (((x_px_center - 6) / self.mm2px).reshape(-1, 1), ((y_px_center - 320) / self.mm2px).reshape(-1, 1)),
+            axis=1)
+        # pred_order = change_sequence(mm_center)
+        # pred_cls_idx = pred_cls_idx[pred_order]
+        pred_cls_name = [name_dict[i] for i in pred_cls_idx]
+        # pred_conf = pred_conf[pred_order]
+        # pred_xylws = pred_xylws[pred_order]
+        # masks = masks[pred_order]
+
+        total_h_distance = []
+        total_center_offset = []
+        total_paired_num = 0
+
+        gt_masks = np.zeros((len(gt_label), 480, 640))
+        gt_cls = []
+        for i in range(len(gt_label)):
+            processed_label = np.asarray(gt_label[i].split(' '), dtype=np.float32)
+            gt_cls.append(processed_label[0])
+            gt_contour = processed_label[1:].reshape(-1, 2)
+            gt_contour[:, 1] *= 480  # from ratio to pixel
+            gt_contour[:, 0] *= 640  # from ratio to pixel
+            gt_contour = gt_contour.astype(np.int32)
+            cv2.fillPoly(gt_masks[i], [gt_contour], color=1)
+        gt_cls = np.asarray(gt_cls)
+        for i in range(len(masks)):
+
+            # evaluate the similarity between gt and pred mask via hamming distance
+            weighted_h_distance = np.min(np.count_nonzero(masks[i] != gt_masks, axis=(1, 2))) / np.count_nonzero(masks[i])
+            total_h_distance.append(weighted_h_distance)
+
+            # evaluate the precision of the center
+            correct_box, rect = self.find_rotated_bounding_box(masks[i])
+            kpt_x = ((correct_box[:, 1] - 6) / self.mm2px).reshape(-1, 1)
+            kpt_y = ((correct_box[:, 0] - 320) / self.mm2px).reshape(-1, 1)
+            kpt_mm = np.concatenate((kpt_x, kpt_y), axis=1)
+            kpt_center = np.average(kpt_mm, axis=0)
+
+            # evaluate category accuracy
+            paired_index = np.argmin(np.count_nonzero(masks[i] != gt_masks, axis=(1, 2)))
+            selected_gt_cls = gt_cls[paired_index]
+            if selected_gt_cls == pred_cls_idx[i]:
+                print(f'success pair {selected_gt_cls}, {name_dict[selected_gt_cls]}')
+                total_paired_num += 1
+
+            # cv2.namedWindow('zzz', 0)
+            # cv2.resizeWindow('zzz', 1280, 960)
+            # cv2.imshow('zzz', gt_mask)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+
+        category_accuracy = total_paired_num / len(gt_label)
+
+        h_distance_per_img = np.mean(np.asarray(total_h_distance))
+        # center_offset_per_img = np.mean(np.asarray(total_center_offset))
+        center_offset_per_img = 0
+        return h_distance_per_img, center_offset_per_img, category_accuracy
+
+if __name__ == '__main__':
+    para_dict = {'device': 'cuda:0', 'yolo_conf': 0.5, 'yolo_iou': 0.6, 'real_operate': True,
+                 'yolo_model_path': '../ASSET/models/301_seg_real_sundry/weights/best.pt',
+                 'dataset_path': '../../knolling_dataset/yolo_seg_sim_sundry_301/',
+                 'index_begin': 44000,
+                 'data_source_path': '../IMAGE/',
+                 'lstm_enable_flag': False}
+
+    # model_threshold_start = 0.3
+    # model_threshold_end = 0.8
+    # check_point = 10
+    # valid_num = 20000
+    # model_threshold = np.linspace(model_threshold_start, model_threshold_end, check_point)
 
     zzz_yolo = Yolo_seg_model(para_dict=para_dict)
-    zzz_yolo.model_predict(start_index=3200, end_index=4000, use_dataset=False)
+    zzz_yolo.model_predict(start_index=3200, end_index=4000, use_dataset=False, epoch=0, capture_video=False)
+    # zzz_yolo.model_predict(start_index=3200, end_index=4000, use_dataset=False, show_mask=True, epoch=1)
+    # zzz_yolo.evaluation(start_index=3200, end_index=4000)

@@ -34,7 +34,7 @@ p.resetDebugVisualizerCamera(cameraDistance=0.7,
                              cameraPitch=-45,
                              cameraTargetPosition=[0.1, 0, 0.4])
 
-baseid = p.loadURDF('plane_zzz.urdf', useMaximalCoordinates=True)
+baseid = p.loadURDF('plane.urdf', useMaximalCoordinates=True)
 #disable rendering during creation.
 
 
