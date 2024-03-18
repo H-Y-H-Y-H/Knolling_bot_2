@@ -15,7 +15,7 @@ import csv
 import pandas
 import glob
 
-from arrange_policy import configuration_zzz, arrangement
+from VAE_arrange_policy import configuration_zzz, arrangement
 
 torch.manual_seed(42)
 
@@ -184,13 +184,17 @@ class Collection_env:
             image[:, :, 2] = temp
             return image
 
-    def is_too_close(self, new_pos, existing_objects, min_distance=0.06):
+    def is_too_close(self, new_pos, existing_objects, min_distance=0.1):
         for _, obj_pos in existing_objects:
             if np.linalg.norm(np.array(new_pos) - np.array(obj_pos)) < min_distance:
                 return True
         return False
 
     def label2image(self, labels_data, labels_name=None):
+
+        rdm_img = np.zeros((480, 640, 4))
+        neat_img = np.zeros((480, 640, 4))
+
         # print(index_flag)
         # index_flag = index_flag.reshape(2, -1)
 
@@ -277,97 +281,100 @@ class Collection_env:
             object_idx = []
             print('position\n', pos_data)
             print('lwh\n', lw_data)
-            for i in range(obj_num):
 
-                # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
-                object_csv = object_path + '.csv'
-                # object_stl = object_path + '.stl'
+            if before_after == 'after' or before_after == 'before_after':
+                for i in range(obj_num):
 
-                print(f'this is matching urdf{i}')
-                csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
-                pos_data[i, 2] = csv_lwh[2] / 2
+                    # object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/'
+                    object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+                    object_csv = object_path + '.csv'
+                    # object_stl = object_path + '.stl'
 
-                if lw_data[i, 0] < lw_data[i, 1]:
-                    ori_data[i, 2] += np.pi / 2
-                object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
-                                             basePosition=pos_data[i],
-                                             baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
-                                             flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-                p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
+                    print(f'this is matching urdf{i}')
+                    csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
+                    pos_data[i, 2] = csv_lwh[2] / 2
 
-            neat_img = self.get_obs('images', None)
+                    if lw_data[i, 0] < lw_data[i, 1]:
+                        ori_data[i, 2] += np.pi / 2
+                    object_idx.append(p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+                                                 basePosition=pos_data[i],
+                                                 baseOrientation=p.getQuaternionFromEuler(ori_data[i]), useFixedBase=False,
+                                                 flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                    p.changeVisualShape(p.getBodyUniqueId(i+1), -1, rgbaColor=mapped_color_values[i] + [1])
 
-
-            # p.restoreState(self.state_blank)
-            self.init_ori_range = [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]]
-            rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1],
-                                             size=(len(object_idx), 1))
-            rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1],
-                                              size=(len(object_idx), 1))
-            rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1],
-                                            size=(len(object_idx), 1))
-            rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
-            self.init_pos_range = [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.01]]
-            for i in object_idx:
-                p.removeBody(i)
-            object_idx = []
-
-            # add the wall while generating rdm positions
-            wall_id = []
-            wall_pos = np.array([[self.x_low_obs - self.table_boundary, 0, 0],
-                                 [(self.x_low_obs + self.x_high_obs) / 2, self.y_low_obs - self.table_boundary, 0],
-                                 [self.x_high_obs + self.table_boundary, 0, 0],
-                                 [(self.x_low_obs + self.x_high_obs) / 2, self.y_high_obs + self.table_boundary, 0]])
-            wall_ori = np.array([[0, 1.57, 0],
-                                 [0, 1.57, 1.57],
-                                 [0, 1.57, 0],
-                                 [0, 1.57, 1.57]])
-            for i in range(len(wall_pos)):
-                wall_id.append(p.loadURDF(os.path.join(self.urdf_path, "wall.urdf"), basePosition=wall_pos[i],
-                                          baseOrientation=p.getQuaternionFromEuler(wall_ori[i]), useFixedBase=1,
-                                          flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
-                p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
-
-            for i in range(obj_num):
-
-                rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
-                rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
-                rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
-                pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
-
-                object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
-                object_csv = object_path + '.csv'
-
-                print(f'this is matching urdf{i}')
-                placement_successful = False
-                while not placement_successful:
-
-                    # Check if the new position is too close to any existing objects
-                    if not self.is_too_close(pos_data, object_idx):
-                        csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
-                        pos_data[2] = csv_lwh[2] / 2
-
-                        object_idx.append((p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
-                                                     basePosition=pos_data,
-                                                     baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=False,
-                                                     flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT), pos_data))
-                        p.changeVisualShape(p.getBodyUniqueId(i+5), -1, rgbaColor=mapped_color_values[i] + [1])
-                        placement_successful = True
-                    else:
-                        rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
-                        rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
-                        rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
-                        pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
+                neat_img = self.get_obs('images', None)
         ################### recover urdf boxes based on lw_data ###################
 
-        # shutil.rmtree(save_urdf_path_one_img)
-        for i in range(100):
-            p.stepSimulation()
-        rdm_img = self.get_obs('images', None)
+            if before_after == 'before' or before_after == 'before_after':
+                # p.restoreState(self.state_blank)
+                self.init_ori_range = [[0, 0], [0, 0], [-np.pi / 4, np.pi / 4]]
+                rdm_ori_roll = np.random.uniform(self.init_ori_range[0][0], self.init_ori_range[0][1],
+                                                 size=(obj_num, 1))
+                rdm_ori_pitch = np.random.uniform(self.init_ori_range[1][0], self.init_ori_range[1][1],
+                                                  size=(obj_num, 1))
+                rdm_ori_yaw = np.random.uniform(self.init_ori_range[2][0], self.init_ori_range[2][1],
+                                                size=(obj_num, 1))
+                rdm_ori = np.hstack([rdm_ori_roll, rdm_ori_pitch, rdm_ori_yaw])
+                self.init_pos_range = [[0.03, 0.27], [-0.15, 0.15], [0.01, 0.01]]
+                for i in object_idx:
+                    p.removeBody(i)
+                object_idx = []
+
+                # add the wall while generating rdm positions
+                wall_id = []
+                wall_pos = np.array([[self.x_low_obs - self.table_boundary, 0, 0],
+                                     [(self.x_low_obs + self.x_high_obs) / 2, self.y_low_obs - self.table_boundary, 0],
+                                     [self.x_high_obs + self.table_boundary, 0, 0],
+                                     [(self.x_low_obs + self.x_high_obs) / 2, self.y_high_obs + self.table_boundary, 0]])
+                wall_ori = np.array([[0, 1.57, 0],
+                                     [0, 1.57, 1.57],
+                                     [0, 1.57, 0],
+                                     [0, 1.57, 1.57]])
+                for i in range(len(wall_pos)):
+                    wall_id.append(p.loadURDF(os.path.join(self.urdf_path, "wall.urdf"), basePosition=wall_pos[i],
+                                              baseOrientation=p.getQuaternionFromEuler(wall_ori[i]), useFixedBase=1,
+                                              flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT))
+                    p.changeVisualShape(wall_id[i], -1, rgbaColor=(1, 1, 1, 0))
+
+                for i in range(obj_num):
+
+                    rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                    rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                    rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                    pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
+
+                    object_path = self.dataset_path + 'generated_stl/' + labels_name[i][:-2] + '/' + labels_name[i]
+                    object_csv = object_path + '.csv'
+
+                    print(f'this is matching urdf{i}')
+                    placement_successful = False
+                    while not placement_successful:
+
+                        # Check if the new position is too close to any existing objects
+                        if not self.is_too_close(pos_data, object_idx):
+                            csv_lwh = np.asarray(pandas.read_csv(object_csv).iloc[0, [3, 4, 5]].values) * 0.001
+                            pos_data[2] = csv_lwh[2] / 2
+
+                            object_idx.append((p.loadURDF(self.dataset_path + 'urdf_file/' + labels_name[i] + '.urdf',
+                                                         basePosition=pos_data,
+                                                         baseOrientation=p.getQuaternionFromEuler(rdm_ori[i]), useFixedBase=False,
+                                                         flags=p.URDF_USE_SELF_COLLISION or p.URDF_USE_SELF_COLLISION_INCLUDE_PARENT), pos_data))
+                            p.changeVisualShape(p.getBodyUniqueId(i+5), -1, rgbaColor=mapped_color_values[i] + [1])
+                            placement_successful = True
+                        else:
+                            rdm_pos_x = np.random.uniform(self.init_pos_range[0][0], self.init_pos_range[0][1])
+                            rdm_pos_y = np.random.uniform(self.init_pos_range[1][0], self.init_pos_range[1][1])
+                            rdm_pos_z = np.random.uniform(self.init_pos_range[2][0], self.init_pos_range[2][1])
+                            pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
+
+                # shutil.rmtree(save_urdf_path_one_img)
+                for i in range(100):
+                    p.stepSimulation()
+                rdm_img = self.get_obs('images', None)
 
         # return self.get_obs('images', None)
-        return np.concatenate((rdm_img, neat_img), axis=1)
+        # return np.concatenate((rdm_img, neat_img), axis=1)
+        return rdm_img, neat_img
 
     def change_config(self):  # this is main function!!!!!!!!!
 
@@ -420,20 +427,18 @@ if __name__ == '__main__':
     np.random.seed(110)
 
     command = 'recover'
-    before_after = 'after'
-    obj_num = 10
-    SHIFT_DATASET_ID = 6
+    before_after = 'before'
+    obj_num = 4
+    SHIFT_DATASET_ID = 0
 
-    total_offset = [0.016, -0.17 + 0.016, 0]
+    total_offset = [0.016, -0.20 + 0.016, 0]
 
-    start_evaluations = 50
+    start_evaluations = 0
     end_evaluations =100
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/learning_data_207_{obj_num}/'
-    images_log_path = target_path + 'images_after/'
-    os.makedirs(images_log_path, exist_ok=True)
+    target_path = f'../../../knolling_dataset/VAE_317_obj{obj_num}/'
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range
@@ -451,10 +456,14 @@ if __name__ == '__main__':
                      [False, False, True, False],
                      [False, False, False, True]]
     solution_num = int(arrange_policy['output_per_cfg'] * len(policy_switch))
-    solution_num = 1
+    # solution_num = 1
 
     if command == 'recover':
-        env = Collection_env(is_render=True, arrange_policy=arrange_policy, total_offset = total_offset)
+
+        os.makedirs(target_path + 'origin_images_before/', exist_ok=True)
+        os.makedirs(target_path + 'origin_images_after/', exist_ok=True)
+
+        env = Collection_env(is_render=False, arrange_policy=arrange_policy, total_offset = total_offset)
         with open('../../ASSET/urdf/object_color/rgb_info.json') as f:
             color_dict = json.load(f)
         names = locals()
@@ -478,8 +487,9 @@ if __name__ == '__main__':
                 print(f'this is data {j}')
                 one_img_data = names['data_' + str(m)][j].reshape(-1, 7)
 
-                image = env.label2image(names['data_' + str(m)][j], labels_name=names['name_' + str(m)][j])
-                image = image[..., :3]
+                rdm_img, neat_img = env.label2image(names['data_' + str(m)][j], labels_name=names['name_' + str(m)][j])
+                rdm_img = rdm_img[..., :3]
+                neat_img = neat_img[..., :3]
 
                 # cv2.namedWindow('zzz', 0)
                 # cv2.resizeWindow('zzz', 1280, 960)
@@ -488,7 +498,11 @@ if __name__ == '__main__':
                 # cv2.destroyAllWindows()
                 # cv2.imwrite('layout_%s.png' % j, image)
 
-                cv2.imwrite(images_log_path + 'label_%d_%d.png' % (j, m), image)
+                if before_after == 'before' or before_after == 'before_after':
+                    cv2.imwrite(target_path + 'origin_images_before/label_%d_%d.png' % (j, m), rdm_img)
+                if before_after == 'after' or before_after == 'before_after':
+                    cv2.imwrite(target_path + 'origin_images_after/label_%d_%d.png' % (j, m), neat_img)
+
 
     if command == 'collection':
 

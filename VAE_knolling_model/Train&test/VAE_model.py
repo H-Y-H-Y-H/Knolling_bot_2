@@ -55,48 +55,78 @@ class CustomImageDataset(Dataset):
 
 # VAE Definition
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, conv_hiddens, latent_dim, img_length_width, prev_channels=3):
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1) # Output: 240x320
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1) # Output: 120x160
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1) # Output: 60x80
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1) # Output: 30x40
-        self.fc1 = nn.Linear(256*15*20, 1024)
-        self.fc21 = nn.Linear(1024, 256)  # mean vector
-        self.fc22 = nn.Linear(1024, 256)  # log variance vector
+
+        temp_linear_dim = 512
+        self.img_length_width = img_length_width
+        self.prev_channels = prev_channels
+
+        modules = []
+        for cur_channels in conv_hiddens:
+            modules.append(
+                nn.Sequential(
+                    nn.Conv2d(self.prev_channels,
+                              cur_channels,
+                              kernel_size=4,
+                              stride=2,
+                              padding=1), nn.BatchNorm2d(cur_channels),
+                    nn.ReLU()))
+            self.prev_channels = cur_channels
+            self.img_length_width //= 2
+        self.encoder = nn.Sequential(*modules)
+
+        self.mean_linear = nn.Sequential(nn.Linear(self.prev_channels * self.img_length_width * self.img_length_width, temp_linear_dim),
+                                         nn.Linear(temp_linear_dim, latent_dim))
+        self.var_linear = nn.Sequential(nn.Linear(self.prev_channels * self.img_length_width * self.img_length_width, temp_linear_dim),
+                                        nn.Linear(temp_linear_dim, latent_dim))
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.conv4(x))
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.fc1(x))
-        return self.fc21(x), self.fc22(x)
+
+        x = self.encoder(x)
+        x = torch.flatten(x, 1)
+        mean = self.mean_linear(x)
+        logvar = self.var_linear(x)
+
+        return mean, logvar
 
 class Decoder(nn.Module):
-    def __init__(self):
+    def __init__(self, conv_hiddens, latent_dim, img_length_width, prev_channels):
         super(Decoder, self).__init__()
-        self.fc = nn.Linear(256, 256*15*20)
-        self.conv1 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1)
-        self.conv2 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1)
-        self.conv3 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1)
-        self.conv4 = nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1)
+
+        self.fc = nn.Linear(latent_dim, prev_channels * img_length_width * img_length_width)
+        self.decoder_input_chw = (prev_channels, img_length_width, img_length_width)
+
+        modules = []
+        conv_hiddens.reverse()
+        conv_hiddens.append(3)
+        for cur_channels in conv_hiddens[1:]:
+            modules.append(
+                nn.Sequential(
+                    nn.ConvTranspose2d(prev_channels,
+                              cur_channels,
+                              kernel_size=4,
+                              stride=2,
+                              padding=1), nn.BatchNorm2d(cur_channels),
+                    nn.ReLU()))
+            prev_channels = cur_channels
+        self.decoder = nn.Sequential(*modules)
 
     def forward(self, x):
-        x = F.relu(self.fc(x))
-        x = x.view(-1, 256, 15, 20)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = torch.sigmoid(self.conv4(x))
+        # x = F.relu(self.fc(x))
+        x = self.fc(x)
+        x = x.view(-1, *self.decoder_input_chw)
+        x = self.decoder(x)
         return x
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, conv_hiddens, latent_dim, img_length_width):
         super(VAE, self).__init__()
-        self.encoder = Encoder()
-        self.decoder = Decoder()
+
+        self.encoder = Encoder(conv_hiddens, latent_dim, img_length_width)
+        pre_channels = self.encoder.prev_channels
+        img_length_width = self.encoder.img_length_width
+        self.decoder = Decoder(conv_hiddens, latent_dim, img_length_width, pre_channels)
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)

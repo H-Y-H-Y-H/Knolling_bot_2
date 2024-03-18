@@ -52,11 +52,13 @@ def main(epochs):
     print(config)
 
     # Mapping device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print('Use: ', device)
 
     # Model instantiation
-    model = VAE().to(device)
+    model = VAE(
+        conv_hiddens=[16, 32, 64, 128], latent_dim=128, img_length_width=128
+    ).to(device)
     if config.pre_trained:
         checkpoint = torch.load(pretrain_model_path, map_location=device)
         model.load_state_dict(checkpoint)
@@ -131,9 +133,9 @@ if __name__ == "__main__":
 
     num_epochs = 10
     num_data = 100
-    dataset_path = '../../../knolling_dataset/VAE_314/'
-    wandb_flag = True
-    proj_name = "VAE_317"
+    dataset_path = '../../../knolling_dataset/VAE_317_obj4/'
+    wandb_flag = False
+    proj_name = "VAE_knolling"
 
     train_input = []
     train_output = []
@@ -143,15 +145,15 @@ if __name__ == "__main__":
     num_test = int(num_data - num_train)
 
     batch_size = 1
-    transform = Compose([Resize((240, 320)),
+    transform = Compose([
                         ToTensor()  # Normalize the image
                         ])
-    train_dataset = CustomImageDataset(input_dir=dataset_path + 'img_input/',
-                                       output_dir=dataset_path + 'img_output/',
+    train_dataset = CustomImageDataset(input_dir=dataset_path + 'images_before/',
+                                       output_dir=dataset_path + 'images_before/',
                                        num_img=num_train, num_total=num_data, start_idx=0,
                                        transform=transform)
-    test_dataset = CustomImageDataset(input_dir=dataset_path + 'img_input/',
-                                       output_dir=dataset_path + 'img_output/',
+    test_dataset = CustomImageDataset(input_dir=dataset_path + 'images_before/',
+                                       output_dir=dataset_path + 'images_before/',
                                        num_img=num_test, num_total=num_data, start_idx=num_train,
                                         transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
