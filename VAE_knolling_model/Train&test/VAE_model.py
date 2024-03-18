@@ -70,7 +70,7 @@ class Encoder(nn.Module):
                               cur_channels,
                               kernel_size=4,
                               stride=2,
-                              padding=1), nn.BatchNorm2d(cur_channels),
+                              padding=1),
                     nn.ReLU()))
             self.prev_channels = cur_channels
             self.img_length_width //= 2
@@ -107,7 +107,7 @@ class Decoder(nn.Module):
                               cur_channels,
                               kernel_size=4,
                               stride=2,
-                              padding=1), nn.BatchNorm2d(cur_channels),
+                              padding=1),
                     nn.ReLU()))
             prev_channels = cur_channels
         self.decoder = nn.Sequential(*modules)
