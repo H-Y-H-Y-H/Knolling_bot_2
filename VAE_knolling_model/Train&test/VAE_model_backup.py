@@ -57,13 +57,13 @@ class CustomImageDataset(Dataset):
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1) # Output: 240x320
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1) # Output: 120x160
-        self.conv3 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1) # Output: 60x80
-        self.conv4 = nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1) # Output: 30x40
-        self.fc1 = nn.Linear(16384, 1024)
-        self.fc21 = nn.Linear(1024, 256)  # mean vector
-        self.fc22 = nn.Linear(1024, 256)  # log variance vector
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=4, stride=2, padding=1) # Output: 240x320
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=1) # Output: 120x160
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1) # Output: 60x80
+        self.conv4 = nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1) # Output: 30x40
+        self.fc1 = nn.Linear(8192, 1024)
+        self.fc21 = nn.Linear(1024, 128)  # mean vector
+        self.fc22 = nn.Linear(1024, 128)  # log variance vector
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -77,15 +77,15 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
-        self.fc = nn.Linear(256, 256*8*8)
-        self.conv1 = nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1)
-        self.conv2 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1)
-        self.conv3 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1)
-        self.conv4 = nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1)
+        self.fc = nn.Linear(128, 128*8*8)
+        self.conv1 = nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1)
+        self.conv2 = nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1)
+        self.conv3 = nn.ConvTranspose2d(32, 16, kernel_size=4, stride=2, padding=1)
+        self.conv4 = nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1)
 
     def forward(self, x):
         x = F.relu(self.fc(x))
-        x = x.view(-1, 256, 8, 8)
+        x = x.view(-1, 128, 8, 8)
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
         x = F.relu(self.conv3(x))
@@ -93,7 +93,7 @@ class Decoder(nn.Module):
         return x
 
 class VAE(nn.Module):
-    def __init__(self):
+    def __init__(self, conv_hiddens=[16, 32, 64, 128], latent_dim=128, img_length_width=128):
         super(VAE, self).__init__()
         self.encoder = Encoder()
         self.decoder = Decoder()

@@ -368,7 +368,7 @@ class Collection_env:
                             pos_data = [rdm_pos_x, rdm_pos_y, rdm_pos_z]
 
                 # shutil.rmtree(save_urdf_path_one_img)
-                for i in range(100):
+                for i in range(20):
                     p.stepSimulation()
                 rdm_img = self.get_obs('images', None)
 
@@ -423,22 +423,22 @@ class Collection_env:
 
 if __name__ == '__main__':
 
-    np.random.seed(110)
-    np.random.seed(110)
+    # np.random.seed(110)
+    # np.random.seed(110)
 
-    command = 'recover'
+    command = 'collection'
     before_after = 'before'
     obj_num = 4
     SHIFT_DATASET_ID = 0
 
     total_offset = [0.016, -0.20 + 0.016, 0]
 
-    start_evaluations = 0
-    end_evaluations =100
+    start_evaluations = 45000
+    end_evaluations =50000
     step_num = 10
     save_point = np.linspace(int((end_evaluations - start_evaluations) / step_num + start_evaluations), end_evaluations, step_num)
 
-    target_path = f'../../../knolling_dataset/VAE_317_obj{obj_num}/'
+    target_path = f'../../../knolling_dataset/VAE_329_obj{obj_num}/'
 
     arrange_policy = {
                     'length_range': [0.036, 0.06], 'width_range': [0.016, 0.036], 'height_range': [0.01, 0.02], # objects 3d range

@@ -1,13 +1,9 @@
-import numpy as np
 import torch
-from torch import nn
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, Dataset
-import torch.nn.functional as F
-import os
-import cv2
+import torch.nn as nn
 from tqdm import tqdm
+from torch.utils.data import DataLoader, Dataset
 from PIL import Image
+import torch.nn.functional as F
 
 class CustomImageDataset(Dataset):
     def __init__(self, input_dir, output_dir, num_img, num_total, start_idx, transform=None):
@@ -53,92 +49,90 @@ class CustomImageDataset(Dataset):
 
         return self.img_input[idx], self.img_output[idx]
 
-# VAE Definition
-class Encoder(nn.Module):
-    def __init__(self, conv_hiddens, latent_dim, img_length_width, prev_channels=3):
-        super(Encoder, self).__init__()
+class VAE(nn.Module):
+    """VAE for 64x64 face generation.
 
-        temp_linear_dim = 512
-        self.img_length_width = img_length_width
-        self.prev_channels = prev_channels
+    The hidden dimensions can be tuned.
+    """
 
+    def __init__(self, conv_hiddens=[16, 32, 64, 128, 256], latent_dim=128, img_length_width=128) -> None:
+        super().__init__()
+
+        # encoder
+        prev_channels = 3
         modules = []
+        img_length = 128
+        self.kl_weight = 1
+
         for cur_channels in conv_hiddens:
             modules.append(
                 nn.Sequential(
-                    nn.Conv2d(self.prev_channels,
+                    nn.Conv2d(prev_channels,
                               cur_channels,
-                              kernel_size=4,
+                              kernel_size=3,
                               stride=2,
-                              padding=1),
-                    nn.ReLU()))
-            self.prev_channels = cur_channels
-            self.img_length_width //= 2
-        self.encoder = nn.Sequential(*modules)
-
-        self.mean_linear = nn.Sequential(nn.Linear(self.prev_channels * self.img_length_width * self.img_length_width, temp_linear_dim),
-                                         nn.Linear(temp_linear_dim, latent_dim))
-        self.var_linear = nn.Sequential(nn.Linear(self.prev_channels * self.img_length_width * self.img_length_width, temp_linear_dim),
-                                        nn.Linear(temp_linear_dim, latent_dim))
-
-    def forward(self, x):
-
-        x = self.encoder(x)
-        x = torch.flatten(x, 1)
-        mean = self.mean_linear(x)
-        logvar = self.var_linear(x)
-
-        return mean, logvar
-
-class Decoder(nn.Module):
-    def __init__(self, conv_hiddens, latent_dim, img_length_width, prev_channels):
-        super(Decoder, self).__init__()
-
-        self.fc = nn.Linear(latent_dim, prev_channels * img_length_width * img_length_width)
-        self.decoder_input_chw = (prev_channels, img_length_width, img_length_width)
-
-        modules = []
-        conv_hiddens.reverse()
-        conv_hiddens.append(3)
-        for cur_channels in conv_hiddens[1:]:
-            modules.append(
-                nn.Sequential(
-                    nn.ConvTranspose2d(prev_channels,
-                              cur_channels,
-                              kernel_size=4,
-                              stride=2,
-                              padding=1),
+                              padding=1), nn.BatchNorm2d(cur_channels),
                     nn.ReLU()))
             prev_channels = cur_channels
+            img_length //= 2
+        self.encoder = nn.Sequential(*modules)
+        self.mean_linear = nn.Linear(prev_channels * img_length * img_length,
+                                     latent_dim)
+        self.var_linear = nn.Linear(prev_channels * img_length * img_length,
+                                    latent_dim)
+        self.latent_dim = latent_dim
+        # decoder
+        modules = []
+        self.decoder_projection = nn.Linear(
+            latent_dim, prev_channels * img_length * img_length)
+        self.decoder_input_chw = (prev_channels, img_length, img_length)
+        for i in range(len(conv_hiddens) - 1, 0, -1):
+            modules.append(
+                nn.Sequential(
+                    nn.ConvTranspose2d(conv_hiddens[i],
+                                       conv_hiddens[i - 1],
+                                       kernel_size=3,
+                                       stride=2,
+                                       padding=1,
+                                       output_padding=1),
+                    nn.BatchNorm2d(conv_hiddens[i - 1]), nn.ReLU()))
+        modules.append(
+            nn.Sequential(
+                nn.ConvTranspose2d(conv_hiddens[0],
+                                   conv_hiddens[0],
+                                   kernel_size=3,
+                                   stride=2,
+                                   padding=1,
+                                   output_padding=1),
+                nn.BatchNorm2d(conv_hiddens[0]), nn.ReLU(),
+                nn.Conv2d(conv_hiddens[0], 3, kernel_size=3, stride=1, padding=1),
+                nn.ReLU()))
         self.decoder = nn.Sequential(*modules)
 
     def forward(self, x):
-        # x = F.relu(self.fc(x))
-        x = self.fc(x)
-        x = x.view(-1, *self.decoder_input_chw)
-        x = self.decoder(x)
-        return x
+        encoded = self.encoder(x)
+        encoded = torch.flatten(encoded, 1)
+        mean = self.mean_linear(encoded)
+        logvar = self.var_linear(encoded)
+        eps = torch.randn_like(logvar)
+        std = torch.exp(logvar / 2)
+        z = eps * std + mean
+        x = self.decoder_projection(z)
+        x = torch.reshape(x, (-1, *self.decoder_input_chw))
+        decoded = self.decoder(x)
 
-class VAE(nn.Module):
-    def __init__(self, conv_hiddens, latent_dim, img_length_width):
-        super(VAE, self).__init__()
+        return decoded, mean, logvar
 
-        self.encoder = Encoder(conv_hiddens, latent_dim, img_length_width)
-        pre_channels = self.encoder.prev_channels
-        img_length_width = self.encoder.img_length_width
-        self.decoder = Decoder(conv_hiddens, latent_dim, img_length_width, pre_channels)
+    def sample(self, device='cuda'):
+        z = torch.randn(1, self.latent_dim).to(device)
+        x = self.decoder_projection(z)
+        x = torch.reshape(x, (-1, *self.decoder_input_chw))
+        decoded = self.decoder(x)
+        return decoded
 
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5*logvar)
-        eps = torch.randn_like(std)
-        return mu + eps*std
-
-    def forward(self, x):
-        mu, logvar = self.encoder(x)
-        z = self.reparameterize(mu, logvar)
-        return self.decoder(z), mu, logvar
-
-    def loss_function(self, recon_x, x, mu, logvar):
-        BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
-        KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-        return BCE + KLD
+    def loss_function(self, y, y_hat, mean, logvar):
+        recons_loss = F.mse_loss(y_hat, y)
+        kl_loss = torch.mean(
+            -0.5 * torch.sum(1 + logvar - mean ** 2 - torch.exp(logvar), 1), 0)
+        loss = recons_loss + kl_loss * self.kl_weight
+        return loss

@@ -15,7 +15,7 @@ def main(epochs):
 
     config = {}
     config = argparse.Namespace(**config)
-    config.pre_trained = False
+    config.pre_trained = pre_train_flag
 
     if wandb_flag == True:
 
@@ -34,10 +34,15 @@ def main(epochs):
     else:
         running_name = 'zzz_test'
 
+
     config.log_pth = f'data/{running_name}/'
-    config.patience = 80
+    config.patience = 20
     config.dataset_path = dataset_path
+    config.num_data = num_data
     config.scheduler_factor = 0.1
+    config.conv_hidden = [16, 32, 64, 128, 256]
+    config.latent_dim = 256
+    config.lr = 0.001
 
     os.makedirs(config.log_pth, exist_ok=True)
 
@@ -56,15 +61,21 @@ def main(epochs):
     print('Use: ', device)
 
     # Model instantiation
-    model = VAE(
-        conv_hiddens=[16, 32, 64, 128], latent_dim=128, img_length_width=128
-    ).to(device)
+
     if config.pre_trained:
-        checkpoint = torch.load(pretrain_model_path, map_location=device)
-        model.load_state_dict(checkpoint)
+        model = torch.load(pretrain_model_path, map_location=device)
+    else:
+        model = VAE(
+            conv_hiddens=config.conv_hidden, latent_dim=config.latent_dim, img_length_width=128
+        ).to(device)
+        # model.load_state_dict(checkpoint)
+    # with open(config.log_pth + 'model_structure.txt', 'a') as f:
+    #     # for params in model.state_dict():
+    #     #     f.write(f'{params}\t{model.state_dict()[params]}\n')
+    #     f.write(model)
 
     # Training setup
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
     # criterion = nn.BCELoss(reduction='sum')
 
     min_loss = np.inf
@@ -84,31 +95,31 @@ def main(epochs):
             # cv2.waitKey()
             # cv2.destroyAllWindows()
 
-            loss = model.loss_function(img_recon, img_neat, mu, log_var)
+            loss = model.loss_function(img_recon, img_rdm, mu, log_var)
             loss.backward()
             train_loss += loss.item()
             optimizer.step()
 
         train_loss /= len(train_loader.dataset)
-        print(f'Epoch {epoch}, Train Loss: {train_loss}')
 
         model.eval()
         validation_loss = 0
         with torch.no_grad():
-            for batch_idx, (img_rdm, img_neat) in test_loader:
+            for img_rdm, img_neat in test_loader:
                 img_rdm = img_rdm.to(device)
                 img_neat = img_neat.to(device)
                 img_recon, mu, log_var = model(img_rdm)
-                loss = model.loss_function(img_recon, img_neat, mu, log_var)
+                loss = model.loss_function(img_recon, img_rdm, mu, log_var)
                 validation_loss += loss.item()
 
         validation_loss /= len(test_loader.dataset)
-        print(f'Epoch {epoch}, Validation Loss: {validation_loss}')
+
 
         if validation_loss < min_loss:
+            print(f'Epoch {epoch}, Train Loss: {train_loss}, Validation Loss: {validation_loss}, Lr: {optimizer.param_groups[0]["lr"]}')
             min_loss = validation_loss
             PATH = config.log_pth + '/best_model.pt'
-            torch.save(model.state_dict(), PATH)
+            torch.save(model, PATH)
             abort_learning = 0
         if validation_loss > 10e8:
             abort_learning = 10000
@@ -116,12 +127,13 @@ def main(epochs):
             abort_learning += 1
 
         if epoch % 20 == 0:
-            torch.save(model.state_dict(), config.log_pth + '/latest_model.pt')
+            torch.save(model, config.log_pth + '/latest_model.pt')
 
-        wandb.log({"train_loss": train_loss,
-                   "valid_loss": validation_loss,
-                   "learning_rate": optimizer.param_groups[0]['lr'],
-                   })
+        if wandb_flag == True:
+            wandb.log({"train_loss": train_loss,
+                       "valid_loss": validation_loss,
+                       "learning_rate": optimizer.param_groups[0]['lr'],
+                       })
 
         if abort_learning > config.patience:
             print('abort training!')
@@ -131,10 +143,11 @@ def main(epochs):
 
 if __name__ == "__main__":
 
-    num_epochs = 10
-    num_data = 100
+    num_epochs = 300
+    num_data = 1200
     dataset_path = '../../../knolling_dataset/VAE_317_obj4/'
-    wandb_flag = False
+    wandb_flag = True
+    pre_train_flag = False
     proj_name = "VAE_knolling"
 
     train_input = []
@@ -144,7 +157,7 @@ if __name__ == "__main__":
     num_train = int(num_data * 0.8)
     num_test = int(num_data - num_train)
 
-    batch_size = 1
+    batch_size = 16
     transform = Compose([
                         ToTensor()  # Normalize the image
                         ])
